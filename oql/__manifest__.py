@@ -2,7 +2,7 @@
     "name": "OQL",
     "version": "15.0.1.0.0",
     "author": "Chris",
-    "website": "https://github.com/chrisking94/odoo_addons/oql",
+    "website": "https://github.com/chrisking94/odoo_addons/tree/main/oql",
     "license": "LGPL-3",
     "category": "Productivity/Apps",
     "summary": "Query ORM model with SQL-Style language.",

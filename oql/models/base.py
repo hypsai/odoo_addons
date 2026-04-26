@@ -10,9 +10,9 @@ _logger = logging.getLogger(__name__)
 class OqlBase(models.AbstractModel):
     _inherit = "base"
 
-    def searcho(self, oql: str, offset=0, limit=None, order=None, count=False):
+    def searcho(self, oql_where: str):
         """Search with OQL."""
-        result = reader.query(oql, OqlTransformer(self.env, self._name))
+        result = reader.query(oql_where, OqlTransformer(self.env, self._name))
         return result
 
     def _valid_field_parameter(self, field, name):
