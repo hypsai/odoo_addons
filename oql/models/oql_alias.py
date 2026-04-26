@@ -3,7 +3,7 @@ from odoo import fields, models
 
 class OqlAlias(models.Model):
     _name = "oql.alias"
-    _description = "Config field path inference rules for ORM models."
+    _description = "OQL Alias"
 
     model_id = fields.Many2one("ir.model", "Model", help="Target model the rules applied to.",
                                required=True, ondelete="cascade", index=True)

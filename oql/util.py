@@ -3,9 +3,9 @@
 # @Author       : Chris
 # @Description  :
 from collections import defaultdict
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Union
 
-from odoo import models
+from odoo import models, fields
 
 
 def parse_list(s: str) -> List[str]:
@@ -44,6 +44,67 @@ def tn(obj):
     if isinstance(obj, type):
         return fullname(obj)
     return fullname(type(obj))
+
+
+_FIELD_TYPE_MAPPING = {
+    'char': str,
+    'text': str,
+    'html': str,
+    'integer': int,
+    'float': float,
+    'monetary': float,
+    'boolean': bool,
+    'date': str,
+    'datetime': str,
+    'binary': bytes,
+    'selection': str,
+    'many2one': int,
+    'one2many': list,
+    'many2many': list,
+    'properties': dict,
+    'json': dict,
+}
+
+
+def field_type2python_type(o_type: str) -> type:
+    """
+    Convert Odoo field type string to Python type.
+
+    :param o_type: Odoo field type (e.g., 'char', 'integer', 'float', 'boolean', 'many2one', etc.)
+    :return: Corresponding Python type
+    """
+    p_type = _FIELD_TYPE_MAPPING.get(o_type)
+    if p_type is None:
+        raise NotImplementedError(f"Don't know counterpart python type for odoo field type `{o_type}`.")
+    return p_type
+
+
+def get_field_def(recs: models.Model, path: str) -> fields.Field:
+    """
+    Get field definition by dot style path.
+    """
+    chips = path.split('.')
+    p = recs
+    for i in range(len(chips)-1):
+        chip = chips[i]
+        if not hasattr(p, chip):
+            raise KeyError(f"Failed getting field definition on `{path}` of `{recs}`, "
+                           f"`{'.'.join(chips[:i+1])}` -> `{p}` does not have field `{chip}`.")
+        p = p[chip]
+        if not isinstance(p, models.Model):
+            raise ValueError(f"Failed getting field definition on `{path}` of `{recs}`, "
+                             f"`{'.'.join(chips[:i+1])}` is not a relational field.")
+    field_def = p._fields.get(chips[-1])
+    if field_def is None:
+        raise KeyError(f"Failed getting field definition on `{path}` of `{recs}`, "
+                       f"`{'.'.join(chips[:-1])}` -> `{p}` does not have field `{chips[-1]}`.")
+    return field_def
+
+
+def get_field_type(field_def: fields.Field) -> Union[type, str]:
+    if field_def.relational:
+        return f"Records[{field_def.comodel_name}]"
+    return field_type2python_type(field_def.type)
 
 
 def read_object(obj, path: str):

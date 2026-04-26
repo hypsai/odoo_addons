@@ -3,10 +3,13 @@
 # @Author       : Chris
 # @Description  :
 from dataclasses import dataclass
-from typing import List, Set, Optional
+from typing import List, Optional
+
 from odoo.models import BaseModel
-from .util import parse_list, parse_type_list
+
+from .models.oql_alias_line import OqlAliasLine
 from .recs import RecordSet
+from .util import get_field_def, field_type2python_type
 
 
 @dataclass(frozen=True)
@@ -16,16 +19,24 @@ class AliasRule:
 
     @classmethod
     def from_orm(cls, recs) -> List["AliasRule"]:
+        env = recs.env
         rules = []
         for rec in recs:
             lines = []
             model = rec.model_id.model
             for rec_line in rec.line_ids:
-                operators = set(parse_list(rec_line.operators))
-                value_model = rec_line.value_model_id.model
-                value_types = parse_type_list(rec_line.value_types, True)
+                rec_line: OqlAliasLine
+                if not rec_line.enable_shorthand:
+                    continue
                 path = rec_line.path
-                lines.append(AliasRuleLine(model, operators, value_model, set(value_types), path))
+                field_def = get_field_def(env[model], path)
+                if field_def.relational:
+                    value_model = field_def.comodel_name
+                    value_type = None
+                else:
+                    value_model = None
+                    value_type = field_type2python_type(field_def.type)
+                lines.append(AliasRuleLine(model, value_model, value_type, path))
             rules.append(AliasRule(model, lines))
         return rules
 
@@ -45,22 +56,19 @@ class AliasRule:
 @dataclass(frozen=True)
 class AliasRuleLine:
     model: str
-    operators: Set[str]
     value_model: Optional[str]
-    value_types: Set[type]
+    value_type: Optional[type]
     path: str
 
     def test(self, operator: str, value):
-        if self.operators and operator not in self.operators:
-            return False
         if self.value_model:
             if isinstance(value, RecordSet):
                 if value.name == self.value_model:
                     return True
-            if isinstance(value, BaseModel):
+            elif isinstance(value, BaseModel):
                 if value._name == self.value_model:
                     return True
-        if self.value_types and type(value) in self.value_types:
+        if self.value_type and type(value) is self.value_type:
             return True
         return False
 

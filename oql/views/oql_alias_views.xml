@@ -23,9 +23,7 @@
                                 <tree editable="bottom">
                                     <field name="alias"/>
                                     <field name="path"/>
-                                    <field name="operators"/>
-                                    <field name="value_model_id"/>
-                                    <field name="value_types"/>
+                                    <field name="enable_shorthand"/>
                                 </tree>
                             </field>
                         </group>

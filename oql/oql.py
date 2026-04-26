@@ -10,7 +10,7 @@ import lark
 from odoo import models, _
 
 from .recs import *
-from .rule import AliasRule
+from .alias import AliasRule
 from .util import KeyPassingDefaultDict, tn
 
 _logger = logging.getLogger(__name__)
