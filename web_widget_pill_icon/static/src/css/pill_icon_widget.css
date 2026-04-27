@@ -1,0 +1,46 @@
+/* Prevent background from turning white and keep the pill style */
+.o_pill_icon_cell {
+    background-color: transparent !important;
+}
+
+.o_pill_icon_widget {
+    display: inline-flex !important; /* This is the fix for the width issue */
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    max-width: 100%;
+}
+
+/* --- The "Pill" Logic --- */
+.o_pill_icon_widget.pill {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    border: 1px solid transparent;
+}
+
+/* --- Size Modifiers --- */
+.o_pill_icon_widget.sm { padding: 1px 6px; font-size: 11px; }
+.o_pill_icon_widget.lg { padding: 4px 14px; font-size: 14px; }
+
+/* --- Style Modifiers --- */
+.o_pill_icon_widget.outline {
+    background-color: transparent !important;
+    border-color: currentColor !important;
+}
+
+/* --- Semantic Color Helpers (Applied via 'values' option) --- */
+.o_pill_icon_widget.success { background-color: #e6f4ea; color: #1e7e34; border-color: #c3e6cb; }
+.o_pill_icon_widget.warning { background-color: #fdf6b2; color: #857005; border-color: #fce96a; }
+.o_pill_icon_widget.danger  { background-color: #fde8e8; color: #c81e1e; border-color: #f8b4b4; }
+.o_pill_icon_widget.info    { background-color: #e1effe; color: #1e429f; border-color: #a4cafe; }
+.o_pill_icon_widget.primary { background-color: #cfe2ff; color: #084298; border-color: #b6d4fe; }
+.o_pill_icon_widget.muted   { background-color: #f8f9fa; color: #6c757d; border-color: #dee2e6; }
+
+/* --- Fix Odoo List View Hover/Selection --- */
+.o_list_view .o_data_row.o_selected_row .o_pill_icon_widget {
+    background-color: inherit; /* Keeps the semantic color visible */
+    height: auto !important;
+}
