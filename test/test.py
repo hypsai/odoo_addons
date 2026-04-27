@@ -11,13 +11,16 @@ import odoo
 import sys
 
 root = os.path.abspath(os.path.join(__file__, "../../"))
-if len(sys.argv) < 2:
-    raise Exception("Must specify name of target test addon！")
-target = sys.argv[1]
-del sys.argv[1]
+if len(sys.argv) < 3:
+    raise Exception("Must specify version and name of target test addon！")
+ver = sys.argv[1]
+target = sys.argv[2]
+del sys.argv[1:3]
 
 sys.argv.append(f"--config={root}/test/odoo.conf")
 sys.argv.append(f"--addons-path={root}")
+sys.argv.append(f"--data-dir=C:/data/odoo_addons_v{ver}")
+sys.argv.append(f"--database=odoo_addons_v{ver}")
 # sys.argv.append(f"--init={target}")
 # sys.argv.append(f"--update={target}")
 sys.argv.append(f"--test-enable")

@@ -133,8 +133,9 @@ class McpController(http.Controller):
                     request._mcp_auth_warning_logged = True
                 
                 # Set to admin user
-                request.uid = request.env.ref('base.user_admin').id
-                request._env = None
+                # request.uid = request.env.ref('base.user_admin').id
+                # request._env = None
+                request.update_env(request.env.ref('base.user_admin').id)  # V17
                 return None  # Success (with warning logged)
                 
         except Exception as e:
