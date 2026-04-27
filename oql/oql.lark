@@ -1,0 +1,78 @@
+?start: root
+
+root: expr
+
+?expr: or_expr
+
+?or_expr: and_expr | or_expr "or" and_expr
+?and_expr: not_expr | and_expr "and" not_expr
+?not_expr: "not" not_expr | _opr_expr
+
+_opr_expr: bin_expr
+         | una_expr
+         | get_expr
+         | nul_expr
+         | dot_expr
+         | "(" expr ")"
+
+una_expr: UNA_OPR field
+bin_expr: field BIN_OPR _value
+get_expr: field "[" _value "]"  // For Many2one relation, e.g. partner[1]
+nul_expr: field "is" ("null" | "not" "null")
+dot_expr: field
+
+field: CNAME ("." CNAME)*  // Dot-style field access
+
+_value: string
+     | INT
+     | FLOAT
+     | TRUE
+     | FALSE
+     | NULL
+     | array
+
+array: "(" [_value ("," _value)*] ")"
+     | "[" [_value ("," _value)*] "]"
+
+string: ESCAPED_STRING
+
+// Operators
+UNA_OPR: "size"
+
+BIN_OPR: "="
+        | "!="
+        | "<>"
+        | "<"
+        | "<="
+        | ">"
+        | ">="
+        | "like"
+        | /not[ \t]+like/
+        | "ilike"
+        | /not[ \t]+ilike/
+        | "in"
+        | /not[ \t]+in/
+        | "=like"
+        | "=ilike"
+        | "=?"
+        | "child_of"
+        | "parent_of"
+
+// Ignore white chars
+%ignore " "
+%ignore "\t"
+%ignore "\n"
+%ignore "\r"
+
+// Lexis units
+CNAME: ("_"|LETTER) ("_"|LETTER|DIGIT)*
+ESCAPED_STRING: /'[^']*'/ | /"[^"]*"/
+INT: /[-+]?\d+/
+FLOAT: /[-+]?\d+\.\d+/
+TRUE: "true"
+FALSE: "false"
+NULL: "null"
+
+// Imports
+%import common.LETTER
+%import common.DIGIT
