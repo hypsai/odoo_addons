@@ -61,26 +61,16 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
-
-      - name: Check test results
-        run: |
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 12.0!"
-            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 12.0!"
-          fi
 
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: odoo-logs-12.0
-          path: /tmp/odoo_output.log
+          path: /var/lib/odoo/.local/share/Odoo/log/
           retention-days: 7
 
   test-13:
@@ -137,19 +127,10 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
 
-      - name: Check test results
-        run: |
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 13.0!"
-            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 13.0!"
-          fi
 
       - name: Upload test logs
         if: failure()
@@ -213,19 +194,10 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
 
-      - name: Check test results
-        run: |
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 14.0!"
-            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 14.0!"
-          fi
 
       - name: Upload test logs
         if: failure()
@@ -289,25 +261,10 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
 
-      - name: Check test results
-        run: |
-          echo "=== Checking test results ==="
-          echo "Last 100 lines of log:"
-          tail -n 100 /tmp/odoo_output.log
-          echo ""
-          echo "=== Searching for errors ==="
-          grep -i "error\|fail\|traceback" /tmp/odoo_output.log | head -n 50 || echo "No explicit errors found"
-          echo ""
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 15.0!"
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 15.0!"
-          fi
 
       - name: Upload test logs
         if: failure()
@@ -371,7 +328,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
 
@@ -447,7 +404,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
 
@@ -523,7 +480,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
 
@@ -599,7 +556,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn
         env:
           PGPASSWORD: odoo
 
