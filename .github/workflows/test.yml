@@ -33,9 +33,24 @@ jobs:
       
       - name: Run tests with Odoo 12.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:12.0 \
             odoo -i mcp_base \
                  --test-enable \
@@ -94,9 +109,24 @@ jobs:
       
       - name: Run tests with Odoo 13.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:13.0 \
             odoo -i mcp_base \
                  --test-enable \
@@ -155,9 +185,24 @@ jobs:
       
       - name: Run tests with Odoo 14.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:14.0 \
             odoo -i mcp_base \
                  --test-enable \
@@ -216,9 +261,24 @@ jobs:
       
       - name: Run tests with Odoo 15.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:15.0 \
             odoo -i mcp_base \
                  --test-enable \
@@ -277,9 +337,24 @@ jobs:
       
       - name: Run tests with Odoo 16.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:16.0 \
             odoo -i mcp_base \
                  --test-enable \
@@ -338,9 +413,24 @@ jobs:
       
       - name: Run tests with Odoo 17.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:17.0 \
             odoo -i mcp_base \
                  --test-enable \
@@ -399,9 +489,24 @@ jobs:
       
       - name: Run tests with Odoo 18.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:18.0 \
             odoo -i mcp_base \
                  --test-enable \
@@ -460,9 +565,24 @@ jobs:
       
       - name: Run tests with Odoo 19.0 Docker
         run: |
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U odoo; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
             odoo:19.0 \
             odoo -i mcp_base \
                  --test-enable \
