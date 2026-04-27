@@ -42,3 +42,26 @@ def root_patch_get_request():
 
         Root.get_request = _patched_get_request
     # ---- Monkey Patch End ---
+
+
+def registry_register_temp_model(registry, cr, Model):
+    """Register a temporary model in the registry (Odoo 12-19 compatible)
+    
+    Args:
+        registry: The Odoo registry
+        cr: Database cursor
+        Model: The model class to register
+    
+    Returns:
+        str: The model name
+    """
+    model_name = Model._name
+    
+    if ODOO_MAJOR_VERSION >= 19:
+        # Odoo 19+ uses registry.load()
+        registry.load(cr, [Model])
+    else:
+        # Odoo 12-18 uses Model._build_model()
+        registry.models[model_name] = Model._build_model(registry, cr)
+    
+    return model_name

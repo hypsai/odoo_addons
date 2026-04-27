@@ -5,7 +5,7 @@ from odoo import models
 from odoo.addons.mcp_base import mcp_tool
 from odoo.tests import common, tagged
 
-from ..compatible import registry_clear_cache
+from ..compatible import registry_clear_cache, registry_register_temp_model
 
 
 class McpBaseToolTest(models.Model):
@@ -32,10 +32,10 @@ class TestMCPController(common.HttpCase):
 
         # 2 Register temporary models.
         for Model in [McpBaseToolTest]:
-            model_name = Model._name
-            self.registry.models[model_name] = Model._build_model(
-                self.registry, self.cr
+            model_name = registry_register_temp_model(
+                self.registry, self.cr, Model
             )
+            
             self.registry.setup_models(self.cr)
             self.registry.init_models(
                 self.cr, [model_name], {"module": "test"}, install=True
