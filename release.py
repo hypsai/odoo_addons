@@ -220,14 +220,25 @@ def main():
         
         # Cherry-pick only this module's commit
         print(f"→ Cherry-picking commit {release_commit[:8]} for {module}")
-        try:
-            run_command(f"git cherry-pick {release_commit}")
-        except SystemExit:
-            # If conflict, abort and manually handle
-            print("⚠️ Conflict during cherry-pick, aborting...")
-            run_command("git cherry-pick --abort")
-            print(f"❌ Please manually merge {module} changes into {branch}")
-            sys.exit(1)
+        
+        # Check if commit is already in branch history
+        check_result = subprocess.run(
+            f"git log --oneline {branch}..{release_commit}",
+            shell=True, capture_output=True, text=True
+        )
+        
+        if release_commit[:8] not in check_result.stdout and check_result.returncode == 0:
+            # Commit is not in branch, need to cherry-pick
+            try:
+                run_command(f"git cherry-pick {release_commit} --strategy-option=ours")
+            except SystemExit:
+                # If still conflicts, abort
+                print("⚠️ Conflict during cherry-pick, aborting...")
+                run_command("git cherry-pick --abort")
+                print(f"❌ Please manually merge {module} changes into {branch}")
+                sys.exit(1)
+        else:
+            print(f"✅ Commit already in {branch} history, skipping cherry-pick")
         
         # Update version to Odoo version format
         print(f"→ Updating version to {odoo_version}")
