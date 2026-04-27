@@ -207,6 +207,9 @@ def main():
         release_commit = run_command(f"git log -1 --format=%H -- {manifest_path}")
     
     for branch in odoo_branches:
+        if branch == 'main':
+            continue  # Skip main, already processed
+            
         odoo_version = get_odoo_version(branch, new_version)
         print(f"\n{'='*60}")
         print(f"📋 Processing branch: {branch} (Odoo {odoo_version})")
@@ -218,27 +221,9 @@ def main():
         # Pull latest code
         run_command(f"git pull origin {branch}")
         
-        # Cherry-pick only this module's commit
-        print(f"→ Cherry-picking commit {release_commit[:8]} for {module}")
-        
-        # Check if commit is already in branch history
-        check_result = subprocess.run(
-            f"git log --oneline {branch}..{release_commit}",
-            shell=True, capture_output=True, text=True
-        )
-        
-        if release_commit[:8] not in check_result.stdout and check_result.returncode == 0:
-            # Commit is not in branch, need to cherry-pick
-            try:
-                run_command(f"git cherry-pick {release_commit} --strategy-option=ours")
-            except SystemExit:
-                # If still conflicts, abort
-                print("⚠️ Conflict during cherry-pick, aborting...")
-                run_command("git cherry-pick --abort")
-                print(f"❌ Please manually merge {module} changes into {branch}")
-                sys.exit(1)
-        else:
-            print(f"✅ Commit already in {branch} history, skipping cherry-pick")
+        # Force sync with main branch (main takes full precedence)
+        print(f"→ Syncing {branch} with main (main takes full precedence)")
+        run_command(f"git reset --hard main")
         
         # Update version to Odoo version format
         print(f"→ Updating version to {odoo_version}")
@@ -267,16 +252,20 @@ def main():
                 supported_modules.add(mod)
         
         # Remove unsupported module directories
+        has_cleanup = False
         for mod in (all_modules - supported_modules):
             mod_path = Path(mod)
-            if mod_path.exists() and mod != module:
+            if mod_path.exists():
                 print(f"   Removing {mod} (not supported in {branch})")
                 shutil.rmtree(mod_path)
-                run_command(f"git add -A")
-                try:
-                    run_command(f'git commit -m "chore: remove {mod} from {branch} (only supported in {", ".join(MODULE_VERSIONS[mod])})"')
-                except SystemExit:
-                    pass  # Already removed or no changes
+                has_cleanup = True
+        
+        if has_cleanup:
+            run_command(f"git add -A")
+            try:
+                run_command(f'git commit -m "chore: remove unsupported modules from {branch}"')
+            except SystemExit:
+                pass  # No changes
         
         run_command(f"git push origin {branch}")
         print(f"✅ Branch {branch} released successfully")
