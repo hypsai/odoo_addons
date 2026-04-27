@@ -7,42 +7,15 @@ on:
     branches: [main, '12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
 
 jobs:
-  test:
+  test-12:
     runs-on: ubuntu-latest
-    
-    # Map branch to Odoo version for testing
-    strategy:
-      matrix:
-        odoo-version: ['12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
-        postgres-version: ['12', '12', '12', '15', '15', '15', '15', '15']
-        include:
-          - odoo-version: '12.0'
-            postgres-version: '12'
-          - odoo-version: '13.0'
-            postgres-version: '12'
-          - odoo-version: '14.0'
-            postgres-version: '12'
-          - odoo-version: '15.0'
-            postgres-version: '15'
-          - odoo-version: '16.0'
-            postgres-version: '15'
-          - odoo-version: '17.0'
-            postgres-version: '15'
-          - odoo-version: '18.0'
-            postgres-version: '15'
-          - odoo-version: '19.0'
-            postgres-version: '15'
-      
-      fail-fast: false
-    
-    # Only run for matching branch or PR target
     if: >
-      github.ref == format('refs/heads/{0}', matrix.odoo-version) ||
-      (github.event_name == 'pull_request' && github.base_ref == matrix.odoo-version)
+      github.ref == 'refs/heads/12.0' ||
+      (github.event_name == 'pull_request' && github.base_ref == '12.0')
     
     services:
       postgres:
-        image: postgres:${{ matrix.postgres-version }}
+        image: postgres:12
         env:
           POSTGRES_USER: odoo
           POSTGRES_PASSWORD: odoo
@@ -57,20 +30,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run tests with Odoo ${{ matrix.odoo-version }} Docker
+      
+      - name: Run tests with Odoo 12.0 Docker
         run: |
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
-            odoo:${{ matrix.odoo-version }} \
+            odoo:12.0 \
             odoo -i mcp_base \
                  --test-enable \
                  --test-tags /mcp_base \
                  --stop-after-init \
-                 -d test_mcp_${{ matrix.odoo-version }} \
+                 -d test_mcp_12.0 \
                  --db_host=localhost \
                  --db_port=5432 \
                  --db_user=odoo \
@@ -82,18 +53,445 @@ jobs:
       - name: Check test results
         run: |
           if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo ${{ matrix.odoo-version }}!"
+            echo "❌ Tests failed for Odoo 12.0!"
             grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
             exit 1
           else
-            echo "✅ All tests passed for Odoo ${{ matrix.odoo-version }}!"
+            echo "✅ All tests passed for Odoo 12.0!"
           fi
 
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: odoo-logs-${{ matrix.odoo-version }}
+          name: odoo-logs-12.0
+          path: /tmp/odoo_output.log
+          retention-days: 7
+
+  test-13:
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/13.0' ||
+      (github.event_name == 'pull_request' && github.base_ref == '13.0')
+    
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run tests with Odoo 13.0 Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            odoo:13.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --test-tags /mcp_base \
+                 --stop-after-init \
+                 -d test_mcp_13.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+        env:
+          PGPASSWORD: odoo
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo 13.0!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo 13.0!"
+          fi
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-logs-13.0
+          path: /tmp/odoo_output.log
+          retention-days: 7
+
+  test-14:
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/14.0' ||
+      (github.event_name == 'pull_request' && github.base_ref == '14.0')
+    
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run tests with Odoo 14.0 Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            odoo:14.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --test-tags /mcp_base \
+                 --stop-after-init \
+                 -d test_mcp_14.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+        env:
+          PGPASSWORD: odoo
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo 14.0!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo 14.0!"
+          fi
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-logs-14.0
+          path: /tmp/odoo_output.log
+          retention-days: 7
+
+  test-15:
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/15.0' || github.ref == 'refs/heads/main' ||
+      (github.event_name == 'pull_request' && (github.base_ref == '15.0' || github.base_ref == 'main'))
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run tests with Odoo 15.0 Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            odoo:15.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --test-tags /mcp_base \
+                 --stop-after-init \
+                 -d test_mcp_15.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+        env:
+          PGPASSWORD: odoo
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo 15.0!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo 15.0!"
+          fi
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-logs-15.0
+          path: /tmp/odoo_output.log
+          retention-days: 7
+
+  test-16:
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/16.0' ||
+      (github.event_name == 'pull_request' && github.base_ref == '16.0')
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run tests with Odoo 16.0 Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            odoo:16.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --test-tags /mcp_base \
+                 --stop-after-init \
+                 -d test_mcp_16.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+        env:
+          PGPASSWORD: odoo
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo 16.0!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo 16.0!"
+          fi
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-logs-16.0
+          path: /tmp/odoo_output.log
+          retention-days: 7
+
+  test-17:
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/17.0' ||
+      (github.event_name == 'pull_request' && github.base_ref == '17.0')
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run tests with Odoo 17.0 Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            odoo:17.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --test-tags /mcp_base \
+                 --stop-after-init \
+                 -d test_mcp_17.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+        env:
+          PGPASSWORD: odoo
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo 17.0!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo 17.0!"
+          fi
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-logs-17.0
+          path: /tmp/odoo_output.log
+          retention-days: 7
+
+  test-18:
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/18.0' ||
+      (github.event_name == 'pull_request' && github.base_ref == '18.0')
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run tests with Odoo 18.0 Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            odoo:18.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --test-tags /mcp_base \
+                 --stop-after-init \
+                 -d test_mcp_18.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+        env:
+          PGPASSWORD: odoo
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo 18.0!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo 18.0!"
+          fi
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-logs-18.0
+          path: /tmp/odoo_output.log
+          retention-days: 7
+
+  test-19:
+    runs-on: ubuntu-latest
+    if: >
+      github.ref == 'refs/heads/19.0' ||
+      (github.event_name == 'pull_request' && github.base_ref == '19.0')
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run tests with Odoo 19.0 Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            odoo:19.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --test-tags /mcp_base \
+                 --stop-after-init \
+                 -d test_mcp_19.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+        env:
+          PGPASSWORD: odoo
+
+      - name: Check test results
+        run: |
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo 19.0!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo 19.0!"
+          fi
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-logs-19.0
           path: /tmp/odoo_output.log
           retention-days: 7
 
