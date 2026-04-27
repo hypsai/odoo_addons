@@ -92,6 +92,12 @@ Just add the decorator. That's all you need:
 ✅ Default values -> Schema defaults  
 ✅ Method signature -> Required parameters list
 
+.. important::
+   **Inheritance Note**: The ``@mcp_tool`` decorator only works on methods defined directly in the current class.
+   Methods decorated in parent classes are NOT inherited as MCP tools. If you need a tool in a child model,
+   you must re-decorate it in that model. This is by design to ensure explicit control over which methods
+   are exposed to AI agents.
+
 Flexible Decorator Styles
 --------------------------
 

@@ -245,13 +245,9 @@ class McpController(http.Controller):
         """Handle tools/list request."""
         tools = []
         
-        for model_name, model_obj in request.env.registry.models.items():
-            for attr_name in dir(model_obj):
-                if attr_name.startswith('_'):
-                    continue
-                    
+        for model_name, model_cls in request.env.registry.models.items():
+            for attr_name, method in model_cls.__base__.__dict__.items():  # Get from definition type.
                 try:
-                    method = getattr(model_obj, attr_name)
                     if callable(method) and getattr(method, '_is_mcp_tool', False):
                         tools.append({
                             "name": f"{model_name}:{attr_name}",

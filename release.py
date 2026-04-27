@@ -1,17 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Odoo MCP Base Release Script
-Usage: python release.py [version]
-Example: python release.py 1.1.0
+Odoo Addons Release Script
+Usage:
+  python release.py <module> <version>     # Release a module
+  python release.py --list [modules...]    # List current versions
+
+Examples:
+  python release.py mcp_base 1.0.6
+  python release.py --list
+  python release.py --list mcp_base oql
 """
 import subprocess
 import sys
+import re
 from pathlib import Path
 
 
-VERSIONS = ['12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
-MANIFEST_PATH = Path('mcp_base/__manifest__.py')
+# Module to supported Odoo versions mapping
+MODULE_VERSIONS = {
+    "mcp_base": ['12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0'],
+    "oql": ['15.0'],
+    "oql_web": ['15.0'],
+    "web_widget_pill_icon": ['15.0'],
+    "web_widget_yaml": ['15.0'],
+}
+
+
+def get_manifest_path(module):
+    """Get manifest file path for a module"""
+    return Path(f'{module}/__manifest__.py')
 
 
 def run_command(cmd, cwd=None):
@@ -27,12 +45,17 @@ def run_command(cmd, cwd=None):
     return result.stdout.strip()
 
 
-def update_manifest_version(version):
+def update_manifest_version(module, version):
     """Update version in manifest file"""
-    content = MANIFEST_PATH.read_text(encoding='utf-8')
+    manifest_path = get_manifest_path(module)
+    
+    if not manifest_path.exists():
+        print(f"❌ Error: Manifest file not found: {manifest_path}")
+        sys.exit(1)
+    
+    content = manifest_path.read_text(encoding='utf-8')
     
     # Check if version is already set
-    import re
     match = re.search(r"'version':\s*'([^']+)'", content)
     if match and match.group(1) == version:
         print(f"✅ Version is already {version}, no update needed")
@@ -45,7 +68,7 @@ def update_manifest_version(version):
         content
     )
     
-    MANIFEST_PATH.write_text(new_content, encoding='utf-8')
+    manifest_path.write_text(new_content, encoding='utf-8')
     print(f"✅ Version updated to: {version}")
     return True
 
@@ -65,15 +88,81 @@ def get_odoo_version(branch, main_version):
     return f"{branch}.1.0.{sub_version}"
 
 
+def get_current_version(module):
+    """Get current version from manifest file"""
+    manifest_path = get_manifest_path(module)
+    
+    if not manifest_path.exists():
+        return None
+    
+    content = manifest_path.read_text(encoding='utf-8')
+    match = re.search(r"'version':\s*'([^']+)'", content)
+    
+    if match:
+        return match.group(1)
+    return None
+
+
+def list_versions(modules=None):
+    """List current versions of modules"""
+    if modules is None:
+        modules = list(MODULE_VERSIONS.keys())
+    
+    print("\n📦 Current Module Versions")
+    print("=" * 60)
+    
+    for module in modules:
+        if module not in MODULE_VERSIONS:
+            print(f"⚠️  Unknown module: {module}")
+            continue
+        
+        version = get_current_version(module)
+        odoo_versions = MODULE_VERSIONS[module]
+        
+        if version:
+            print(f"\n{module}:")
+            print(f"  Main version: {version}")
+            print(f"  Supported Odoo versions: {', '.join(odoo_versions)}")
+            
+            # Show branch versions
+            for branch in odoo_versions:
+                branch_version = get_odoo_version(branch, version)
+                print(f"  Branch {branch}: {branch_version}")
+        else:
+            print(f"\n{module}: ❌ Version not found")
+    
+    print("\n" + "=" * 60)
+
+
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python release.py <version>")
-        print("Example: python release.py 1.1.0")
+    # Handle --list option
+    if '--list' in sys.argv or '-l' in sys.argv:
+        # Get modules to list (all if none specified)
+        args = [arg for arg in sys.argv[1:] if arg not in ['--list', '-l']]
+        list_versions(args if args else None)
+        return
+    
+    # Handle release mode
+    if len(sys.argv) != 3:
+        print("Usage:")
+        print("  python release.py <module> <version>     # Release a module")
+        print("  python release.py --list [modules...]    # List current versions")
+        print("\nExamples:")
+        print("  python release.py mcp_base 1.0.6")
+        print("  python release.py --list")
+        print("  python release.py --list mcp_base oql")
         sys.exit(1)
     
-    new_version = sys.argv[1]
+    module = sys.argv[1]
+    new_version = sys.argv[2]
     
-    print(f"\n🚀 Starting release {new_version}\n")
+    # Validate module
+    if module not in MODULE_VERSIONS:
+        print(f"❌ Error: Unknown module '{module}'")
+        print(f"Available modules: {', '.join(MODULE_VERSIONS.keys())}")
+        sys.exit(1)
+    
+    print(f"\n🚀 Starting release {module} v{new_version}\n")
     
     # 0. Check workspace status
     print("📋 Step 0: Checking workspace status")
@@ -94,19 +183,21 @@ def main():
     
     # 3. Update main branch version
     print(f"\n📋 Step 3: Updating main branch version to {new_version}")
-    version_updated = update_manifest_version(new_version)
+    manifest_path = get_manifest_path(module)
+    version_updated = update_manifest_version(module, new_version)
     
     if version_updated:
         # 4. Commit main branch
         print("\n📋 Step 4: Committing main branch")
-        run_command(f"git add {MANIFEST_PATH}")
-        run_command(f'git commit -m "Release version {new_version}"')
+        run_command(f"git add {manifest_path}")
+        run_command(f'git commit -m "Release {module} version {new_version}"')
         run_command("git push origin main")
     else:
         print("⚠️ Main branch version unchanged, skipping commit")
     
     # 5. Merge to version branches and update versions
-    for branch in VERSIONS:
+    odoo_branches = MODULE_VERSIONS[module]
+    for branch in odoo_branches:
         odoo_version = get_odoo_version(branch, new_version)
         print(f"\n{'='*60}")
         print(f"📋 Processing branch: {branch} (Odoo {odoo_version})")
@@ -127,19 +218,18 @@ def main():
             print("⚠️ Conflict detected, using main branch files...")
             
             # Save current branch version
-            current_content = MANIFEST_PATH.read_text(encoding='utf-8')
-            import re
+            current_content = manifest_path.read_text(encoding='utf-8')
             match = re.search(r"'version':\s*'([^']+)'", current_content)
             if match:
                 branch_version = match.group(1)
                 print(f"   Saving branch version: {branch_version}")
             
             # Use main branch file
-            run_command(f"git checkout main -- {MANIFEST_PATH}")
+            run_command(f"git checkout main -- {manifest_path}")
             
             # Restore branch version
             if match:
-                update_manifest_version(branch_version)
+                update_manifest_version(module, branch_version)
             
             # For CI/CD file, also use main branch
             ci_file = Path('.github/workflows/test.yml')
@@ -152,13 +242,13 @@ def main():
         
         # Update version to Odoo version format
         print(f"→ Updating version to {odoo_version}")
-        version_updated = update_manifest_version(odoo_version)
+        version_updated = update_manifest_version(module, odoo_version)
         
         if version_updated:
             # Commit and push
-            run_command(f"git add {MANIFEST_PATH}")
+            run_command(f"git add {manifest_path}")
             try:
-                run_command(f'git commit -m "Update version to {odoo_version} for Odoo {branch}"')
+                run_command(f'git commit -m "Update {module} version to {odoo_version} for Odoo {branch}"')
                 print(f"✅ Version committed")
             except SystemExit:
                 # No changes to commit, version already set
@@ -175,9 +265,9 @@ def main():
     print('='*60)
     run_command("git checkout main")
     
-    print(f"\n🎉 Version {new_version} released successfully!")
+    print(f"\n🎉 Module {module} v{new_version} released successfully!")
     print(f"\nReleased branches:")
-    for branch in VERSIONS:
+    for branch in odoo_branches:
         print(f"  - {branch}: {get_odoo_version(branch, new_version)}")
     print(f"  - main: {new_version}")
     print(f"\nCheck CI/CD status: https://github.com/chrisking94/odoo_addons/actions")
