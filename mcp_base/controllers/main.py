@@ -6,10 +6,9 @@ import json
 import logging
 
 from odoo import http
-from odoo.http import request, Root, HttpRequest
 from odoo.exceptions import AccessDenied
+from odoo.http import request, Root, HttpRequest
 from werkzeug.wrappers import Response as WerkzeugResponse
-
 
 _logger = logging.getLogger(__name__)
 
@@ -247,15 +246,18 @@ class McpController(http.Controller):
         
         for model_name, model_cls in request.env.registry.models.items():
             for attr_name, method in model_cls.__base__.__dict__.items():  # Get from definition type.
-                try:
-                    if callable(method) and getattr(method, '_is_mcp_tool', False):
-                        tools.append({
-                            "name": f"{model_name}:{attr_name}",
-                            "description": getattr(method, '_mcp_desc', ""),
-                            "inputSchema": getattr(method, '_mcp_schema', {"type": "object"})
-                        })
-                except:
-                    continue
+                if callable(method) and getattr(method, '_is_mcp_tool', False):
+                    # Get the original schema
+                    schema = getattr(method, '_mcp_schema', {"type": "object"})
+                    
+                    # Add built-in properties to schema.
+                    schema = self._add_built_in_properties(method, schema)
+                    
+                    tools.append({
+                        "name": f"{model_name}:{attr_name}",
+                        "description": getattr(method, '_mcp_desc', ""),
+                        "inputSchema": schema
+                    })
         
         _logger.debug(f"MCP found {len(tools)} tools")
         return {"tools": tools}
@@ -271,7 +273,18 @@ class McpController(http.Controller):
             model_name, method_name = name.split(':')
             # Use the already authenticated request.env
             model = request.env[model_name]
-            result = getattr(model, method_name)(**arguments)
+            
+            # Extract `_search_` parameter if present
+            search = arguments.pop('_search_', None)
+            
+            # If `search` is provided and not empty, filter records
+            if search:
+                # For recordset methods, apply domain to get filtered recordset
+                recordset = model.search(**search)
+                result = getattr(recordset, method_name)(**arguments)
+            else:
+                # No domain, call method on model directly (for @api.model or empty recordset)
+                result = getattr(model, method_name)(**arguments)
             
             return {
                 "content": [{
@@ -288,3 +301,44 @@ class McpController(http.Controller):
                 "content": [{"type": "text", "text": f"Error: {str(e)}"}],
                 "isError": True
             }
+
+    @classmethod
+    def _add_built_in_properties(cls, method: callable, schema: dict) -> dict:
+        """Add built-in properties to tool schema.
+
+        Args:
+            method: The MCP tool method.
+            schema: The JSON schema to modify
+        """
+        schema = schema.copy()
+        properties = schema.get("properties", {}).copy()
+
+        # Add `_search_` parameter for recordset level method with all search() options.
+        odoo_api = getattr(method, "_api", None)
+        if odoo_api != "model" and odoo_api != "model_create":
+            properties['_search_'] = {
+                "type": "object",
+                "description": "Parameters for Odoo ORM model's `search` method. "
+                               "If specified, this method will be invoked on search result recordset. "
+                               "If not, this method will be invoked on model level.",
+                "properties": {
+                    "args": {
+                        "type": "array",
+                        "description": "Odoo ORM domain: [[field, op, value], ...]. "
+                                       "Empty list means all records, use it with caution.",
+                        "default": []
+                    },
+                    "offset": {"type": "integer", "default": 0},
+                    "limit": {"type": "integer", "default": None},
+                    "order": {"type": "string", "description": "e.g. 'name asc'", "default": None},
+                },
+                "required": ["domain"],
+                "additionalProperties": False,
+                "default": None
+            }
+
+        # Update schema.
+        if properties:
+            schema["properties"] = properties
+
+        return schema

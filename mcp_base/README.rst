@@ -90,7 +90,26 @@ Just add the decorator. That's all you need:
 ✅ Type hints -> JSON Schema types (``str`` -> ``string``, ``int`` -> ``integer``)  
 ✅ Docstring -> Tool description + parameter descriptions  
 ✅ Default values -> Schema defaults  
-✅ Method signature -> Required parameters list
+✅ Method signature -> Required parameters list  
+✅ **Built-in ``_search_`` parameter** -> Filter and control records before method execution
+
+.. important::
+   **Record Selection with ``_search_``**: Every MCP tool automatically includes an optional ``_search_`` 
+   object parameter. This allows AI agents to filter records using domain criteria and control result 
+   pagination, ordering, and counting. The framework will search for records matching the criteria and 
+   execute the method on those specific records instead of the entire model.
+   
+   Example usage: 
+   
+   .. code-block:: json
+   
+      {
+        "_search_": {
+          "domain": [["active", "=", true], ["country_id.code", "=", "US"]],
+          "limit": 10,
+          "order": "name asc"
+        }
+      }
 
 .. important::
    **Inheritance Note**: The ``@mcp_tool`` decorator only works on methods defined directly in the current class.

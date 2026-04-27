@@ -156,6 +156,51 @@ class TestMCPController(common.HttpCase):
         )
         
         self.assertEqual(response.status_code, 405)
+    
+    def test_mcp_tools_have_search_parameter(self):
+        """Test that all MCP tools include _search_ parameter in schema"""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        tools = result['result']['tools']
+        
+        # Check that at least some tools exist and have _search_ parameter
+        if tools:
+            for tool in tools[:3]:  # Check first 3 tools
+                schema = tool.get('inputSchema', {})
+                properties = schema.get('properties', {})
+                # Verify _search_ parameter is present
+                self.assertIn('_search_', properties, 
+                    f"Tool {tool['name']} should have _search_ parameter")
+                
+                # Verify _search_ has correct structure
+                search_prop = properties['_search_']
+                self.assertEqual(search_prop['type'], 'object')
+                self.assertIn('description', search_prop)
+                
+                # Verify nested properties exist (using 'args' instead of 'domain')
+                search_properties = search_prop.get('properties', {})
+                self.assertIn('args', search_properties, "Should have 'args' parameter")
+                self.assertIn('offset', search_properties)
+                self.assertIn('limit', search_properties)
+                self.assertIn('order', search_properties)
+                
+                # Verify 'args' is required
+                required = search_prop.get('required', [])
+                self.assertIn('args', required, "'args' should be required")
 
 
 @tagged('post_install', '-at_install')
