@@ -7,13 +7,42 @@ on:
     branches: [main]
 
 jobs:
-  test-12:
+  test:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/12.0'
+    if: |
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/12.0' ||
+      github.ref == 'refs/heads/13.0' ||
+      github.ref == 'refs/heads/14.0' ||
+      github.ref == 'refs/heads/15.0' ||
+      github.ref == 'refs/heads/16.0' ||
+      github.ref == 'refs/heads/17.0' ||
+      github.ref == 'refs/heads/18.0' ||
+      github.ref == 'refs/heads/19.0'
+    
+    strategy:
+      matrix:
+        include:
+          - odoo-version: '12.0'
+            postgres-version: '12'
+          - odoo-version: '13.0'
+            postgres-version: '12'
+          - odoo-version: '14.0'
+            postgres-version: '12'
+          - odoo-version: '15.0'
+            postgres-version: '15'
+          - odoo-version: '16.0'
+            postgres-version: '15'
+          - odoo-version: '17.0'
+            postgres-version: '15'
+          - odoo-version: '18.0'
+            postgres-version: '15'
+          - odoo-version: '19.0'
+            postgres-version: '15'
     
     services:
       postgres:
-        image: postgres:12
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_USER: odoo
           POSTGRES_PASSWORD: odoo
@@ -31,541 +60,41 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run tests with Odoo 12.0 Docker
+      - name: Run tests with Odoo ${{ matrix.odoo-version }} Docker
         run: |
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:12.0 \
+            odoo:${{ matrix.odoo-version }} \
             odoo -i mcp_base \
                  --test-enable \
+                 --test-tags /mcp_base \
                  --stop-after-init \
-                 -d test_mcp_12.0 \
+                 -d test_mcp_${{ matrix.odoo-version }} \
                  --db_host=localhost \
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=test 2>&1 | tee /tmp/odoo_output.log
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-12.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
-          retention-days: 7
-
-  test-13:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/13.0'
-    
-    services:
-      postgres:
-        image: postgres:12
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run tests with Odoo 13.0 Docker
+      - name: Check test results
         run: |
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:13.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --stop-after-init \
-                 -d test_mcp_13.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=test 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
+          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
+            echo "❌ Tests failed for Odoo ${{ matrix.odoo-version }}!"
+            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
+            exit 1
+          else
+            echo "✅ All tests passed for Odoo ${{ matrix.odoo-version }}!"
+          fi
 
       - name: Upload test logs
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: odoo-logs-13.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
-          retention-days: 7
-
-  test-14:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/14.0'
-    
-    services:
-      postgres:
-        image: postgres:12
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run tests with Odoo 14.0 Docker
-        run: |
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:14.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --stop-after-init \
-                 -d test_mcp_14.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=test 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-14.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
-          retention-days: 7
-
-  test-15:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/15.0'
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install wheel setuptools requests lxml_html_clean
-
-      - name: Install Odoo 15.0
-        run: pip install https://nightly.odoo.com/15.0/nightly/src/odoo_15.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 15.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_15.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-15.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
-          retention-days: 7
-
-  test-16:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/16.0'
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install wheel setuptools requests lxml_html_clean
-
-      - name: Install Odoo 16.0
-        run: pip install https://nightly.odoo.com/16.0/nightly/src/odoo_16.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 16.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_16.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-16.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
-          retention-days: 7
-
-  test-17:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/17.0'
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install wheel setuptools requests lxml_html_clean
-
-      - name: Install Odoo 17.0
-        run: pip install https://nightly.odoo.com/17.0/nightly/src/odoo_17.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 17.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_17.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-17.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
-          retention-days: 7
-
-  test-18:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/18.0'
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install wheel setuptools requests lxml_html_clean
-
-      - name: Install Odoo 18.0
-        run: pip install https://nightly.odoo.com/18.0/nightly/src/odoo_18.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 18.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_18.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-18.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
-          retention-days: 7
-
-  test-19:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/19.0'
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install wheel setuptools requests lxml_html_clean
-
-      - name: Install Odoo 19.0
-        run: pip install https://nightly.odoo.com/19.0/nightly/src/odoo_19.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 19.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_19.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-19.0
-          path: |
-            /tmp/odoo_test.log
-            /tmp/odoo_output.log
-            ~/.local/share/Odoo/log/*.log
+          name: odoo-logs-${{ matrix.odoo-version }}
+          path: /tmp/odoo_output.log
           retention-days: 7
 
   lint:
