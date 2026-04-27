@@ -31,48 +31,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.6
+      - name: Run tests with Odoo 12.0 Docker
         run: |
-          sudo add-apt-repository ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y python3.6 python3.6-venv python3.6-dev
-          python3.6 --version
-
-      - name: Install dependencies
-        run: |
-          python3.6 -m pip install --upgrade pip
-          pip3.6 install wheel setuptools requests lxml_html_clean typing_extensions<4.0
-
-      - name: Install Odoo 12.0
-        run: pip install https://nightly.odoo.com/12.0/nightly/src/odoo_12.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 12.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_12.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
+            odoo:12.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --stop-after-init \
+                 -d test_mcp_12.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=test 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
@@ -111,48 +88,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.6
+      - name: Run tests with Odoo 13.0 Docker
         run: |
-          sudo add-apt-repository ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y python3.6 python3.6-venv python3.6-dev
-          python3.6 --version
-
-      - name: Install dependencies
-        run: |
-          python3.6 -m pip install --upgrade pip
-          pip3.6 install wheel setuptools requests lxml_html_clean typing_extensions<4.0
-
-      - name: Install Odoo 13.0
-        run: pip install https://nightly.odoo.com/13.0/nightly/src/odoo_13.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 13.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_13.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
+            odoo:13.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --stop-after-init \
+                 -d test_mcp_13.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=test 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
@@ -191,48 +145,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.7
+      - name: Run tests with Odoo 14.0 Docker
         run: |
-          sudo add-apt-repository ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y python3.7 python3.7-venv python3.7-dev
-          python3.7 --version
-
-      - name: Install dependencies
-        run: |
-          python3.7 -m pip install --upgrade pip
-          pip3.7 install wheel setuptools requests lxml_html_clean typing_extensions<4.6.0
-
-      - name: Install Odoo 14.0
-        run: pip install https://nightly.odoo.com/14.0/nightly/src/odoo_14.0.latest.tar.gz
-
-      - name: Create Odoo configuration
-        run: |
-          WORKSPACE=$(pwd)
-          cat > odoo.conf << EOF
-          [options]
-          addons_path = $WORKSPACE
-          db_host = localhost
-          db_port = 5432
-          db_user = odoo
-          db_password = odoo
-          log_level = test
-          logfile = /tmp/odoo_test.log
-          EOF
-
-      - name: Run Odoo tests
-        run: |
-          echo "Starting Odoo 14.0 tests..."
-          odoo -c odoo.conf \
-               -i mcp_base \
-               --test-enable \
-               --stop-after-init \
-               -d test_mcp_14.0 \
-               --db_host=localhost \
-               --db_port=5432 \
-               --db_user=odoo \
-               --db_password=odoo \
-               --log-level=debug 2>&1 | tee /tmp/odoo_output.log
+          docker run --rm \
+            --network host \
+            -v $(pwd):/mnt/extra-addons \
+            -e HOST=localhost \
+            -e PORT=5432 \
+            -e USER=odoo \
+            -e PASSWORD=odoo \
+            odoo:14.0 \
+            odoo -i mcp_base \
+                 --test-enable \
+                 --stop-after-init \
+                 -d test_mcp_14.0 \
+                 --db_host=localhost \
+                 --db_port=5432 \
+                 --db_user=odoo \
+                 --db_password=odoo \
+                 --log-level=test 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
