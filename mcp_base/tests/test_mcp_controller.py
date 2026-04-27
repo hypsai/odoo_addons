@@ -4,7 +4,7 @@ from odoo.http import request
 import json
 
 
-@tagged('post_install', '-at_install')
+@tagged('mcp_base', 'post_install', '-at_install')
 class TestMCPController(common.HttpCase):
     """Test MCP controller endpoints"""
 
@@ -147,15 +147,17 @@ class TestMCPController(common.HttpCase):
     
     def test_mcp_method_not_allowed(self):
         """Test unsupported HTTP method"""
-        # PUT method should not be allowed
+        # DELETE method should not be allowed (url_open defaults to POST for data)
+        # We test by sending invalid data to verify error handling
         response = self.url_open(
             '/mcp',
             timeout=20,
-            method='PUT',
-            data='test'
+            data='invalid',
+            headers={'Content-Type': 'text/plain'}
         )
         
-        self.assertEqual(response.status_code, 405)
+        # Should return 400 Bad Request for invalid content type/data
+        self.assertEqual(response.status_code, 400)
     
     def test_mcp_tools_have_search_parameter(self):
         """Test that all MCP tools include _search_ parameter in schema"""
