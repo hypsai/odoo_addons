@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-from odoo.tests import common
+from odoo.tests import common, tagged
 from ..decorators import mcp_tool, python_type_to_json_type
 from typing import List, Dict, Optional
 import inspect
 
 
+@tagged("mcp_base")
 class TestMCPDecorator(common.TransactionCase):
     """Test MCP decorator functionality"""
 

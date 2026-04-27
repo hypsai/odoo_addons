@@ -4,7 +4,7 @@ from odoo.http import request
 import json
 
 
-@tagged('post_install', '-at_install')
+@tagged('mcp_base', 'post_install', '-at_install')
 class TestMCPController(common.HttpCase):
     """Test MCP controller endpoints"""
 
