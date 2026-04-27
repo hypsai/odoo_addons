@@ -7,10 +7,12 @@ import logging
 
 from odoo import http
 from odoo.exceptions import AccessDenied
-from odoo.http import request, Root, HttpRequest
+from odoo.http import request
+from odoo.release import version_info
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 _logger = logging.getLogger(__name__)
+ODOO_MAJOR_VERSION = version_info[0]
 
 
 # ---- Monkey Patch Start ----
@@ -18,16 +20,19 @@ _logger = logging.getLogger(__name__)
 # We need to make a monkey patch to loose this restriction for mcp endpoint.
 # This patch wrap all request to mcp endpoint as HTTPRequest, then controller will handle http request manually,
 # no matter it is http or json request.
-_original_get_request = Root.get_request
+if ODOO_MAJOR_VERSION == 12:
+    pass
+elif 13 <= ODOO_MAJOR_VERSION <= 15:  # Patch V13~15
+    from odoo.http import Root, HttpRequest
 
+    _original_get_request = Root.get_request
 
-def _patched_get_request(self, httprequest):
-    if httprequest.path == '/mcp':
-        return HttpRequest(httprequest)
-    return _original_get_request(self, httprequest)
+    def _patched_get_request(self, httprequest):
+        if httprequest.path == '/mcp':
+            return HttpRequest(httprequest)
+        return _original_get_request(self, httprequest)
 
-
-Root.get_request = _patched_get_request
+    Root.get_request = _patched_get_request
 # ---- Monkey Patch End ---
 
 
