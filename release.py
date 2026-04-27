@@ -14,6 +14,7 @@ Examples:
 import subprocess
 import sys
 import re
+import shutil
 from pathlib import Path
 
 
@@ -197,6 +198,14 @@ def main():
     
     # 5. Merge to version branches and update versions
     odoo_branches = MODULE_VERSIONS[module]
+    
+    # Get the commit hash for this module's release
+    if version_updated:
+        release_commit = run_command("git rev-parse HEAD")
+    else:
+        # Find last commit that modified this module
+        release_commit = run_command(f"git log -1 --format=%H -- {manifest_path}")
+    
     for branch in odoo_branches:
         odoo_version = get_odoo_version(branch, new_version)
         print(f"\n{'='*60}")
@@ -209,36 +218,16 @@ def main():
         # Pull latest code
         run_command(f"git pull origin {branch}")
         
-        # Merge main (handle conflicts automatically)
-        print(f"→ Merging main into {branch}")
+        # Cherry-pick only this module's commit
+        print(f"→ Cherry-picking commit {release_commit[:8]} for {module}")
         try:
-            run_command(f"git merge main --no-edit")
+            run_command(f"git cherry-pick {release_commit}")
         except SystemExit:
-            # If conflict, use main branch files but keep branch version
-            print("⚠️ Conflict detected, using main branch files...")
-            
-            # Save current branch version
-            current_content = manifest_path.read_text(encoding='utf-8')
-            match = re.search(r"'version':\s*'([^']+)'", current_content)
-            if match:
-                branch_version = match.group(1)
-                print(f"   Saving branch version: {branch_version}")
-            
-            # Use main branch file
-            run_command(f"git checkout main -- {manifest_path}")
-            
-            # Restore branch version
-            if match:
-                update_manifest_version(module, branch_version)
-            
-            # For CI/CD file, also use main branch
-            ci_file = Path('.github/workflows/test.yml')
-            if ci_file.exists():
-                run_command(f"git checkout main -- {ci_file}")
-            
-            # Add all files
-            run_command("git add -A")
-            run_command(f'git commit -m "Merge main into {branch}"')
+            # If conflict, abort and manually handle
+            print("⚠️ Conflict during cherry-pick, aborting...")
+            run_command("git cherry-pick --abort")
+            print(f"❌ Please manually merge {module} changes into {branch}")
+            sys.exit(1)
         
         # Update version to Odoo version format
         print(f"→ Updating version to {odoo_version}")
@@ -255,6 +244,28 @@ def main():
                 print(f"⚠️ No changes to commit (version already {odoo_version})")
         else:
             print(f"⚠️ No changes to commit (version already {odoo_version})")
+        
+        # Clean up modules not supported in this branch
+        print(f"→ Cleaning up unsupported modules in {branch}")
+        all_modules = set(MODULE_VERSIONS.keys())
+        supported_modules = set()
+        
+        # Find all modules supported in this branch
+        for mod, branches in MODULE_VERSIONS.items():
+            if branch in branches:
+                supported_modules.add(mod)
+        
+        # Remove unsupported module directories
+        for mod in (all_modules - supported_modules):
+            mod_path = Path(mod)
+            if mod_path.exists() and mod != module:
+                print(f"   Removing {mod} (not supported in {branch})")
+                shutil.rmtree(mod_path)
+                run_command(f"git add -A")
+                try:
+                    run_command(f'git commit -m "chore: remove {mod} from {branch} (only supported in {", ".join(MODULE_VERSIONS[mod])})"')
+                except SystemExit:
+                    pass  # Already removed or no changes
         
         run_command(f"git push origin {branch}")
         print(f"✅ Branch {branch} released successfully")
