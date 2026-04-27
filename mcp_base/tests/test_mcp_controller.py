@@ -1,7 +1,19 @@
 # -*- coding: utf-8 -*-
-from odoo.tests import common, tagged
-from odoo.http import request
 import json
+
+from odoo import models
+from odoo.addons.mcp_base import mcp_tool
+from odoo.tests import common, tagged
+
+
+class McpBaseToolTest(models.Model):
+    _name = "mcp.base.tool.test"
+    _description = "MCP Tool Test"
+
+    @mcp_tool
+    def get_customers(self):
+        """Get all customers."""
+        return [{"name": "Mary"}, {"name", "Lily"}, {"name": "Tom"}]
 
 
 @tagged('mcp_base', 'post_install', '-at_install')
@@ -10,10 +22,38 @@ class TestMCPController(common.HttpCase):
 
     def setUp(self):
         super().setUp()
-        # Ensure the module is installed
+
+        # 1 Ensure the module is installed
         self.module = self.env['ir.module.module'].search([('name', '=', 'mcp_base')])
         if self.module and self.module.state != 'installed':
             self.module.button_immediate_install()
+
+        # 2 Register temporary models.
+        for Model in [McpBaseToolTest]:
+            model_name = Model._name
+            self.registry.models[model_name] = Model._build_model(
+                self.registry, self.cr
+            )
+            self.registry.setup_models(self.cr)
+            self.registry.init_models(
+                self.cr, [model_name], {"module": "test"}, install=True
+            )
+            self.env['ir.model.access'].create({
+                'name': f'access_{model_name.replace(".", "_")}',
+                'model_id': self.env['ir.model']._get_id(model_name),
+                'group_id': self.env.ref('base.group_user').id,
+                'perm_read': True,
+                'perm_write': True,
+                'perm_create': True,
+                'perm_unlink': True,
+            })
+
+        # 3 Clear cache.
+        # 3.1 Clear the ORM cache (important for menus)
+        self.env['ir.ui.menu'].clear_caches()
+        # 3.2 Re-initialize the environment to pick up the new records
+        self.env.registry.clear_caches()
+        self.env.registry.signal_changes()
     
     def test_mcp_endpoint_exists(self):
         """Test that MCP endpoint is accessible"""
@@ -72,6 +112,7 @@ class TestMCPController(common.HttpCase):
         self.assertEqual(result['id'], 2)
         self.assertIn('tools', result['result'])
         self.assertIsInstance(result['result']['tools'], list)
+        self.assertGreater(len(result['result']['tools']), 0)
     
     def test_mcp_invalid_method(self):
         """Test handling of invalid MCP method"""
@@ -211,8 +252,7 @@ class TestMCPIntegration(common.TransactionCase):
     
     def test_mcp_tool_registration(self):
         """Test that MCP tools can be discovered in registry"""
-        from ..decorators import mcp_tool
-        
+
         # Create a test model with MCP tool
         test_model = self.env.registry.models.get('res.partner')
         if test_model:

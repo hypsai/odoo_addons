@@ -1,0 +1,37 @@
+# -*- coding: utf-8 -*-
+# @Time         : 19:16 2026/4/27
+# @Author       : Chris
+# @Description  :
+from odoo.release import version_info
+
+ODOO_MAJOR_VERSION = version_info[0]
+
+
+def update_request(req, uid: int):
+    if ODOO_MAJOR_VERSION >= 16:
+        req.update_env(uid)
+    else:
+        req.uid = uid
+        req._env = None
+
+
+def patch_root_get_request():
+    # ---- Monkey Patch Start ----
+    # Odoo Controller is strict to request type and endpoint type.
+    # We need to make a monkey patch to loose this restriction for mcp endpoint.
+    # This patch wrap all request to mcp endpoint as HTTPRequest, then controller will handle http request manually,
+    # no matter it is http or json request.
+    if ODOO_MAJOR_VERSION == 12:
+        pass
+    elif 13 <= ODOO_MAJOR_VERSION <= 15:  # Patch V13~15
+        from odoo.http import Root, HttpRequest
+
+        _original_get_request = Root.get_request
+
+        def _patched_get_request(self, httprequest):
+            if httprequest.path == '/mcp':
+                return HttpRequest(httprequest)
+            return _original_get_request(self, httprequest)
+
+        Root.get_request = _patched_get_request
+    # ---- Monkey Patch End ---

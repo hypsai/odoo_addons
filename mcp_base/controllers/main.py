@@ -8,32 +8,12 @@ import logging
 from odoo import http
 from odoo.exceptions import AccessDenied
 from odoo.http import request
-from odoo.release import version_info
 from werkzeug.wrappers import Response as WerkzeugResponse
 
+from ..compatible import update_request, patch_root_get_request
+
 _logger = logging.getLogger(__name__)
-ODOO_MAJOR_VERSION = version_info[0]
-
-
-# ---- Monkey Patch Start ----
-# Odoo Controller is strict to request type and endpoint type.
-# We need to make a monkey patch to loose this restriction for mcp endpoint.
-# This patch wrap all request to mcp endpoint as HTTPRequest, then controller will handle http request manually,
-# no matter it is http or json request.
-if ODOO_MAJOR_VERSION == 12:
-    pass
-elif 13 <= ODOO_MAJOR_VERSION <= 15:  # Patch V13~15
-    from odoo.http import Root, HttpRequest
-
-    _original_get_request = Root.get_request
-
-    def _patched_get_request(self, httprequest):
-        if httprequest.path == '/mcp':
-            return HttpRequest(httprequest)
-        return _original_get_request(self, httprequest)
-
-    Root.get_request = _patched_get_request
-# ---- Monkey Patch End ---
+patch_root_get_request()
 
 
 class McpController(http.Controller):
@@ -133,9 +113,8 @@ class McpController(http.Controller):
                     request._mcp_auth_warning_logged = True
                 
                 # Set to admin user
-                # request.uid = request.env.ref('base.user_admin').id
-                # request._env = None
-                request.update_env(request.env.ref('base.user_admin').id)  # V17
+                update_request(request, request.env.ref('base.user_admin').id)
+
                 return None  # Success (with warning logged)
                 
         except Exception as e:
@@ -285,11 +264,11 @@ class McpController(http.Controller):
             
             # If `search` is provided and not empty, filter records
             if search:
-                # For recordset methods, apply domain to get filtered recordset
+                # For recordset methods, apply search to get filtered recordset
                 recordset = model.search(**search)
                 result = getattr(recordset, method_name)(**arguments)
             else:
-                # No domain, call method on model directly (for @api.model or empty recordset)
+                # No search, call method on model directly (for @api.model or empty recordset)
                 result = getattr(model, method_name)(**arguments)
             
             return {
@@ -338,7 +317,7 @@ class McpController(http.Controller):
                     "limit": {"type": "integer", "default": None},
                     "order": {"type": "string", "description": "e.g. 'name asc'", "default": None},
                 },
-                "required": ["domain"],
+                "required": ["args"],
                 "additionalProperties": False,
                 "default": None
             }

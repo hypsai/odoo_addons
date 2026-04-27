@@ -20,6 +20,7 @@ sys.argv.append(f"--addons-path={root}")
 sys.argv.append(f"--config={root}/test/odoo.conf")
 sys.argv.append(f"--data-dir=C:/data/odoo_addons_v{ver}")
 sys.argv.append(f"--database=odoo_addons_v{ver}")
+sys.argv.append(f"--dev=all")
 
 if __name__ == "__main__":
     odoo.cli.main()
