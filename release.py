@@ -267,7 +267,8 @@ def main():
             except SystemExit:
                 pass  # No changes
         
-        run_command(f"git push origin {branch}")
+        # Force push because we used git reset --hard
+        run_command(f"git push origin {branch} --force")
         print(f"✅ Branch {branch} released successfully")
     
     # 6. Switch back to main
