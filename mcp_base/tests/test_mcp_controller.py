@@ -5,6 +5,8 @@ from odoo import models
 from odoo.addons.mcp_base import mcp_tool
 from odoo.tests import common, tagged
 
+from ..compatible import registry_clear_cache
+
 
 class McpBaseToolTest(models.Model):
     _name = "mcp.base.tool.test"
@@ -52,7 +54,7 @@ class TestMCPController(common.HttpCase):
         # 3.1 Clear the ORM cache (important for menus)
         self.env['ir.ui.menu'].clear_caches()
         # 3.2 Re-initialize the environment to pick up the new records
-        self.env.registry.clear_caches()
+        registry_clear_cache(self.env.registry)
         self.env.registry.signal_changes()
     
     def test_mcp_endpoint_exists(self):

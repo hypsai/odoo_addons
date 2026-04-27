@@ -7,7 +7,7 @@ from odoo.release import version_info
 ODOO_MAJOR_VERSION = version_info[0]
 
 
-def update_request(req, uid: int):
+def request_update_env(req, uid: int):
     if ODOO_MAJOR_VERSION >= 16:
         req.update_env(uid)
     else:
@@ -15,7 +15,14 @@ def update_request(req, uid: int):
         req._env = None
 
 
-def patch_root_get_request():
+def registry_clear_cache(registry):
+    if ODOO_MAJOR_VERSION >= 17:
+        registry.clear_cache()
+    else:
+        registry.clear_caches()
+
+
+def root_patch_get_request():
     # ---- Monkey Patch Start ----
     # Odoo Controller is strict to request type and endpoint type.
     # We need to make a monkey patch to loose this restriction for mcp endpoint.

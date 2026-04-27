@@ -10,10 +10,10 @@ from odoo.exceptions import AccessDenied
 from odoo.http import request
 from werkzeug.wrappers import Response as WerkzeugResponse
 
-from ..compatible import update_request, patch_root_get_request
+from ..compatible import request_update_env, root_patch_get_request
 
 _logger = logging.getLogger(__name__)
-patch_root_get_request()
+root_patch_get_request()
 
 
 class McpController(http.Controller):
@@ -113,7 +113,7 @@ class McpController(http.Controller):
                     request._mcp_auth_warning_logged = True
                 
                 # Set to admin user
-                update_request(request, request.env.ref('base.user_admin').id)
+                request_update_env(request, request.env.ref('base.user_admin').id)
 
                 return None  # Success (with warning logged)
                 
