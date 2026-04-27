@@ -295,9 +295,15 @@ jobs:
 
       - name: Check test results
         run: |
+          echo "=== Checking test results ==="
+          echo "Last 100 lines of log:"
+          tail -n 100 /tmp/odoo_output.log
+          echo ""
+          echo "=== Searching for errors ==="
+          grep -i "error\|fail\|traceback" /tmp/odoo_output.log | head -n 50 || echo "No explicit errors found"
+          echo ""
           if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
             echo "❌ Tests failed for Odoo 15.0!"
-            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
             exit 1
           else
             echo "✅ All tests passed for Odoo 15.0!"

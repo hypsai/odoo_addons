@@ -12,7 +12,7 @@ class TestMCPController(common.HttpCase):
         super().setUp()
         # Ensure the module is installed
         self.module = self.env['ir.module.module'].search([('name', '=', 'mcp_base')])
-        if self.module:
+        if self.module and self.module.state != 'installed':
             self.module.button_immediate_install()
     
     def test_mcp_endpoint_exists(self):
