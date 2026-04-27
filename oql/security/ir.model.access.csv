@@ -1,9 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_oql_term_admin,oql.term,model_oql_term,base.group_system,1,1,1,1
-access_oql_term_user,oql.term,model_oql_term,base.group_user,1,0,0,0
-access_oql_term_domain_admin,oql.term.domain,model_oql_term_domain,base.group_system,1,1,1,1
-access_oql_term_domain_user,oql.term.domain,model_oql_term_domain,base.group_user,1,0,0,0
-access_oql_alias_admin,oql.alias,model_oql_alias,base.group_system,1,1,1,1
-access_oql_alias_user,oql.alias,model_oql_alias,base.group_user,1,0,0,0
-access_oql_alias_line_admin,oql.alias.line,model_oql_alias_line,base.group_system,1,1,1,1
-access_oql_alias_line_user,oql.alias.line,model_oql_alias_line,base.group_user,1,0,0,0
