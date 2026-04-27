@@ -2,43 +2,40 @@ name: Test MCP Base Compatibility
 
 on:
   push:
-    branches: [main, '12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
+    branches: ['12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
   pull_request:
-    branches: [main]
+    branches: [main, '12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: |
-      github.ref == 'refs/heads/main' ||
-      github.ref == 'refs/heads/12.0' ||
-      github.ref == 'refs/heads/13.0' ||
-      github.ref == 'refs/heads/14.0' ||
-      github.ref == 'refs/heads/15.0' ||
-      github.ref == 'refs/heads/16.0' ||
-      github.ref == 'refs/heads/17.0' ||
-      github.ref == 'refs/heads/18.0' ||
-      github.ref == 'refs/heads/19.0'
     
+    # Map branch to Odoo version for testing
     strategy:
       matrix:
         include:
-          - odoo-version: '12.0'
+          # Test the version matching the current branch or PR target
+          - odoo-version: ${{ (github.ref == 'refs/heads/12.0' || github.base_ref == '12.0') && '12.0' || '' }}
             postgres-version: '12'
-          - odoo-version: '13.0'
+          - odoo-version: ${{ (github.ref == 'refs/heads/13.0' || github.base_ref == '13.0') && '13.0' || '' }}
             postgres-version: '12'
-          - odoo-version: '14.0'
+          - odoo-version: ${{ (github.ref == 'refs/heads/14.0' || github.base_ref == '14.0') && '14.0' || '' }}
             postgres-version: '12'
-          - odoo-version: '15.0'
+          - odoo-version: ${{ (github.ref == 'refs/heads/15.0' || github.base_ref == '15.0') && '15.0' || '' }}
             postgres-version: '15'
-          - odoo-version: '16.0'
+          - odoo-version: ${{ (github.ref == 'refs/heads/16.0' || github.base_ref == '16.0') && '16.0' || '' }}
             postgres-version: '15'
-          - odoo-version: '17.0'
+          - odoo-version: ${{ (github.ref == 'refs/heads/17.0' || github.base_ref == '17.0') && '17.0' || '' }}
             postgres-version: '15'
-          - odoo-version: '18.0'
+          - odoo-version: ${{ (github.ref == 'refs/heads/18.0' || github.base_ref == '18.0') && '18.0' || '' }}
             postgres-version: '15'
-          - odoo-version: '19.0'
+          - odoo-version: ${{ (github.ref == 'refs/heads/19.0' || github.base_ref == '19.0') && '19.0' || '' }}
             postgres-version: '15'
+      
+      fail-fast: false
+    
+    # Skip if odoo-version is empty
+    if: ${{ matrix.odoo-version != '' }}
     
     services:
       postgres:
