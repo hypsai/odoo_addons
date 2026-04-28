@@ -14,7 +14,7 @@ The Problem
 How many lines of code does it take to find waterproof Danner boots in EU sizes 40-40.5?
 -----------------------------------------------------------------------------------------
 
-**Traditional Odoo Domain Approach (❌ Complex & Verbose)**
+**❌ Traditional Odoo Domain Approach (Complex & Verbose)**
 
 With traditional Odoo domains, you need **4 preparatory searches + 1 complex domain**:
 
@@ -60,8 +60,7 @@ With traditional Odoo domains, you need **4 preparatory searches + 1 complex dom
    - Business users cannot read, write, or verify the logic
    - Fragile: breaks when data model changes
 
-OQL Solution (✅ Simple & Intuitive)
-=====================================
+**✅ OQL Solution (Simple & Intuitive)**
 
 **The same query in 1 line:**
 
