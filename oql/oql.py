@@ -2,15 +2,15 @@
 # @Time         : 17:50 2025/10/15
 # @Author       : Chris
 # @Description  :
-import json
 import os.path
 from typing import List, Dict, Optional
 
 import lark
 from odoo import models, _
+from odoo.tools.safe_eval import safe_eval
 
-from .recs import *
 from .alias import AliasRule
+from .recs import *
 from .util import KeyPassingDefaultDict, tn
 
 _logger = logging.getLogger(__name__)
@@ -56,7 +56,8 @@ class OqlMeta:
         env = self.env
         fields = env['ir.model.fields'].search([
             '|', ('ttype', '=', 'many2one'), ('ttype', '=', 'many2many'),
-            ('relation', '=', "oql.term")
+            ('relation', '=', "oql.term"),
+            ('model', '!=', 'oql.term.domain'),
         ])
         return fields
 
@@ -106,10 +107,11 @@ class OqlMeta:
                 domain_name = domain_rec.name
                 str_domain = domain_rec.domain
                 try:
-                    domain = json.loads(str_domain)
+                    domain = safe_eval(str_domain)
                     term2model2name2domains[term][model][domain_name].append(domain)
                 except Exception as e:
-                    _logger.warning(f"Invalid domain `{domain_name}` for term `{term}`: {str_domain} has been ignored.")
+                    _logger.warning(f"Invalid domain `{domain_name}` for term `{term}`: {str_domain} has been ignored. "
+                                    f"Error: {type(e).__name__}({e})")
         # 3 Merge domains.
         for term, model2name2domains in term2model2name2domains.items():
             d_term = Term(term)

@@ -60,7 +60,7 @@ class TestOql(TransactionCase):
         # 4 Alias rules.
         rule1 = env["oql.alias"].create({"model_id": metaProduct.id})
         line1 = env["oql.alias.line"].create({"alias": "attr_val_records", "rule_id": rule1.id, "path": "attribute_value_ids", 'enable_shorthand': True})
-        line3 = env["oql.alias.line"].create({"alias": "attrs", "rule_id": rule1.id, "path": "attribute_value_ids.attribute_id", 'enable_shorthand': True})
+        line3 = env["oql.alias.line"].create({"alias": "attrs_records", "rule_id": rule1.id, "path": "attribute_value_ids.attribute_id", 'enable_shorthand': True})
         line2 = env["oql.alias.line"].create({"alias": "tag_records", "rule_id": rule1.id, "path": "tag_ids", 'enable_shorthand': True})
         line3 = env["oql.alias.line"].create({"alias": "tags", "rule_id": rule1.id, "path": "tag_ids.name", 'enable_shorthand': False})
 
@@ -98,6 +98,9 @@ class TestOql(TransactionCase):
         res = self.env["test.oql.product"].searcho("Waterproof")
         self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
 
+        res = self.env["test.oql.product"].searcho("WeatherAware")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+
     def test_searcho_alias(self):
         res = self.env["test.oql.product"].searcho("tags='Waterproof:GTX'")
         self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
@@ -112,7 +115,6 @@ class TestOql(TransactionCase):
         # Test OR logic
         res = self.env["test.oql.product"].searcho("tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot'")
         self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
-        print(f"Logic test result: {res.mapped('name')}")
 
     def test_searcho_una_expr(self):
         """Test unary expressions (boolean field checks)."""
