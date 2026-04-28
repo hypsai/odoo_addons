@@ -50,6 +50,8 @@ With traditional Odoo domains, you need **4 preparatory searches + 1 complex dom
     ]
     products = env['product.product'].search(domain)
 
+.. attention::
+
    **Problems with this approach:**
 
    - 30+ lines of code for a simple business requirement
@@ -67,6 +69,8 @@ With traditional Odoo domains, you need **4 preparatory searches + 1 complex dom
     products = env['product.product'].searcho(
         "CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"
     )
+
+.. important::
 
    **Benefits:**
 
