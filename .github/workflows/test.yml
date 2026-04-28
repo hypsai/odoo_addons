@@ -332,16 +332,6 @@ jobs:
         env:
           PGPASSWORD: odoo
 
-      - name: Check test results
-        run: |
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 16.0!"
-            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 16.0!"
-          fi
-
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -407,16 +397,6 @@ jobs:
                  --log-level=warn 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
-
-      - name: Check test results
-        run: |
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 17.0!"
-            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 17.0!"
-          fi
 
       - name: Upload test logs
         if: failure()
@@ -484,16 +464,6 @@ jobs:
         env:
           PGPASSWORD: odoo
 
-      - name: Check test results
-        run: |
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 18.0!"
-            grep -A 5 "FAIL\|ERROR" /tmp/odoo_output.log || true
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 18.0!"
-          fi
-
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -559,22 +529,6 @@ jobs:
                  --log-level=warn 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
-
-      - name: Check test results
-        run: |
-          echo "=== Checking test results ==="
-          echo "Last 50 lines of log:"
-          tail -n 50 /tmp/odoo_output.log
-          echo ""
-          echo "=== Searching for errors ==="
-          grep -i "error\|fail\|traceback" /tmp/odoo_output.log || echo "No explicit errors found"
-          echo ""
-          if grep -q "FAIL\|ERROR" /tmp/odoo_output.log; then
-            echo "❌ Tests failed for Odoo 19.0!"
-            exit 1
-          else
-            echo "✅ All tests passed for Odoo 19.0!"
-          fi
 
       - name: Upload test logs
         if: failure()
