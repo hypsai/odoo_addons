@@ -15,7 +15,7 @@ The Problem
 
    <div style="background-color: #667eea; color: white; padding: 25px; margin: 20px 0; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
 
-**How many lines of code does it take to find waterproof Danner boots in EU sizes 40-40.5?**
+**How many lines of code does it take to find waterproof Danner boots in EU sizes 40-40.5 with Odoo domain?**
 
 .. raw:: html
 
