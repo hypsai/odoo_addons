@@ -57,15 +57,23 @@ def update_manifest_version(module, version):
     content = manifest_path.read_text(encoding='utf-8')
     
     # Check if version is already set
-    match = re.search(r'[\'"]version[\'"]:\\s*[\'"]([^\'"]+)[\'"]', content)
+    match = re.search(r'[\'"]version[\'"]:\s*[\'"]([^\'"]+)[\'"]', content)
     if match and match.group(1) == version:
         print(f"✅ Version is already {version}, no update needed")
         return False
     
-    # Replace version (support both single and double quotes)
+    # Replace version (support both single and double quotes, preserve original quote style)
+    def replace_version(match):
+        prefix = match.group(1)  # e.g., '"version": ' or "'version': "
+        # Detect quote style from original content
+        if '"' in prefix:
+            return f'{prefix}"{version}"'
+        else:
+            return f"{prefix}'{version}'"
+    
     new_content = re.sub(
-        r'([\'"]version[\'"]:\\s*)[\'"][^\'"]+[\'"]',
-        f'\\g<1>"{version}"',
+        r'([\'"]version[\'"]:)\s*[\'"][^\'"]+[\'"]',
+        replace_version,
         content
     )
     
@@ -97,7 +105,7 @@ def get_current_version(module):
         return None
     
     content = manifest_path.read_text(encoding='utf-8')
-    match = re.search(r'[\'"]version[\'"]:\\s*[\'"]([^\'"]+)[\'"]', content)
+    match = re.search(r'[\'"]version[\'"]:\s*[\'"]([^\'"]+)[\'"]', content)
     
     if match:
         return match.group(1)
