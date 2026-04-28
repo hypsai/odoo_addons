@@ -30,42 +30,48 @@ def ensure_model_meta(env, model_names):
             })
 
 
-class TestOqlA(models.Model):
-    _name = 'test.oql.a'
-    _description = 'Test OQL Model A'
+class TestOqlProduct(models.Model):
+    _name = 'test.oql.product'
+    _description = 'Test OQL Product'
 
-    name = fields.Char()
-    b_ids = fields.One2many("test.oql.b", "a_id")
-    attr_value_ids = fields.Many2many("test.oql.c")
+    name = fields.Char("Name")
+    attribute_value_ids = fields.One2many("test.oql.attribute.value", "product_id")
+    tag_ids = fields.Many2many("test.oql.tag")
 
 
-class TestOqlB(models.Model):
-    _name = "test.oql.b"
-    _description = 'Test OQL Model B'
+class TestOqlAttribute(models.Model):
+    _name = "test.oql.attribute"
+    _description = "Test Oql Attribute"
 
-    name = fields.Char()
-    a_id = fields.Many2one("test.oql.a")
-    c_ids = fields.Many2many("test.oql.c")
-    term_ids = fields.Many2many("oql.term")
+    name = fields.Char("Name")
+    value_ids = fields.One2many("test.oql.attribute.value", "attribute_id", "Values")
+    term_ids = fields.Many2many("oql.term", string="Terms")
 
     def __oql_bin__(self, term, opr, value, value_term):
         if term.domain == "self.term_ids":
-            return self.c_ids.search([("id", "in", self.c_ids.ids), ("name", opr, value)])
+            return self.value_ids.search([("id", "in", self.value_ids.ids), ("name", opr, value)])
         raise NotImplementedError()
 
     def __oql_hnt__(self, opr: str):
         if opr == "?":
-            return self.c_ids
+            return self.value_ids
         else:
-            return self.c_ids.mapped("name")
+            return self.value_ids.mapped("name")
 
 
-class TestOqlC(models.Model):
-    _name = "test.oql.c"
-    _description = 'Test OQL Model C'
+class TestOqlAttributeValue(models.Model):
+    _name = "test.oql.attribute.value"
+    _description = 'Test OQL Attribute Value'
 
-    name = fields.Char()
-    age = fields.Integer()
-    gender = fields.Selection([("male", "Male"), ("female", "Female")])
-    height = fields.Float()
-    enrolled = fields.Boolean()
+    name = fields.Char("Name")
+    product_id = fields.Many2one("test.oql.product", "Product")
+    attribute_id = fields.Many2one("test.oql.attribute", "Attribute")
+
+
+class TestOqlTag(models.Model):
+    _name = "test.oql.tag"
+    _description = 'Test OQL Tag'
+
+    name = fields.Char("Name")
+    product_id = fields.Many2one("test.oql.product", "Product")
+    term_ids = fields.Many2many("oql.term", string="Terms")

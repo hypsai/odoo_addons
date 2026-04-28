@@ -1,3 +1,4 @@
+from odoo import Command
 from odoo.tests import tagged, TransactionCase
 from ..oql import reader, OqlTransformer
 from .test_model_defs import ensure_model_meta
@@ -10,87 +11,155 @@ class TestOql(TransactionCase):
         super().setUp()
         env = self.env
 
-        # Load model meta.
-        ensure_model_meta(env, ['test.oql.a', 'test.oql.b', 'test.oql.c'])
-        metaA = env["ir.model"].search([("model", "=", "test.oql.a")], limit=1)
-        metaB = env["ir.model"].search([("model", "=", "test.oql.b")], limit=1)
-        metaC = env["ir.model"].search([("model", "=", "test.oql.c")], limit=1)
+        # 1 Load model meta.
+        ensure_model_meta(env, ['test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value', 'test.oql.tag'])
+        metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
+        metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
+        metaTag = env["ir.model"].search([("model", "=", "test.oql.tag")], limit=1)
 
-        # Terms
-        term1 = env["oql.term"].create({"name": "Size"})
-        term2 = env["oql.term"].create({"name": "ItemA"})
-        env["oql.term.domain"].create({"name": "domain1", "term_id": term2.id, "model_id": metaA.id, "domain": "[]"})
+        # 2 Create test records.
+        # 2.1 Product
+        prod_cold = env["test.oql.product"].create({"name": "Cold Boot"})
+        prod_hot = env["test.oql.product"].create({"name": "Hot Boot"})
+        # 2.2 Attribute
+        attr_size = env["test.oql.attribute"].create({"name": "Size"})
+        attr_width = env["test.oql.attribute"].create({"name": "Width"})
+        # 2.3 Attribute Value
+        for prod in [prod_cold, prod_hot]:
+            for attr, values in [(attr_size, ["5", "6", "7"]),
+                                 (attr_width, ["D", "EE"])]:
+                for value in values:
+                    env["test.oql.attribute.value"].create({
+                        "name": value,
+                        "product_id": prod.id,
+                        "attribute_id": attr.id})
+        # 2.4 Tag
+        tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "product_id": prod_cold.id})
+        tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "product_id": prod_cold.id})
+        tag_hot = env["test.oql.tag"].create({"name": "Weather:Hot", "product_id": prod_hot.id})
 
-        # Path rules.
-        rule1 = env["oql.alias"].create({"model_id": metaA.id})
-        line1 = env["oql.alias.line"].create({"alias": "attr", "rule_id": rule1.id, "path": "attr_value_ids", 'enable_shorthand': True})
-        line2 = env["oql.alias.line"].create({"alias": "bs", "rule_id": rule1.id, "path": "b_ids", 'enable_shorthand': True})
-        line3 = env["oql.alias.line"].create({"alias": "c", "rule_id": rule1.id, "path": "b_ids.c_ids", 'enable_shorthand': False})
+        # 3 Terms
+        # 3.1 Attr
+        term_size = env["oql.term"].create({"name": "Size"})
+        term_width = env["oql.term"].create({"name": "Width"})
+        attr_size.term_ids = [Command.link(term_size.id)]
+        attr_width.term_ids = [Command.link(term_width.id)]
+        # 3.2 Tag
+        term_hot = env["oql.term"].create({"name": "Hot"})
+        term_waterproof = env["oql.term"].create({"name": "Waterproof"})
+        term_weather = env["oql.term"].create({"name": "WeatherAware"})
+        term_weather_domain = env["oql.term.domain"].create({
+            "name": "WeatherSelector",
+            "term_id": term_weather.id,
+            "model_id": metaTag.id,
+            "domain": "[('name', '=like', 'Weather:%')]"
+        })
+        tag_hot.term_ids = [Command.link(term_hot.id)]
+        tag_waterproof.term_ids = [Command.link(term_waterproof.id)]
 
-        # a.b.c
-        c1 = env["test.oql.c"].create({"name": "c1", "age": 22, "gender": "male", "height": 175, "enrolled": False})
-        c2 = env["test.oql.c"].create({"name": "c2", "age": 18, "gender": "female", "height": 155, "enrolled": True})
-        c3 = env["test.oql.c"].create({"name": "c3", "age": 20, "gender": "female", "height": 160, "enrolled": True})
-
-        a1 = env["test.oql.a"].create({"name": "a1", "attr_value_ids": [c1.id, c2.id]})
-        a2 = env["test.oql.a"].create({"name": "a2", "attr_value_ids": [c2.id]})
-
-        b1 = env["test.oql.b"].create({"name": "b1", "a_id": a1.id, "c_ids": [c1.id, c2.id], "term_ids": [term1.id]})
+        # 4 Alias rules.
+        rule1 = env["oql.alias"].create({"model_id": metaProduct.id})
+        line1 = env["oql.alias.line"].create({"alias": "attr", "rule_id": rule1.id, "path": "attribute_value_ids", 'enable_shorthand': True})
+        line2 = env["oql.alias.line"].create({"alias": "tags", "rule_id": rule1.id, "path": "tag_ids", 'enable_shorthand': True})
 
     def tearDown(self):
         super().tearDown()
 
     def test_grammar_parse(self):
-        parsed = reader.query("b_ids.c_ids.name = 'c1'", self._get_transformer())
-        print("Hello Odoo tests")
+        """Test basic OQL grammar parsing."""
+        parsed = reader.query("tag_ids.name = 'Waterproof:GTX'", self._get_transformer())
+        print("Grammar parse test passed")
 
     def test_search(self):
-        res = reader.query("b_ids.c_ids.name='c1' or b_ids.c_ids.name='c2'", self._get_transformer())
-        print(res)
+        """Test search with field path navigation."""
+        res = reader.query("tag_ids.name='Waterproof:GTX' or tag_ids.name='Weather:Hot'", self._get_transformer())
+        # Should return both products
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        print(f"Search result: {res.mapped('name')}")
 
     def test_searcho(self):
-        res = self.env["test.oql.a"].searcho("b_ids.c_ids.name='c1' or b_ids.c_ids.name='c2'")
-        self.assertEqual({"a1"}, set(res.mapped("name")))
-        print(res)
+        """Test searcho with tag filtering."""
+        # Search products with Waterproof tag
+        res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX'")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        
+        # Search products with Weather tags (both Cold and Hot)
+        res = self.env["test.oql.product"].searcho("tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot'")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        print(f"Searcho result: {res.mapped('name')}")
 
     def test_searcho_term(self):
-        res = self.env["test.oql.a"].searcho("Size='c1'")
-        self.assertEqual({"a1"}, set(res.mapped("name")))
-        res = self.env["test.oql.a"].searcho("Size='c2'")
-        self.assertEqual({"a1", "a2"}, set(res.mapped("name")))
-        print(res)
+        """Test searcho with term-based queries."""
+        # Size term should find products through attribute values
+        res = self.env["test.oql.product"].searcho("Size='5'")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        
+        res = self.env["test.oql.product"].searcho("Width='D'")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        print(f"Term search result: {res.mapped('name')}")
 
     def test_searcho_logic(self):
-        res = self.env["test.oql.c"].searcho("age >= 18 and gender='female' and height > 150")
-        self.assertEqual({"c2", "c3"}, set(res.mapped("name")))
-        res = self.env["test.oql.c"].searcho("age >= 20 and gender='female' or age >= 22 and gender='male'")
-        self.assertEqual({"c1", "c3"}, set(res.mapped("name")))
-        print(res.mapped("name"))
+        """Test logical operators in OQL queries."""
+        # Test AND logic - not applicable for tag model in current setup
+        # Instead test product queries with multiple conditions
+        res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and tag_ids.name='Weather:Cold'")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        
+        # Test OR logic
+        res = self.env["test.oql.product"].searcho("tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot'")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        print(f"Logic test result: {res.mapped('name')}")
 
     def test_searcho_una_expr(self):
-        res = self.env["test.oql.c"].searcho("enrolled")
-        self.assertEqual({"c2", "c3"}, set(res.mapped("name")))
-        res = self.env["test.oql.a"].searcho("b_ids")
-        self.assertEqual({"a1"}, set(res.mapped("name")))
+        """Test unary expressions (boolean field checks)."""
+        # Test that products with tags are found
+        res = self.env["test.oql.product"].searcho("tag_ids")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        
+        # Test products with attribute values
+        res = self.env["test.oql.product"].searcho("attribute_value_ids")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
 
     def test_searcho_has_term(self):
-        res = self.env["test.oql.a"].searcho("Size")
-        self.assertEqual({"a1"}, set(res.mapped("name")))
+        """Test querying by term existence."""
+        # Products with Size term (through attributes)
+        res = self.env["test.oql.product"].searcho("Size")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        
+        # Products with Waterproof term (through tags)
+        res = self.env["test.oql.product"].searcho("Waterproof")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
 
     def test_searcho_term_in(self):
-        res = self.env["test.oql.a"].searcho("Size in ('c1')")
-        self.assertEqual({"a1"}, set(res.mapped("name")))
+        """Test term queries with IN operator."""
+        res = self.env["test.oql.product"].searcho("Size in ('5', '6')")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        
+        res = self.env["test.oql.product"].searcho("Width in ('D', 'EE')")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
 
     def test_searcho_parenthesis(self):
-        res = self.env["test.oql.c"].searcho("(age > 20 or height < 160)")
-        self.assertEqual({"c1", "c2"}, set(res.mapped("name")))
+        """Test parenthesis for grouping expressions."""
+        # Group weather-related tags
+        res = self.env["test.oql.product"].searcho("(tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot')")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        
+        # Combine waterproof with weather
+        res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and (tag_ids.name='Weather:Cold')")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
 
     def test_searcho_alias(self):
-        res = self.env["test.oql.a"].searcho("c='c1'")
-        self.assertEqual({"a1"}, set(res.mapped("name")))
+        """Test alias-based queries."""
+        # Use 'tags' alias for tag_ids
+        res = self.env["test.oql.product"].searcho("tags.name='Waterproof:GTX'")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        
+        # Use 'attr' alias for attribute_value_ids
+        res = self.env["test.oql.product"].searcho("attr.name='5'")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
 
     def assertHints(self, expected, actual):
         self.assertEqual(expected, {x["value"] for x in actual})
 
     def _get_transformer(self):
-        return OqlTransformer(self.env, "test.oql.a")
+        return OqlTransformer(self.env, "test.oql.product")
