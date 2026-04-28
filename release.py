@@ -20,7 +20,7 @@ from pathlib import Path
 
 # Module to supported Odoo versions mapping
 MODULE_VERSIONS = {
-    "mcp_base": ['12.0', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0'],
+    "mcp_base": ['13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0'],
     "oql": ['15.0'],
     "oql_web": ['15.0'],
     "web_widget_pill_icon": ['15.0'],
@@ -225,23 +225,7 @@ def main():
         print(f"→ Syncing {branch} with main (main takes full precedence)")
         run_command(f"git reset --hard main")
         
-        # Update version to Odoo version format
-        print(f"→ Updating version to {odoo_version}")
-        version_updated = update_manifest_version(module, odoo_version)
-        
-        if version_updated:
-            # Commit and push
-            run_command(f"git add {manifest_path}")
-            try:
-                run_command(f'git commit -m "Update {module} version to {odoo_version} for Odoo {branch}"')
-                print(f"✅ Version committed")
-            except SystemExit:
-                # No changes to commit, version already set
-                print(f"⚠️ No changes to commit (version already {odoo_version})")
-        else:
-            print(f"⚠️ No changes to commit (version already {odoo_version})")
-        
-        # Clean up modules not supported in this branch
+        # Clean up modules not supported in this branch BEFORE updating version
         print(f"→ Cleaning up unsupported modules in {branch}")
         all_modules = set(MODULE_VERSIONS.keys())
         supported_modules = set()
@@ -262,10 +246,26 @@ def main():
         
         if has_cleanup:
             run_command(f"git add -A")
+        
+        # Update version to Odoo version format
+        print(f"→ Updating version to {odoo_version}")
+        version_updated = update_manifest_version(module, odoo_version)
+        
+        if version_updated or has_cleanup:
+            # Commit all changes together with meaningful message
+            run_command(f"git add {manifest_path}")
+            if has_cleanup:
+                run_command(f"git add -A")
+            
+            commit_msg = f"Release {module} v{new_version} for Odoo {branch}"
             try:
-                run_command(f'git commit -m "chore: remove unsupported modules from {branch}"')
+                run_command(f'git commit -m "{commit_msg}"')
+                print(f"✅ Changes committed: {commit_msg}")
             except SystemExit:
-                pass  # No changes
+                # No changes to commit
+                print(f"⚠️ No changes to commit")
+        else:
+            print(f"⚠️ No changes to commit (version already {odoo_version})")
         
         # Force push because we used git reset --hard
         run_command(f"git push origin {branch} --force")
