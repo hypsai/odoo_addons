@@ -21,9 +21,7 @@ def root_patch_get_request():
     # We need to make a monkey patch to loose this restriction for mcp endpoint.
     # This patch wrap all request to mcp endpoint as HTTPRequest, then controller will handle http request manually,
     # no matter it is http or json request.
-    if ODOO_VERSION == 12:
-        pass
-    elif 13 <= ODOO_VERSION <= 15:  # Patch V13~15
+    if 13 <= ODOO_VERSION <= 15:  # Patch V13~15
         from odoo.http import Root, HttpRequest
 
         _original_get_request = Root.get_request
