@@ -7,7 +7,7 @@ import os.path
 
 __import__('os').environ['TZ'] = 'UTC'
 
-import odoo
+import odoo.cli
 import sys
 
 root = os.path.normpath(os.path.join(__file__, "../../"))
@@ -23,4 +23,4 @@ sys.argv.append(f"--database=odoo_addons_v{ver}")
 sys.argv.append(f"--dev=all")
 
 if __name__ == "__main__":
-    odoo.cli.main()
+    odoo.cli.command.main()

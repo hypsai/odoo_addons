@@ -1,21 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 
-from odoo import models
-from odoo.addons.mcp_base import mcp_tool
 from odoo.tests import common, tagged
-
-from ..compatible import registry_clear_cache, registry_register_temp_model
-
-
-class McpBaseToolTest(models.Model):
-    _name = "mcp.base.tool.test"
-    _description = "MCP Tool Test"
-
-    @mcp_tool
-    def get_customers(self):
-        """Get all customers."""
-        return [{"name": "Mary"}, {"name", "Lily"}, {"name": "Tom"}]
 
 
 @tagged('mcp_base', 'post_install', '-at_install')
@@ -29,33 +15,6 @@ class TestMCPController(common.HttpCase):
         self.module = self.env['ir.module.module'].search([('name', '=', 'mcp_base')])
         if self.module and self.module.state != 'installed':
             self.module.button_immediate_install()
-
-        # 2 Register temporary models.
-        for Model in [McpBaseToolTest]:
-            model_name = registry_register_temp_model(
-                self.registry, self.cr, Model
-            )
-            
-            self.registry.setup_models(self.cr)
-            self.registry.init_models(
-                self.cr, [model_name], {"module": "test"}, install=True
-            )
-            self.env['ir.model.access'].create({
-                'name': f'access_{model_name.replace(".", "_")}',
-                'model_id': self.env['ir.model']._get_id(model_name),
-                'group_id': self.env.ref('base.group_user').id,
-                'perm_read': True,
-                'perm_write': True,
-                'perm_create': True,
-                'perm_unlink': True,
-            })
-
-        # 3 Clear cache.
-        # 3.1 Clear the ORM cache (important for menus)
-        self.env['ir.ui.menu'].clear_caches()
-        # 3.2 Re-initialize the environment to pick up the new records
-        registry_clear_cache(self.env.registry)
-        self.env.registry.signal_changes()
     
     def test_mcp_endpoint_exists(self):
         """Test that MCP endpoint is accessible"""

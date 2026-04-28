@@ -7,7 +7,7 @@ import os.path
 
 __import__('os').environ['TZ'] = 'UTC'
 
-import odoo
+import odoo.cli
 import sys
 
 root = os.path.abspath(os.path.join(__file__, "../../"))
@@ -29,4 +29,4 @@ sys.argv.append("--log-level=test")
 sys.argv.append(f"--test-tags=/{target}")
 
 if __name__ == "__main__":
-    odoo.cli.main()
+    odoo.cli.command.main()
