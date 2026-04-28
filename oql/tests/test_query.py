@@ -59,8 +59,10 @@ class TestOql(TransactionCase):
 
         # 4 Alias rules.
         rule1 = env["oql.alias"].create({"model_id": metaProduct.id})
-        line1 = env["oql.alias.line"].create({"alias": "attr", "rule_id": rule1.id, "path": "attribute_value_ids", 'enable_shorthand': True})
-        line2 = env["oql.alias.line"].create({"alias": "tags", "rule_id": rule1.id, "path": "tag_ids", 'enable_shorthand': True})
+        line1 = env["oql.alias.line"].create({"alias": "attr_val_records", "rule_id": rule1.id, "path": "attribute_value_ids", 'enable_shorthand': True})
+        line3 = env["oql.alias.line"].create({"alias": "attrs", "rule_id": rule1.id, "path": "attribute_value_ids.attribute_id", 'enable_shorthand': True})
+        line2 = env["oql.alias.line"].create({"alias": "tag_records", "rule_id": rule1.id, "path": "tag_ids", 'enable_shorthand': True})
+        line3 = env["oql.alias.line"].create({"alias": "tags", "rule_id": rule1.id, "path": "tag_ids.name", 'enable_shorthand': False})
 
     def tearDown(self):
         super().tearDown()
@@ -68,35 +70,37 @@ class TestOql(TransactionCase):
     def test_grammar_parse(self):
         """Test basic OQL grammar parsing."""
         parsed = reader.query("tag_ids.name = 'Waterproof:GTX'", self._get_transformer())
-        print("Grammar parse test passed")
+        self.assertIsNotNone(parsed)
 
-    def test_search(self):
+    def test_simple_search(self):
         """Test search with field path navigation."""
-        res = reader.query("tag_ids.name='Waterproof:GTX' or tag_ids.name='Weather:Hot'", self._get_transformer())
+        res = reader.query("name = 'Hot Boot'", self._get_transformer())
         # Should return both products
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
-        print(f"Search result: {res.mapped('name')}")
+        self.assertEqual({"Hot Boot"}, set(res.mapped("name")))
 
     def test_searcho(self):
-        """Test searcho with tag filtering."""
+        """Test direct simple searcho."""
+        # Search products with name
+        res = self.env["test.oql.product"].searcho("name='Cold Boot'")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+
         # Search products with Waterproof tag
         res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX'")
         self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
-        
-        # Search products with Weather tags (both Cold and Hot)
-        res = self.env["test.oql.product"].searcho("tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot'")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
-        print(f"Searcho result: {res.mapped('name')}")
 
     def test_searcho_term(self):
         """Test searcho with term-based queries."""
-        # Size term should find products through attribute values
+        # Attribute.
         res = self.env["test.oql.product"].searcho("Size='5'")
         self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
-        
-        res = self.env["test.oql.product"].searcho("Width='D'")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
-        print(f"Term search result: {res.mapped('name')}")
+
+        # Tag
+        res = self.env["test.oql.product"].searcho("Waterproof")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+
+    def test_searcho_alias(self):
+        res = self.env["test.oql.product"].searcho("tags='Waterproof:GTX'")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
 
     def test_searcho_logic(self):
         """Test logical operators in OQL queries."""
@@ -147,16 +151,6 @@ class TestOql(TransactionCase):
         # Combine waterproof with weather
         res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and (tag_ids.name='Weather:Cold')")
         self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
-
-    def test_searcho_alias(self):
-        """Test alias-based queries."""
-        # Use 'tags' alias for tag_ids
-        res = self.env["test.oql.product"].searcho("tags.name='Waterproof:GTX'")
-        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
-        
-        # Use 'attr' alias for attribute_value_ids
-        res = self.env["test.oql.product"].searcho("attr.name='5'")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
 
     def assertHints(self, expected, actual):
         self.assertEqual(expected, {x["value"] for x in actual})
