@@ -328,7 +328,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
@@ -404,7 +404,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
@@ -480,7 +480,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
@@ -556,7 +556,7 @@ jobs:
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
-                 --log-level=warn
+                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
         env:
           PGPASSWORD: odoo
 
