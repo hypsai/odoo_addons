@@ -74,6 +74,34 @@ The OQL Solution
 - **Accessible**: Business analysts can write and review queries
 - **Efficient**: No preparatory searches needed
 
+Quick Start
+-----------
+
+Get started with OQL in 3 steps:
+
+**1. Install**
+
+Install the OQL module and its dependency::
+
+    pip install lark
+
+**2. Configure Terms**
+
+Navigate to **Settings > Technical > OQL > Terms** and create your first term (e.g., "Waterproof"). Add domain rules or link it to records via the UI.
+
+**3. Query**
+
+Use ``searcho()`` instead of ``search()``::
+
+    products = env['product.product'].searcho("Waterproof and Size = '40'")
+
+That's it! Start writing business-focused queries immediately.
+
+For detailed configuration options and advanced features, see Core Concepts below.
+
+.. note::
+   This documentation is currently being improved. More examples and detailed guides are coming soon.
+
 Core Concepts
 -------------
 
@@ -93,7 +121,7 @@ Defining Terms via UI
 
 Create terms and configure their selection rules directly through the Odoo interface:
 
-1. Navigate to **OQL > Terms** menu
+1. Navigate to **Settings > Technical > OQL > Terms** menu
 2. Create a new term (e.g., "Waterproof")
 3. Add domain rules to specify which records this term selects
 
