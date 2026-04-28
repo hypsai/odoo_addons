@@ -11,9 +11,13 @@ OQL (Odoo Query Language) transforms how you query data in Odoo. Instead of cons
 The Problem
 ~~~~~~~~~~~
 
-Traditional Odoo domain queries require deep technical knowledge and often multiple search operations. Consider finding waterproof Danner boots in EU sizes 40-40.5::
+**How many lines of code does it take to find waterproof Danner boots in EU sizes 40-40.5?**
 
-    # Step 1: Find the category records
+With traditional Odoo domains, you need **4 preparatory searches + 1 complex domain**:
+
+.. code-block:: python
+
+    # Step 1: Find category records (2 searches)
     boot_catg = env['product.category'].search([
         ('name', '=', 'Boot'),
         ('level', '=', 'CatgS')
@@ -24,18 +28,18 @@ Traditional Odoo domain queries require deep technical knowledge and often multi
         ('parent_id', 'child_of', boot_catg.ids)
     ])
 
-    # Step 2: Find the attribute and its values
+    # Step 2: Find attribute values (1 search)
     size_values = env['product.attribute.value'].search([
         ('attribute_id.name', 'like', 'EU Shoe Size'),
         ('name', 'in', ['40', '40.5'])
     ])
 
-    # Step 3: Find waterproof tags
+    # Step 3: Find waterproof tags (1 search)
     waterproof_tags = env['product.template.tag'].search([
         ('name', 'like', 'Waterproof')
     ])
 
-    # Step 4: Construct the domain
+    # Step 4: Construct and execute the domain
     domain = [
         ('categ_id', 'child_of', danner_brand.ids),
         ('product_template_attribute_value_ids.product_attribute_value_id', 'in', size_values.ids),
@@ -43,29 +47,32 @@ Traditional Odoo domain queries require deep technical knowledge and often multi
     ]
     products = env['product.product'].search(domain)
 
-This approach has several issues:
+**Problems with this approach:**
 
-- Requires multiple preparatory searches to get reference IDs
-- Deep understanding of Odoo's internal relational structure
-- Complex nested domains with child_of, OR logic, and multi-level relationships
-- Business users cannot write or verify such queries
-- Difficult to maintain when business requirements change
+- 30+ lines of code for a simple business requirement
+- Requires deep knowledge of Odoo's internal data structure
+- Multiple database queries just to build the domain
+- Business users cannot read, write, or verify the logic
+- Fragile: breaks when data model changes
 
 The OQL Solution
 ~~~~~~~~~~~~~~~~
 
-The same query in OQL::
+**The same query in 1 line:**
+
+.. code-block:: python
 
     products = env['product.product'].searcho(
         "CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"
     )
 
-Benefits:
+**Benefits:**
 
 - **Business-focused**: Uses terms like "Waterproof" instead of field paths
 - **Intuitive**: Reads like natural language requirements
-- **Maintainable**: Easy to modify and understand
+- **Maintainable**: One line, easy to modify and understand
 - **Accessible**: Business analysts can write and review queries
+- **Efficient**: No preparatory searches needed
 
 Core Concepts
 -------------
