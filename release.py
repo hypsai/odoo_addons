@@ -57,15 +57,15 @@ def update_manifest_version(module, version):
     content = manifest_path.read_text(encoding='utf-8')
     
     # Check if version is already set
-    match = re.search(r"'version':\s*'([^']+)'", content)
+    match = re.search(r'[\'"]version[\'"]:\\s*[\'"]([^\'"]+)[\'"]', content)
     if match and match.group(1) == version:
         print(f"✅ Version is already {version}, no update needed")
         return False
     
-    # Replace version
+    # Replace version (support both single and double quotes)
     new_content = re.sub(
-        r"'version':\s*'[^']+'",
-        f"'version': '{version}'",
+        r'([\'"]version[\'"]:\\s*)[\'"][^\'"]+[\'"]',
+        f'\\g<1>"{version}"',
         content
     )
     
@@ -97,7 +97,7 @@ def get_current_version(module):
         return None
     
     content = manifest_path.read_text(encoding='utf-8')
-    match = re.search(r"'version':\s*'([^']+)'", content)
+    match = re.search(r'[\'"]version[\'"]:\\s*[\'"]([^\'"]+)[\'"]', content)
     
     if match:
         return match.group(1)
