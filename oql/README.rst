@@ -97,7 +97,7 @@ Create terms and configure their selection rules directly through the Odoo inter
 2. Create a new term (e.g., "Waterproof")
 3. Add domain rules to specify which records this term selects
 
-.. image:: static/description/term_domain_config.png
+.. image:: static/description/term_config.png
    :alt: Term configuration with domain rules
    :align: center
    :width: 800px
@@ -115,12 +115,7 @@ For more flexible term assignment, add a Many2many field to your business models
         
         term_ids = fields.Many2many('oql.term', string='Terms')
 
-Expose this field in the form view so users can associate terms with records through the UI:
-
-.. image:: static/description/term_field_ui.png
-   :alt: Associating terms with records via UI
-   :align: center
-   :width: 800px
+Note: Expose this field in the form view so users can associate terms with records through the UI.
 
 Now when you query ``EuShoeSize``, OQL finds all attributes that have been tagged with the "EuShoeSize" term through the interface.
 
@@ -198,6 +193,69 @@ Once configured, use aliases to simplify your queries:
     # With alias 'spu':
     products = env['product.product'].searcho("spu = 'BOOT-001'")
 
+3. Operator Overloading - Custom Query Logic
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For advanced scenarios, you can customize how terms behave in queries by implementing the ``__oql_bin__`` method on your models.
+
+Why Operator Overloading?
+*************************
+
+By default, when you use a term like ``EuShoeSize = '40'``, OQL finds records associated with that term. But sometimes you need more sophisticated logic.
+
+For example, ``EuShoeSize`` might be linked to ``product.attribute`` records, but you actually want to query based on ``product.attribute.value`` records. Operator overloading lets you define this custom behavior.
+
+Implementing __oql_bin__
+************************
+
+Add the ``__oql_bin__`` method to your model:
+
+.. code-block:: python
+
+    class ProductAttribute(models.Model):
+        _inherit = 'product.attribute'
+        
+        def __oql_bin__(self, term, opr, value, value_term):
+            """Custom logic for term-based binary operations.
+            
+            Args:
+                term: The Term object being queried
+                opr: The operator (=, !=, in, etc.)
+                value: The value being compared
+                value_term: Value term if applicable
+            """
+            if term.domain == 'self.term_ids':
+                # Search attribute values matching the criteria
+                return self.value_ids.search([
+                    ('id', 'in', self.value_ids.ids),
+                    ('name', opr, value)
+                ])
+            raise NotImplementedError()
+
+This implementation allows ``EuShoeSize in ('40', '40.5')`` to:
+
+1. Find attributes tagged with the "EuShoeSize" term
+2. Search their ``value_ids`` for values matching '40' or '40.5'
+3. Return the matching ``product.attribute.value`` records
+4. Use these records to filter products
+
+When to Use Operator Overloading
+********************************
+
+Use ``__oql_bin__`` when:
+
+- Terms are linked to parent records but you need to query child records
+- You need custom filtering logic beyond simple domain matching
+- The default term resolution doesn't match your business requirements
+
+Example Use Cases
+*****************
+
+**Case 1: Attribute to Value Resolution**
+
+As shown above, resolve from attributes to their values for size/colour queries.
+
+
 Query Syntax
 ------------
 
@@ -262,117 +320,6 @@ Check for existence without specifying values::
 
     # Products with the Waterproof term
     searcho("Waterproof")
-
-Complete Example
-----------------
-
-Here's a complete example showing all concepts working together:
-
-Model Setup
-~~~~~~~~~~~
-
-::
-
-    class Product(models.Model):
-        _name = 'product.product'
-        
-        name = fields.Char('Name')
-        attribute_value_ids = fields.One2many('product.attribute.value', 'product_id')
-        tag_ids = fields.One2many('product.tag', 'product_id')
-
-
-    class ProductAttribute(models.Model):
-        _name = 'product.attribute'
-        
-        name = fields.Char('Name')
-        value_ids = fields.One2many('product.attribute.value', 'attribute_id')
-        term_ids = fields.Many2many('oql.term', string='Terms')
-        
-        def __oql_bin__(self, term, opr, value, value_term):
-            if term.domain == 'self.term_ids':
-                return self.value_ids.search([
-                    ('id', 'in', self.value_ids.ids),
-                    ('name', opr, value)
-                ])
-            raise NotImplementedError()
-
-
-    class ProductTag(models.Model):
-        _name = 'product.tag'
-        
-        name = fields.Char('Name')
-        product_id = fields.Many2one('product.product')
-        term_ids = fields.Many2many('oql.term', string='Terms')
-
-Term Configuration
-~~~~~~~~~~~~~~~~~~
-
-::
-
-    # Create terms
-    term_eu_size = env['oql.term'].create({'name': 'EuShoeSize'})
-    term_waterproof = env['oql.term'].create({'name': 'Waterproof'})
-    term_brand_danner = env['oql.term'].create({'name': 'BrandDanner'})
-
-    # Link terms to attributes
-    eu_size_attr = env['product.attribute'].search([('name', '=', 'EU Size')])
-    eu_size_attr.term_ids = [(4, term_eu_size.id)]
-
-    # Link terms to tags via domain
-    waterproof_tag_model = env['ir.model'].search([('model', '=', 'product.tag')])
-    env['oql.term.domain'].create({
-        'term_id': term_waterproof.id,
-        'model_id': waterproof_tag_model.id,
-        'domain': "[('name', '=like', 'Waterproof%')]"
-    })
-
-Alias Configuration
-~~~~~~~~~~~~~~~~~~~
-
-::
-
-    product_model = env['ir.model'].search([('model', '=', 'product.product')])
-    rule = env['oql.alias'].create({'model_id': product_model.id})
-
-    env['oql.alias.line'].create({
-        'rule_id': rule.id,
-        'alias': 'attr_vals',
-        'path': 'attribute_value_ids',
-        'enable_shorthand': True
-    })
-
-    env['oql.alias.line'].create({
-        'rule_id': rule.id,
-        'alias': 'tags',
-        'path': 'tag_ids.name',
-        'enable_shorthand': False
-    })
-
-Query Examples
-~~~~~~~~~~~~~~
-
-::
-
-    # Simple term query
-    boots = env['product.product'].searcho("CatgS = 'Boot'")
-
-    # Multiple conditions
-    danner_boots = env['product.product'].searcho(
-        "CatgS = 'Boot' and Brand = 'Danner'"
-    )
-
-    # Size range with IN clause
-    sized_boots = env['product.product'].searcho(
-        "EuShoeSize in ('40', '40.5')"
-    )
-
-    # Complete business requirement
-    result = env['product.product'].searcho(
-        "CatgS = 'Boot' and "
-        "Brand = 'Danner' and "
-        "EuShoeSize in ('40', '40.5') and "
-        "Waterproof"
-    )
 
 Installation
 ------------
