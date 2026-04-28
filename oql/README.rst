@@ -77,77 +77,59 @@ The OQL Solution
 Core Concepts
 -------------
 
-OQL simplifies queries through three key concepts: Terms, the ``.`` operator, and Aliases.
+OQL simplifies queries through two fundamental concepts: **Terms** and **Aliases**. These abstractions let you write queries in business language rather than technical field paths.
 
 1. Terms - Business Terminology Abstraction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Terms map business concepts to actual database records. They allow you to query using meaningful names instead of technical identifiers.
+Terms map business concepts to actual database records. Instead of writing complex domain filters, you define meaningful names that represent specific record sets.
 
-Defining Terms
-**************
+For example, instead of filtering tags with ``('name', '=like', 'Waterproof%')``, you simply use the term ``Waterproof`` in your query.
 
-There are two ways to define what records a term selects:
+Defining Terms via UI
+*********************
 
-**Method 1: Domain Configuration**
+**Method 1: Domain-Based Configuration**
 
-Configure terms through ``oql.term.domain`` records with Odoo domain syntax::
+Create terms and configure their selection rules directly through the Odoo interface:
 
-    # Create a term for weather-related tags
-    term_weather = env['oql.term'].create({'name': 'WeatherAware'})
+1. Navigate to **OQL > Terms** menu
+2. Create a new term (e.g., "Waterproof")
+3. Add domain rules to specify which records this term selects
 
-    # Define domain to select relevant records
-    env['oql.term.domain'].create({
-        'term_id': term_weather.id,
-        'model_id': product_tag_model.id,
-        'name': 'WeatherSelector',
-        'domain': "[('name', '=like', 'Weather:%')]"
-    })
+.. image:: static/description/term_domain_config.png
+   :alt: Term configuration with domain rules
+   :align: center
+   :width: 800px
 
-Now ``WeatherAware`` automatically matches any tag with name starting with "Weather:".
+Each term can have multiple domain rules for different models. When you use the term in a query, OQL automatically applies the appropriate domain to filter records.
 
-**Method 2: Relationship Fields**
+**Method 2: Relationship Field Association**
 
-Add Many2one or Many2many fields referencing ``oql.term`` on your business models::
+For more flexible term assignment, add a Many2many field to your business models:
+
+.. code-block:: python
 
     class ProductAttribute(models.Model):
-        _name = 'product.attribute'
+        _inherit = 'product.attribute'
         
-        name = fields.Char('Name')
         term_ids = fields.Many2many('oql.term', string='Terms')
 
-Users can then associate terms with records through the UI::
+Expose this field in the form view so users can associate terms with records through the UI:
 
-    size_attr = env['product.attribute'].search([('name', '=', 'EU Size')])
-    eu_size_term = env['oql.term'].create({'name': 'EuShoeSize'})
-    size_attr.term_ids = [(4, eu_size_term.id)]
+.. image:: static/description/term_field_ui.png
+   :alt: Associating terms with records via UI
+   :align: center
+   :width: 800px
 
-When querying ``EuShoeSize``, OQL finds all attributes linked to this term.
-
-Custom Query Logic
-******************
-
-For advanced scenarios, implement ``__oql_bin__`` method on your model to control how term queries execute::
-
-    class ProductAttribute(models.Model):
-        _name = 'product.attribute'
-        
-        def __oql_bin__(self, term, opr, value, value_term):
-            """Custom logic for term-based binary operations."""
-            if term.domain == 'self.term_ids':
-                # Search attribute values matching the criteria
-                return self.value_ids.search([
-                    ('id', 'in', self.value_ids.ids),
-                    ('name', opr, value)
-                ])
-            raise NotImplementedError()
-
-This allows ``EuShoeSize in ('40', '40.5')`` to return specific attribute value records rather than just attributes.
+Now when you query ``EuShoeSize``, OQL finds all attributes that have been tagged with the "EuShoeSize" term through the interface.
 
 Using Terms in Queries
 **********************
 
-Once defined, use terms directly in queries::
+Once configured, use terms directly in your queries:
+
+.. code-block:: python
 
     # Find products with EU Size 40
     products = env['product.product'].searcho("EuShoeSize = '40'")
@@ -158,118 +140,63 @@ Once defined, use terms directly in queries::
     # Find products tagged as waterproof
     products = env['product.product'].searcho("Waterproof")
 
-2. The ``.`` Operator - Has/Contains Semantics
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The term automatically resolves to the underlying records based on your configuration.
 
-The dot operator expresses "has" or "contains" relationships. It checks whether a field contains records matching specified criteria.
-
-Basic Usage
-***********
-
-::
-
-    # Products that have waterproof tags
-    products = env['product.product'].searcho("tag_ids.Waterproof")
-
-    # Equivalent explicit syntax (dot at root is optional)
-    products = env['product.product'].searcho(".Waterproof")
-
-Nested Paths
-************
-
-Chain the dot operator to navigate relationships::
-
-    # Products whose tags have the Waterproof term
-    products = env['product.product'].searcho("product.tag_ids.Waterproof")
-
-Combining with Conditions
-*************************
-
-Use dots with comparison operators::
-
-    # Products with tags named specifically "Waterproof:GTX"
-    products = env['product.product'].searcho("tag_ids.name = 'Waterproof:GTX'")
-
-3. Aliases - Path Simplification
+2. Aliases - Path Simplification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Aliases shorten long field paths and enable intelligent shorthand notation.
+Aliases shorten long field paths into concise, memorable names. They eliminate the need to remember complex relational chains.
 
-Name Simplification
-*******************
+Configuring Aliases via UI
+**************************
 
-Map verbose paths to concise names::
+Set up aliases through the OQL interface:
 
-    # Configuration
-    rule = env['oql.alias'].create({'model_id': product_model.id})
-    env['oql.alias.line'].create({
-        'rule_id': rule.id,
-        'alias': 'spu',
-        'path': 'product_tmpl_id.default_code',
-        'enable_shorthand': False
-    })
+1. Navigate to **Settings > Technical -> OQL > Aliases** menu
+2. Select the target model (e.g., ``product.product``)
+3. Add alias rules mapping short names to field paths
 
-    # Usage - instead of:
+.. image:: static/description/alias_config.png
+   :alt: Alias configuration interface
+   :align: center
+   :width: 800px
+
+**Name Simplification**
+
+Map verbose paths to short aliases:
+
+- ``product_tmpl_id.default_code`` → ``spu``
+- ``categ_id.complete_name`` → "category"
+- ``partner_id.country_id.name`` → ``country``
+
+**Shorthand Notation**
+
+Enable intelligent type-based resolution by checking the "Enable Shorthand" option. When enabled, OQL automatically matches value types to find the correct field path.
+
+For example, if you enable shorthand for ``tags`` for `tag_ids` on the product model, you can write:
+
+.. code-block:: python
+
+    # Instead of:
+    products = env['product.product'].searcho("tags.Waterproof'")
+
+    # Simply use the term directly (OQL resolves the path automatically):
+    products = env['product.product'].searcho("Waterproof")
+
+Each model can have only one shorthand-enabled path per value type, ensuring unambiguous resolution.
+
+Using Aliases in Queries
+************************
+
+Once configured, use aliases to simplify your queries:
+
+.. code-block:: python
+
+    # Without alias:
     products = env['product.product'].searcho("product_tmpl_id.default_code = 'BOOT-001'")
 
-    # Write:
+    # With alias 'spu':
     products = env['product.product'].searcho("spu = 'BOOT-001'")
-
-Shorthand Notation
-******************
-
-Enable automatic field resolution based on value types::
-
-    # Configuration - enable shorthand for attribute values
-    env['oql.alias.line'].create({
-        'rule_id': rule.id,
-        'alias': 'attr_vals',
-        'path': 'product_attribute_value_ids',
-        'enable_shorthand': True  # Enable type-based matching
-    })
-
-    # When you write:
-    products = env['product.product'].searcho("product.attribute.value recordset")
-
-    # OQL automatically resolves to:
-    # product.product.product_attribute_value_ids
-
-The system matches value types to find the correct field path. Each model can have only one shorthand-enabled path per value type, ensuring unambiguous resolution.
-
-Practical Example
-*****************
-
-::
-
-    # Setup aliases for product model
-    rule = env['oql.alias'].create({'model_id': product_model.id})
-
-    # Alias for attribute values (with shorthand)
-    env['oql.alias.line'].create({
-        'rule_id': rule.id,
-        'alias': 'attr_val_records',
-        'path': 'attribute_value_ids',
-        'enable_shorthand': True
-    })
-
-    # Alias for attribute records (with shorthand)
-    env['oql.alias.line'].create({
-        'rule_id': rule.id,
-        'alias': 'attrs_records',
-        'path': 'attribute_value_ids.attribute_id',
-        'enable_shorthand': True
-    })
-
-    # Alias for tag names (without shorthand - requires full expression)
-    env['oql.alias.line'].create({
-        'rule_id': rule.id,
-        'alias': 'tags',
-        'path': 'tag_ids.name',
-        'enable_shorthand': False
-    })
-
-    # Usage
-    products = env['product.product'].searcho("tags = 'Waterproof:GTX'")
 
 Query Syntax
 ------------
