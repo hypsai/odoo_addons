@@ -11,7 +11,22 @@ OQL (Odoo Query Language) transforms how you query data in Odoo. Instead of cons
 The Problem
 ~~~~~~~~~~~
 
+.. raw:: html
+
+   <div style="background-color: #667eea; color: white; padding: 25px; margin: 20px 0; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+
 **How many lines of code does it take to find waterproof Danner boots in EU sizes 40-40.5?**
+
+.. raw:: html
+
+   </div>
+
+**Traditional Odoo Domain Approach (❌ Complex & Verbose)**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. raw:: html
+
+   <div style="background-color: #fff3cd; border-left: 5px solid #f39c12; padding: 20px; margin: 20px 0; border-radius: 5px;">
 
 With traditional Odoo domains, you need **4 preparatory searches + 1 complex domain**:
 
@@ -55,8 +70,16 @@ With traditional Odoo domains, you need **4 preparatory searches + 1 complex dom
 - Business users cannot read, write, or verify the logic
 - Fragile: breaks when data model changes
 
-The OQL Solution
-~~~~~~~~~~~~~~~~
+.. raw:: html
+
+   </div>
+
+**OQL Solution (✅ Simple & Intuitive)**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. raw:: html
+
+   <div style="background-color: #d4edda; border-left: 5px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 5px;">
 
 **The same query in 1 line:**
 
@@ -68,11 +91,15 @@ The OQL Solution
 
 **Benefits:**
 
-- **Business-focused**: Uses terms like "Waterproof" instead of field paths
-- **Intuitive**: Reads like natural language requirements
-- **Maintainable**: One line, easy to modify and understand
-- **Accessible**: Business analysts can write and review queries
-- **Efficient**: No preparatory searches needed
+- ✅ **Business-focused**: Uses terms like "Waterproof" instead of field paths
+- ✅ **Intuitive**: Reads like natural language requirements
+- ✅ **Maintainable**: One line, easy to modify and understand
+- ✅ **Accessible**: Business analysts can write and review queries
+- ✅ **Efficient**: No preparatory searches needed
+
+.. raw:: html
+
+   </div>
 
 Quick Start
 -----------
