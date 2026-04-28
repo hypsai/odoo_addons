@@ -232,13 +232,6 @@ Once configured, use aliases to simplify your queries:
 
 For advanced scenarios, you can customize how terms behave in queries by implementing the ``__oql_bin__`` method on your models.
 
-Why Operator Overloading?
-*************************
-
-By default, when you use a term like ``EuShoeSize = '40'``, OQL finds records associated with that term. But sometimes you need more sophisticated logic.
-
-For example, ``EuShoeSize`` might be linked to ``product.attribute`` records, but you actually want to query based on ``product.attribute.value`` records. Operator overloading lets you define this custom behavior.
-
 Implementing __oql_bin__
 ************************
 
