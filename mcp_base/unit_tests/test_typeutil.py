@@ -3,6 +3,15 @@
 import sys
 from typing import List, Dict, Optional, Union, Tuple, Set, Any
 from mcp_base.typeutil import python_type_to_json_type, docstring_type_to_json_type, resolve_method_metadata
+from typeutil_test_classes import (
+    _TestBaseClass,
+    _TestChildClass,
+    _TestBaseCustomer,
+    _TestChildCustomer,
+    _TestGrandparent,
+    _TestParent,
+    _TestChild
+)
 
 
 def test_python_type_to_json_basic():
@@ -151,22 +160,30 @@ def test_resolve_method_metadata_basic():
     """Test basic method metadata resolution."""
     print("Testing basic method metadata resolution...")
     
-    class BaseClass:
-        def search(self, name: str, limit: int = 10):
-            """Search customers by name.
-            
-            :param name: Customer name to search for
-            :param limit: Maximum number of results to return
-            """
-            pass
+    meta = resolve_method_metadata(_TestBaseClass.search)
     
-    metadata = resolve_method_metadata(BaseClass.search)
+    # Check it's a MethodMeta object
+    assert hasattr(meta, 'name')
+    assert hasattr(meta, 'description')
+    assert hasattr(meta, 'params')
     
-    assert metadata['docstring'] is not None
-    assert 'name' in metadata['annotations']
-    assert metadata['annotations']['name'] == str
-    assert 'limit' in metadata['annotations']
-    assert metadata['annotations']['limit'] == int
+    assert meta.name == 'search'
+    assert meta.description is not None
+    assert len(meta.params) == 2  # name and limit (excluding self)
+    
+    # Check parameters
+    param_names = [p.name for p in meta.params]
+    assert 'name' in param_names
+    assert 'limit' in param_names
+    
+    # Find name parameter
+    name_param = next(p for p in meta.params if p.name == 'name')
+    assert name_param.json_type == 'string'
+    
+    # Find limit parameter
+    limit_param = next(p for p in meta.params if p.name == 'limit')
+    assert limit_param.json_type == 'integer'
+    assert limit_param.default == 10
     
     print("  ✓ Basic metadata resolution passed!\n")
 
@@ -175,32 +192,24 @@ def test_resolve_method_metadata_inheritance():
     """Test metadata resolution with class inheritance."""
     print("Testing metadata resolution with inheritance...")
     
-    class BaseClass:
-        def search(self, name: str, limit: int = 10):
-            """Search customers by name.
-            
-            :param name: Customer name to search for
-            :param limit: Maximum number of results to return
-            """
-            pass
+    meta = resolve_method_metadata(_TestChildClass.search)
     
-    class ChildClass(BaseClass):
-        def search(self, name, limit=10):
-            # No annotation, no docstring - should inherit from base
-            pass
+    # Should inherit description from base
+    assert meta.description is not None
+    assert 'Search customers' in meta.description
     
-    # Test child class method (explicitly pass cls for local classes)
-    metadata = resolve_method_metadata(ChildClass.search, cls=ChildClass)
+    # Should inherit parameter types from base
+    param_names = [p.name for p in meta.params]
+    assert 'name' in param_names
+    assert 'limit' in param_names
     
-    # Should inherit docstring from base
-    assert metadata['docstring'] is not None
-    assert 'Customer name' in metadata['docstring']
+    name_param = next(p for p in meta.params if p.name == 'name')
+    assert name_param.json_type == 'string'
+    assert 'Customer name' in name_param.description
     
-    # Should inherit annotations from base
-    assert 'name' in metadata['annotations']
-    assert metadata['annotations']['name'] == str
-    assert 'limit' in metadata['annotations']
-    assert metadata['annotations']['limit'] == int
+    limit_param = next(p for p in meta.params if p.name == 'limit')
+    assert limit_param.json_type == 'integer'
+    assert limit_param.default == 10
     
     print("  ✓ Inheritance metadata resolution passed!\n")
 
@@ -209,34 +218,22 @@ def test_resolve_method_metadata_partial_override():
     """Test metadata resolution with partial override."""
     print("Testing metadata resolution with partial override...")
     
-    class BaseClass:
-        def create_customer(self, name: str, email: str, phone: str = None):
-            """Create a new customer record.
-            
-            :param name: Customer's full name
-            :param email: Customer's email address
-            :param phone: Customer's phone number (optional)
-            """
-            pass
+    meta = resolve_method_metadata(_TestChildCustomer.create_customer)
     
-    class ChildClass(BaseClass):
-        def create_customer(self, name, email, phone=None):
-            """Override with partial docstring but no type hints."""
-            # Only description, no param docs or types
-            pass
+    # Should use child's description
+    assert meta.description is not None
+    assert 'partial' in meta.description.lower()
     
-    # Test child class method (explicitly pass cls for local classes)
-    metadata = resolve_method_metadata(ChildClass.create_customer, cls=ChildClass)
+    # Should inherit parameter types from base
+    param_names = [p.name for p in meta.params]
+    assert 'name' in param_names
+    assert 'email' in param_names
     
-    # Should use child's docstring
-    assert metadata['docstring'] is not None
-    assert 'partial docstring' in metadata['docstring'].lower()
+    name_param = next(p for p in meta.params if p.name == 'name')
+    assert name_param.json_type == 'string'
     
-    # Should inherit annotations from base
-    assert 'name' in metadata['annotations']
-    assert metadata['annotations']['name'] == str
-    assert 'email' in metadata['annotations']
-    assert metadata['annotations']['email'] == str
+    email_param = next(p for p in meta.params if p.name == 'email')
+    assert email_param.json_type == 'string'
     
     print("  ✓ Partial override metadata resolution passed!\n")
 
@@ -245,35 +242,42 @@ def test_resolve_method_metadata_multi_level():
     """Test metadata resolution with multi-level inheritance."""
     print("Testing metadata resolution with multi-level inheritance...")
     
-    class GrandparentClass:
-        def search(self, name: str, limit: int = 10):
-            """Search customers by name.
-            
-            :param name: Customer name to search for
-            :param limit: Maximum number of results to return
-            """
-            pass
-    
-    class ParentClass(GrandparentClass):
-        def search(self, name, limit=10):
-            # No annotation, no docstring
-            pass
-    
-    class ChildClass(ParentClass):
-        def search(self, *args, **kwargs):
-            # Completely empty override
-            pass
-    
-    # Test child class method (explicitly pass cls for local classes)
-    metadata = resolve_method_metadata(ChildClass.search, cls=ChildClass)
+    meta = resolve_method_metadata(_TestChild.search)
     
     # Should inherit from grandparent through parent
-    assert metadata['docstring'] is not None
-    assert 'Customer name' in metadata['docstring']
-    assert 'name' in metadata['annotations']
-    assert metadata['annotations']['name'] == str
+    assert meta.description is not None
+    assert 'Search customers' in meta.description
+    
+    param_names = [p.name for p in meta.params]
+    assert 'name' in param_names
+    
+    name_param = next(p for p in meta.params if p.name == 'name')
+    assert name_param.json_type == 'string'
+    assert 'Customer name' in name_param.description
     
     print("  ✓ Multi-level inheritance metadata resolution passed!\n")
+
+
+def test_method_meta_structure():
+    """Test MethodMeta and ParameterMeta structure."""
+    print("Testing MethodMeta structure...")
+    
+    meta = resolve_method_metadata(_TestBaseClass.search)
+    
+    # Check MethodMeta attributes
+    assert isinstance(meta.name, str)
+    assert isinstance(meta.description, str)
+    assert isinstance(meta.params, list)
+    
+    # Check ParameterMeta objects
+    for param in meta.params:
+        assert hasattr(param, 'name')
+        assert hasattr(param, 'json_type')
+        assert hasattr(param, 'description')
+        assert hasattr(param, 'default')
+        assert isinstance(param.name, str)
+    
+    print("  ✓ MethodMeta structure test passed!\n")
 
 
 if __name__ == '__main__':
@@ -291,6 +295,7 @@ if __name__ == '__main__':
         test_resolve_method_metadata_inheritance()
         test_resolve_method_metadata_partial_override()
         test_resolve_method_metadata_multi_level()
+        test_method_meta_structure()
         
         print("=" * 60)
         print("All type utility tests passed! ✓")

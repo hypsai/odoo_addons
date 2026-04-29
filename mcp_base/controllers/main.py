@@ -11,6 +11,7 @@ from odoo.http import request
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 from ..compatible import request_update_env, root_patch_get_request
+from ..mcputil import build_tool_info
 
 _logger = logging.getLogger(__name__)
 root_patch_get_request()
@@ -22,17 +23,17 @@ class McpController(http.Controller):
     def mcp_endpoint(self, **kwargs):
         """
         Unified Streamable HTTP endpoint for MCP protocol.
-        
+
         GET  → SSE stream for server notifications
         POST → JSON-RPC message handling
-        
+
         Authentication:
         - If auth_api_key is installed: supports API key via 'Api-Key' header
         - Otherwise: runs with admin privileges (development mode)
         """
         # Try to authenticate with API key if available
         auth_error = self._try_api_key_auth()
-        
+
         # Handle authentication errors
         if auth_error:
             if request.httprequest.method == 'POST':
@@ -54,7 +55,7 @@ class McpController(http.Controller):
                     mimetype='text/plain',
                     headers={'Access-Control-Allow-Origin': '*'}
                 )
-        
+
         if request.httprequest.method == 'GET':
             return self._handle_sse_stream()
         elif request.httprequest.method == 'POST':
@@ -65,22 +66,22 @@ class McpController(http.Controller):
     def _try_api_key_auth(self):
         """
         Attempt API key authentication using auth_api_key's standard method.
-        
+
         Security Policy:
         - If auth_api_key is installed: API key is REQUIRED
         - If auth_api_key is NOT installed: Use admin with security warning (dev mode)
-        
+
         Returns:
             str: Error message if authentication failed, None if successful
         """
         try:
             # Check if auth_api_key module provides the authentication method
             ir_http = request.env['ir.http']
-            
+
             if hasattr(ir_http, '_auth_method_api_key'):
                 # Module is installed - API key is MANDATORY
                 api_key_header = request.httprequest.environ.get('HTTP_API_KEY')
-                
+
                 if not api_key_header:
                     error_msg = (
                         "API key is required but not provided. "
@@ -89,7 +90,7 @@ class McpController(http.Controller):
                     )
                     _logger.warning(f"MCP authentication failed: {error_msg}")
                     return error_msg
-                
+
                 # Try to authenticate with provided API key
                 try:
                     ir_http._auth_method_api_key()
@@ -111,12 +112,12 @@ class McpController(http.Controller):
                         "Install from: https://apps.odoo.com/apps/modules/browse?search=auth_api_key"
                     )
                     request._mcp_auth_warning_logged = True
-                
+
                 # Set to admin user
                 request_update_env(request, request.env.ref('base.user_admin').id)
 
                 return None  # Success (with warning logged)
-                
+
         except Exception as e:
             error_msg = f"Authentication error: {str(e)}"
             _logger.error(f"MCP authentication error: {e}")
@@ -143,18 +144,18 @@ class McpController(http.Controller):
         try:
             payload = json.loads(request.httprequest.get_data(as_text=True))
             method = payload.get('method')
-            
+
             # Check if this is a notification (no id field)
             is_notification = payload.get('id') is None
-            
+
             # Handle notifications - no response needed
             if is_notification and method.startswith('notifications/'):
                 self._handle_notification(method, payload.get('params', {}))
                 return WerkzeugResponse('', status=202)
-            
+
             # Handle regular requests
             result = self._process_mcp_method(method, payload.get('params', {}))
-            
+
             return self._json_response({
                 "jsonrpc": "2.0",
                 "id": payload.get('id'),
@@ -167,11 +168,11 @@ class McpController(http.Controller):
                 "id": None,
                 "error": {"code": -32700, "message": "Parse error"}
             }, 400)
-            
+
         except Exception as e:
             import traceback
             _logger.error(f"MCP Error: {e}\n{traceback.format_exc()}")
-            
+
             return self._json_response({
                 "jsonrpc": "2.0",
                 "id": payload.get('id') if 'payload' in locals() else None,
@@ -185,7 +186,7 @@ class McpController(http.Controller):
     def _handle_notification(self, method, params):
         """Handle JSON-RPC notifications (no response required)."""
         _logger.debug(f"MCP notification received: {method}")
-        
+
         if method == 'notifications/initialized':
             _logger.debug("MCP client initialization complete")
 
@@ -205,17 +206,17 @@ class McpController(http.Controller):
             'tools/list': self._handle_list_tools,
             'tools/call': self._handle_call_tool,
         }
-        
+
         handler = handlers.get(method)
         if not handler:
             raise Exception(f"Method not found: {method}")
-        
+
         return handler(params)
-    
+
     def _handle_initialize(self, params):
         """Handle initialize request."""
         _logger.debug(f"MCP initialize called with params: {params}")
-        
+
         return {
             "protocolVersion": "2025-03-26",
             "capabilities": {"tools": {}},
@@ -224,25 +225,33 @@ class McpController(http.Controller):
                 "version": "1.0.0"
             }
         }
-    
+
     def _handle_list_tools(self, params):
         """Handle tools/list request."""
         tools = []
-        
+
         for model_name, model_cls in request.env.registry.models.items():
             for attr_name, method in model_cls.__base__.__dict__.items():  # Get from definition type.
                 if callable(method) and getattr(method, '_is_mcp_tool', False):
-                    # Get the original schema
-                    schema = getattr(method, '_mcp_schema', {"type": "object"})
-                    
-                    # Add built-in properties to schema.
-                    schema = self._add_built_in_properties(method, schema)
-                    
-                    tools.append({
-                        "name": f"{model_name}:{attr_name}",
-                        "description": getattr(method, '_mcp_desc', ""),
-                        "inputSchema": schema
-                    })
+                    tool_info = getattr(method, "_mcp_base_cache_tool_info", None)
+
+                    if not tool_info:
+                        # Get stored decorator parameters
+                        custom_desc = getattr(method, '_mcp_custom_description', None)
+                        inherit_docs = getattr(method, '_mcp_inherit_docs', True)
+
+                        # Build tool info using mcputil
+                        tool_info = build_tool_info(method, custom_desc=custom_desc, inherit_docs=inherit_docs)
+                        tool_info["name"] = f"{model_name}:{attr_name}"
+
+                        # Add built-in properties to schema
+                        schema = tool_info['inputSchema']
+                        schema = self._add_built_in_properties(method, schema)
+                        tool_info["inputSchema"] = schema
+
+                        method._mcp_base_cache_tool_info = tool_info
+
+                    tools.append(tool_info)
         
         _logger.debug(f"MCP found {len(tools)} tools")
         return {"tools": tools}

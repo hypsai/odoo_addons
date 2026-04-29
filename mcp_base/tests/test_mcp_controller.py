@@ -232,24 +232,3 @@ class TestMCPIntegration(common.TransactionCase):
             
             # At least the test should complete without errors
             self.assertIsInstance(tools_found, int)
-    
-    def test_python_type_conversion_comprehensive(self):
-        """Comprehensive test for type conversion"""
-        from ..decorators import python_type_to_json_type
-        from typing import List, Dict
-        
-        test_cases = [
-            (str, "string"),
-            (int, "integer"),
-            (float, "number"),
-            (bool, "boolean"),
-            (List[str], {"type": "array"}),
-            (Dict, {"type": "object"}),
-        ]
-        
-        for py_type, expected in test_cases:
-            result = python_type_to_json_type(py_type)
-            if isinstance(expected, dict):
-                self.assertEqual(result['type'], expected['type'])
-            else:
-                self.assertEqual(result, expected)
