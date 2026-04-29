@@ -5,7 +5,7 @@
 from .typeutil import resolve_method_metadata
 
 
-def build_tool_info(method, custom_desc=None, inherit_docs=True):
+def build_tool_info(method, custom_desc: str = None, inherit_docs: bool = True):
     """Build complete tool information from a method.
     
     This function handles metadata resolution and JSON Schema generation.

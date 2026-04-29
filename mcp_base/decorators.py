@@ -30,12 +30,13 @@ def mcp_tool(_func_or_desc=None, description=None, inherit_docs=True):
     # Detect usage style
     if callable(_func_or_desc):
         func = _func_or_desc
-    else:
+    else:  # str
         func = None
+        description = _func_or_desc
     
     def decorator(f):
         f._is_mcp_tool = True
-        f._mcp_custom_description = description if description is not None else _func_or_desc
+        f._mcp_custom_description = description
         f._mcp_inherit_docs = inherit_docs
         return f
     
