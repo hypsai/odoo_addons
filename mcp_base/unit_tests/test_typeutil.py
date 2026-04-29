@@ -2,7 +2,7 @@
 """Unit tests for type conversion utilities."""
 import sys
 from typing import List, Dict, Optional, Union, Tuple, Set, Any
-from mcp_base.typeutil import python_type_to_json_type, docstring_type_to_json_type
+from mcp_base.typeutil import python_type_to_json_type, docstring_type_to_json_type, resolve_method_metadata
 
 
 def test_python_type_to_json_basic():
@@ -147,6 +147,135 @@ def test_docstring_type_edge_cases():
     print("  ✓ Edge cases passed!\n")
 
 
+def test_resolve_method_metadata_basic():
+    """Test basic method metadata resolution."""
+    print("Testing basic method metadata resolution...")
+    
+    class BaseClass:
+        def search(self, name: str, limit: int = 10):
+            """Search customers by name.
+            
+            :param name: Customer name to search for
+            :param limit: Maximum number of results to return
+            """
+            pass
+    
+    metadata = resolve_method_metadata(BaseClass.search)
+    
+    assert metadata['docstring'] is not None
+    assert 'name' in metadata['annotations']
+    assert metadata['annotations']['name'] == str
+    assert 'limit' in metadata['annotations']
+    assert metadata['annotations']['limit'] == int
+    
+    print("  ✓ Basic metadata resolution passed!\n")
+
+
+def test_resolve_method_metadata_inheritance():
+    """Test metadata resolution with class inheritance."""
+    print("Testing metadata resolution with inheritance...")
+    
+    class BaseClass:
+        def search(self, name: str, limit: int = 10):
+            """Search customers by name.
+            
+            :param name: Customer name to search for
+            :param limit: Maximum number of results to return
+            """
+            pass
+    
+    class ChildClass(BaseClass):
+        def search(self, name, limit=10):
+            # No annotation, no docstring - should inherit from base
+            pass
+    
+    # Test child class method (explicitly pass cls for local classes)
+    metadata = resolve_method_metadata(ChildClass.search, cls=ChildClass)
+    
+    # Should inherit docstring from base
+    assert metadata['docstring'] is not None
+    assert 'Customer name' in metadata['docstring']
+    
+    # Should inherit annotations from base
+    assert 'name' in metadata['annotations']
+    assert metadata['annotations']['name'] == str
+    assert 'limit' in metadata['annotations']
+    assert metadata['annotations']['limit'] == int
+    
+    print("  ✓ Inheritance metadata resolution passed!\n")
+
+
+def test_resolve_method_metadata_partial_override():
+    """Test metadata resolution with partial override."""
+    print("Testing metadata resolution with partial override...")
+    
+    class BaseClass:
+        def create_customer(self, name: str, email: str, phone: str = None):
+            """Create a new customer record.
+            
+            :param name: Customer's full name
+            :param email: Customer's email address
+            :param phone: Customer's phone number (optional)
+            """
+            pass
+    
+    class ChildClass(BaseClass):
+        def create_customer(self, name, email, phone=None):
+            """Override with partial docstring but no type hints."""
+            # Only description, no param docs or types
+            pass
+    
+    # Test child class method (explicitly pass cls for local classes)
+    metadata = resolve_method_metadata(ChildClass.create_customer, cls=ChildClass)
+    
+    # Should use child's docstring
+    assert metadata['docstring'] is not None
+    assert 'partial docstring' in metadata['docstring'].lower()
+    
+    # Should inherit annotations from base
+    assert 'name' in metadata['annotations']
+    assert metadata['annotations']['name'] == str
+    assert 'email' in metadata['annotations']
+    assert metadata['annotations']['email'] == str
+    
+    print("  ✓ Partial override metadata resolution passed!\n")
+
+
+def test_resolve_method_metadata_multi_level():
+    """Test metadata resolution with multi-level inheritance."""
+    print("Testing metadata resolution with multi-level inheritance...")
+    
+    class GrandparentClass:
+        def search(self, name: str, limit: int = 10):
+            """Search customers by name.
+            
+            :param name: Customer name to search for
+            :param limit: Maximum number of results to return
+            """
+            pass
+    
+    class ParentClass(GrandparentClass):
+        def search(self, name, limit=10):
+            # No annotation, no docstring
+            pass
+    
+    class ChildClass(ParentClass):
+        def search(self, *args, **kwargs):
+            # Completely empty override
+            pass
+    
+    # Test child class method (explicitly pass cls for local classes)
+    metadata = resolve_method_metadata(ChildClass.search, cls=ChildClass)
+    
+    # Should inherit from grandparent through parent
+    assert metadata['docstring'] is not None
+    assert 'Customer name' in metadata['docstring']
+    assert 'name' in metadata['annotations']
+    assert metadata['annotations']['name'] == str
+    
+    print("  ✓ Multi-level inheritance metadata resolution passed!\n")
+
+
 if __name__ == '__main__':
     print("=" * 60)
     print("Type Utility Tests")
@@ -158,6 +287,10 @@ if __name__ == '__main__':
         test_docstring_type_basic()
         test_docstring_type_generics()
         test_docstring_type_edge_cases()
+        test_resolve_method_metadata_basic()
+        test_resolve_method_metadata_inheritance()
+        test_resolve_method_metadata_partial_override()
+        test_resolve_method_metadata_multi_level()
         
         print("=" * 60)
         print("All type utility tests passed! ✓")

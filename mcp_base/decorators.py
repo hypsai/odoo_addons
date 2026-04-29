@@ -3,7 +3,7 @@
 # @Author       : Chris
 # @Description  :
 import inspect
-from .typeutil import python_type_to_json_type
+from .typeutil import python_type_to_json_type, resolve_method_metadata
 from .docstring import parse_docstring
 
 
@@ -77,15 +77,21 @@ def mcp_tool(_func_or_desc=None, description=None):
     def decorator(func):
         func._is_mcp_tool = True
 
+        # Resolve method metadata recursively from class hierarchy
+        metadata = resolve_method_metadata(func)
+        
+        # Use resolved docstring and annotations
+        docstring = metadata['docstring']
+        resolved_annotations = metadata['annotations']
+        
         # Parse docstring and extract metadata
-        docstring = inspect.getdoc(func)
         parsed = parse_docstring(docstring)
 
         # Set tool description with priority: custom > docstring > default
         func._mcp_desc = custom_description or parsed.get('description') or "Odoo Tool"
 
         # Build JSON Schema from signature and docstring
-        sig = inspect.signature(func)
+        sig = metadata['signature'] or inspect.signature(func)
         param_descriptions = parsed['params']
         param_types_from_docstring = parsed.get('param_types', {})
         
@@ -96,9 +102,11 @@ def mcp_tool(_func_or_desc=None, description=None):
             if name == 'self':
                 continue
 
-            # Determine parameter type with priority: type hint > docstring :type: > default
+            # Determine parameter type with priority: type hint > resolved annotation > docstring :type: > default
             if param.annotation != inspect.Parameter.empty:
                 json_type = python_type_to_json_type(param.annotation)
+            elif name in resolved_annotations:
+                json_type = python_type_to_json_type(resolved_annotations[name])
             elif name in param_types_from_docstring:
                 json_type = param_types_from_docstring[name]
             else:

@@ -144,6 +144,43 @@ The decorator supports multiple usage styles for maximum convenience:
 
 Choose the style that fits your needs. Most of the time, ``@mcp_tool`` (Style 1) is all you need.
 
+Smart Inheritance Support
+--------------------------
+
+When overriding methods in child classes, you don't need to repeat annotations or docstrings:
+
+.. code-block:: python
+
+    class BaseClass(models.Model):
+        _name = 'base.model'
+        
+        @mcp_tool
+        def search_records(self, name: str, limit: int = 10):
+            """Search records by name.
+            
+            :param name: Record name to search
+            :param limit: Maximum results
+            """
+            pass
+    
+    class ChildClass(BaseClass):
+        _inherit = 'base.model'
+        
+        @mcp_tool
+        def search_records(self, name, limit=10):
+            # No need to repeat type hints or docstring!
+            # Automatically inherits from parent class
+            return super().search_records(name, limit)
+
+**How it works:**
+
+✅ Missing type hints -> Inherited from parent method  
+✅ Missing docstring -> Inherited from parent method  
+✅ Partial override -> Merges child and parent info  
+✅ Multi-level inheritance -> Searches entire class hierarchy  
+
+This saves you from duplicating documentation while keeping AI agents fully informed.
+
 How It Works
 ------------
 
