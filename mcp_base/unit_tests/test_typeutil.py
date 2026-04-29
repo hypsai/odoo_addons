@@ -44,15 +44,24 @@ class TestTypeUtil(unittest.TestCase):
         
         # Optional[str] - should extract inner type
         result4 = python_type_to_json_type(Optional[str])
-        # Note: Optional is Union[str, None], behavior depends on implementation
+        self.assertEqual(result4, 'string')
+        
+        # Union[int, str] - should return first non-None type
+        result5 = python_type_to_json_type(Union[int, str])
+        self.assertEqual(result5, 'integer')
         
         # Tuple[int, str]
-        result5 = python_type_to_json_type(Tuple[int, str])
-        self.assertEqual(result5["type"], "array")
+        result6 = python_type_to_json_type(Tuple[int, str])
+        self.assertEqual(result6["type"], "array")
         
         # Set[str]
-        result6 = python_type_to_json_type(Set[str])
-        self.assertEqual(result6["type"], "array")
+        result7 = python_type_to_json_type(Set[str])
+        self.assertEqual(result7["type"], "array")
+        
+        # Optional[List[str]] - nested generic
+        result8 = python_type_to_json_type(Optional[List[str]])
+        self.assertEqual(result8['type'], 'array')
+        self.assertEqual(result8['items']['type'], 'string')
 
 
     def test_docstring_type_basic(self):

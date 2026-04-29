@@ -63,7 +63,19 @@ def python_type_to_json_type(py_type):
     origin = get_origin(py_type)
 
     if origin is not None:
-        if origin in (list, tuple, set):
+        # Handle Union/Optional types (Optional[X] is Union[X, None])
+        # In Python 3.7-3.9, Union's origin may be typing._SpecialForm without __name__
+        origin_name = getattr(origin, '__name__', None)
+        if origin_name in ('Union', '_SpecialForm') or str(origin).startswith('typing.Union'):
+            args = get_args(py_type)
+            if args:
+                # Filter out NoneType and return the first non-None type
+                for arg in args:
+                    if arg is not type(None):
+                        return python_type_to_json_type(arg)
+                # If all are None, return null
+                return "null"
+        elif origin in (list, tuple, set):
             args = get_args(py_type)
             if args:
                 item_type = python_type_to_json_type(args[0])
@@ -71,7 +83,7 @@ def python_type_to_json_type(py_type):
             return {"type": "array", "items": {"type": "string"}}
         elif origin is dict:
             return {"type": "object"}
-        elif origin.__name__ == 'Literal':
+        elif origin_name == 'Literal':
             return {"type": "string"}
 
     # Handle bare list/dict/tuple/set types (Python 3.9+)
