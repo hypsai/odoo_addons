@@ -22,17 +22,48 @@ class TestUnitTests(common.TransactionCase):
         module_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         unit_tests_dir = os.path.join(module_dir, 'unit_tests')
         
-        # Add module directory to sys.path for imports
-        if module_dir not in sys.path:
-            sys.path.insert(0, module_dir)
+        # Add unit_tests directory to sys.path for relative imports within test files
+        if unit_tests_dir not in sys.path:
+            sys.path.insert(0, unit_tests_dir)
         
-        # Discover all test files in unit_tests directory
+        # Manually load test files since unit_tests is not a package (no __init__.py)
         loader = unittest.TestLoader()
-        suite = loader.discover(
-            start_dir=unit_tests_dir,
-            pattern='test_*.py',
-            top_level_dir=module_dir
-        )
+        suite = unittest.TestSuite()
+        
+        # Find all test_*.py files in unit_tests directory
+        for filename in sorted(os.listdir(unit_tests_dir)):  # Sort for consistent order
+            if filename.startswith('test_') and filename.endswith('.py'):
+                # Import the test module
+                module_name = filename[:-3]  # Remove .py extension
+                # Import module from file path using absolute path
+                import importlib.util
+                test_file = os.path.join(unit_tests_dir, filename)
+                
+                # Use a unique module name that won't conflict with odoo.addons
+                full_module_name = f"mcp_base_unit_tests_{module_name}"
+                
+                spec = importlib.util.spec_from_file_location(
+                    full_module_name,
+                    test_file
+                )
+                test_module = importlib.util.module_from_spec(spec)
+                
+                # Add parent module to sys.modules so relative imports work
+                # But don't trigger mcp_base.__init__.py
+                if 'mcp_base' not in sys.modules:
+                    # Create a minimal mcp_base module placeholder
+                    import types
+                    mcp_base_placeholder = types.ModuleType('mcp_base')
+                    mcp_base_placeholder.__path__ = [module_dir]
+                    sys.modules['mcp_base'] = mcp_base_placeholder
+                
+                # Add to sys.modules before exec
+                sys.modules[full_module_name] = test_module
+                spec.loader.exec_module(test_module)
+                
+                # Load tests from this module
+                module_suite = loader.loadTestsFromModule(test_module)
+                suite.addTests(module_suite)
         
         # Run the tests
         runner = unittest.TextTestRunner(verbosity=2)

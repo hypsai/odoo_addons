@@ -32,7 +32,7 @@ def mcp_tool(_func_or_desc=None, description=None, inherit_docs=True):
         func = _func_or_desc
     else:  # str
         func = None
-        description = _func_or_desc
+        description = description or _func_or_desc
     
     def decorator(f):
         f._is_mcp_tool = True
