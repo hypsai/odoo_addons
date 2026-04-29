@@ -9,11 +9,15 @@ from odoo.tests import common, tagged
 
 
 @tagged("mcp_base", "post_install", "-at_install")
-class TestUnitTests(common.TransactionCase):
+class TestUnitTests(common.SingleTransactionCase):
     """Run standalone unit tests within Odoo test framework.
     
     This test class discovers and runs all tests in the unit_tests directory,
     allowing them to be executed as part of Odoo's test suite.
+    
+    Note: Using SingleTransactionCase to avoid cursor closure issues when
+    running unittest.TestLoader which may trigger module imports after
+    the main test method completes.
     """
     
     def test_run_unit_tests(self):
