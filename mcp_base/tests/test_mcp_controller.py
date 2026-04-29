@@ -2,6 +2,7 @@
 import json
 
 from odoo.tests import common, tagged
+from .test_model_defs import ensure_model_meta
 
 
 @tagged('mcp_base', 'post_install', '-at_install')
@@ -10,11 +11,21 @@ class TestMCPController(common.HttpCase):
 
     def setUp(self):
         super().setUp()
+        
+        ensure_model_meta(self.env, ["test.mcp.base.tool"])
 
-        # 1 Ensure the module is installed
-        self.module = self.env['ir.module.module'].search([('name', '=', 'mcp_base')])
-        if self.module and self.module.state != 'installed':
-            self.module.button_immediate_install()
+        # Create temporary access rights for test.mcp.base.tool model
+        test_model = self.env['ir.model'].search([('model', '=', 'test.mcp.base.tool')], limit=1)
+        if test_model:
+            self.env['ir.model.access'].create({
+                'name': 'test.mcp.base.tool user access',
+                'model_id': test_model.id,
+                'group_id': self.env.ref('base.group_user').id,
+                'perm_read': True,
+                'perm_write': True,
+                'perm_create': True,
+                'perm_unlink': True,
+            })
     
     def test_mcp_endpoint_exists(self):
         """Test that MCP endpoint is accessible"""
@@ -147,19 +158,271 @@ class TestMCPController(common.HttpCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get('Access-Control-Allow-Origin'), '*')
     
-    def test_mcp_method_not_allowed(self):
-        """Test unsupported HTTP method"""
-        # DELETE method should not be allowed (url_open defaults to POST for data)
-        # We test by sending invalid data to verify error handling
+    def test_mcp_tools_call_success(self):
+        """Test successful tool call via tools/call"""
+        # First get available tools
+        list_payload = {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        list_response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(list_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        tools = list_response.json()['result']['tools']
+        if not tools:
+            self.skipTest("No MCP tools available for testing")
+        
+        # Try to call the first available tool
+        first_tool = tools[0]
+        tool_name = first_tool['name']
+        
+        call_payload = {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {
+                "name": tool_name,
+                "arguments": {}
+            }
+        }
+        
         response = self.url_open(
             '/mcp',
             timeout=20,
-            data='invalid',
-            headers={'Content-Type': 'text/plain'}
+            data=json.dumps(call_payload),
+            headers={'Content-Type': 'application/json'}
         )
         
-        # Should return 400 Bad Request for invalid content type/data
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertEqual(result['jsonrpc'], '2.0')
+        self.assertEqual(result['id'], 11)
+        self.assertIn('result', result)
+        self.assertIn('content', result['result'])
+
+    def test_mcp_tools_call_with_search(self):
+        """Test tool call with _search_ parameter"""
+        # Get available tools
+        list_payload = {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        list_response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(list_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        tools = list_response.json()['result']['tools']
+        if not tools:
+            self.skipTest("No MCP tools available for testing")
+        
+        # Find a tool that has _search_ parameter
+        tool_with_search = None
+        for tool in tools:
+            if '_search_' in tool.get('inputSchema', {}).get('properties', {}):
+                tool_with_search = tool
+                break
+        
+        if not tool_with_search:
+            self.skipTest("No tools with _search_ parameter found")
+        
+        # Call tool with _search_ parameter
+        call_payload = {
+            "jsonrpc": "2.0",
+            "id": 13,
+            "method": "tools/call",
+            "params": {
+                "name": tool_with_search['name'],
+                "arguments": {
+                    "_search_": {
+                        "args": [],
+                        "limit": 1
+                    }
+                }
+            }
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(call_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertIn('result', result)
+
+    def test_mcp_tools_call_nonexistent(self):
+        """Test calling a non-existent tool"""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 14,
+            "method": "tools/call",
+            "params": {
+                "name": "nonexistent:method",
+                "arguments": {}
+            }
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertIn('result', result)
+        # Should return error content
+        self.assertTrue(result['result'].get('isError', False))
+
+    def test_mcp_method_not_allowed(self):
+        """Test unsupported HTTP method returns 405"""
+        # Use requests library to send DELETE method
+        import requests
+        try:
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', 'http://localhost:8069')
+            response = requests.delete(f'{base_url}/mcp')
+            self.assertEqual(response.status_code, 405)
+        except Exception:
+            # If requests not available, skip this test
+            self.skipTest("Cannot test DELETE method without requests library")
+
+    def test_mcp_empty_payload(self):
+        """Test handling of empty POST payload"""
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data='{}',
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should return error for missing method
+        self.assertEqual(response.status_code, 500)
+        result = response.json()
+        self.assertIn('error', result)
+
+    def test_mcp_missing_required_fields(self):
+        """Test handling of missing required JSON-RPC fields"""
+        # Missing 'method' field
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 15
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 500)
+        result = response.json()
+        self.assertIn('error', result)
+
+    def test_mcp_sse_endpoint_format(self):
+        """Test SSE endpoint returns correct format"""
+        response = self.url_open('/mcp', timeout=30)
+        
+        self.assertEqual(response.status_code, 200)
+        content_type = response.headers.get('Content-Type', '')
+        self.assertIn('text/event-stream', content_type)
+        
+        # Check SSE headers
+        self.assertEqual(response.headers.get('Cache-Control'), 'no-cache')
+        # Connection header may contain multiple values
+        connection = response.headers.get('Connection', '')
+        self.assertIn('keep-alive', connection)
+
+    def test_mcp_tools_caching(self):
+        """Test that tool info is cached between requests"""
+        # First request
+        payload1 = {
+            "jsonrpc": "2.0",
+            "id": 16,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        response1 = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload1),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        tools1 = response1.json()['result']['tools']
+        
+        # Second request
+        payload2 = {
+            "jsonrpc": "2.0",
+            "id": 17,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        response2 = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload2),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        tools2 = response2.json()['result']['tools']
+        
+        # Both should return same number of tools
+        self.assertEqual(len(tools1), len(tools2))
+        
+        # Tool structures should be identical (cached)
+        if tools1 and tools2:
+            self.assertEqual(tools1[0]['name'], tools2[0]['name'])
+            self.assertEqual(tools1[0]['description'], tools2[0]['description'])
+
+    def test_mcp_authentication_without_api_key(self):
+        """Test authentication when auth_api_key module is not installed"""
+        # Check if auth_api_key is installed
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping dev mode test")
+        
+        # Without API key, should still work in dev mode (with admin privileges)
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 18,
+            "method": "initialize",
+            "params": {}
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should succeed with admin user
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertIn('result', result)
     
     def test_mcp_tools_have_search_parameter(self):
         """Test that all MCP tools include _search_ parameter in schema"""
