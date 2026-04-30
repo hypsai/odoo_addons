@@ -7,9 +7,10 @@
     "category": "Productivity/Apps",
     "summary": "Odoo web components.",
     "depends": ["oql"],
+    "images": ["static/description/banner.png"],
 
-    'assets': {
-        'web.assets_backend': [
+    "assets": {
+        "web.assets_backend": [
             "oql/static/lib/codemirror/lib/*",
             "oql/static/lib/codemirror/addon/**/*",
             "oql/static/src/xml/*",
