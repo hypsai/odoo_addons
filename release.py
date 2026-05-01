@@ -82,19 +82,16 @@ def update_manifest_version(module, version):
     return True
 
 
-def get_odoo_version(branch, main_version):
-    """Get Odoo version from branch name and main version
+def get_branch_version(branch, main_version):
+    """Get version for a specific branch
     
-    Example: branch='13.0', main_version='1.0.5' -> '13.0.1.0.5'
+    Format: {branch}.{main_version}
+    Example: branch='15.0', main_version='1.1.0' -> '15.0.1.1.0'
+    For main branch, return main_version as-is
     """
-    # Extract sub-version from main version (e.g., '1.0.5' -> '5')
-    parts = main_version.split('.')
-    if len(parts) >= 3:
-        sub_version = parts[-1]  # Last part is the patch/sub version
-    else:
-        sub_version = '0'
-    
-    return f"{branch}.1.0.{sub_version}"
+    if branch == 'main':
+        return main_version
+    return f"{branch}.{main_version}"
 
 
 def get_current_version(module):
@@ -135,7 +132,7 @@ def list_versions(modules=None):
             
             # Show branch versions
             for branch in odoo_versions:
-                branch_version = get_odoo_version(branch, version)
+                branch_version = get_branch_version(branch, version)
                 print(f"  Branch {branch}: {branch_version}")
         else:
             print(f"\n{module}: ❌ Version not found")
@@ -218,9 +215,9 @@ def main():
         if branch == 'main':
             continue  # Skip main, already processed
             
-        odoo_version = get_odoo_version(branch, new_version)
+        branch_version = get_branch_version(branch, new_version)
         print(f"\n{'='*60}")
-        print(f"📋 Processing branch: {branch} (Odoo {odoo_version})")
+        print(f"📋 Processing branch: {branch}")
         print('='*60)
         
         # Switch to branch
@@ -255,9 +252,9 @@ def main():
         if has_cleanup:
             run_command(f"git add -A")
         
-        # Update version to Odoo version format
-        print(f"→ Updating version to {odoo_version}")
-        version_updated = update_manifest_version(module, odoo_version)
+        # Update version to branch format
+        print(f"→ Updating version to {branch_version}")
+        version_updated = update_manifest_version(module, branch_version)
         
         if version_updated or has_cleanup:
             # Commit all changes together with meaningful message
@@ -273,7 +270,7 @@ def main():
                 # No changes to commit
                 print(f"⚠️ No changes to commit")
         else:
-            print(f"⚠️ No changes to commit (version already {odoo_version})")
+            print(f"⚠️ No changes to commit (version already {branch_version})")
         
         # Force push because we used git reset --hard
         run_command(f"git push origin {branch} --force")
@@ -288,8 +285,8 @@ def main():
     print(f"\n🎉 Module {module} v{new_version} released successfully!")
     print(f"\nReleased branches:")
     for branch in odoo_branches:
-        print(f"  - {branch}: {get_odoo_version(branch, new_version)}")
-    print(f"  - main: {new_version}")
+        branch_ver = get_branch_version(branch, new_version)
+        print(f"  - {branch}: {branch_ver}")
     print(f"\nCheck CI/CD status: https://github.com/chrisking94/odoo_addons/actions")
 
 
