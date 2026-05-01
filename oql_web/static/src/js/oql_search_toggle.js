@@ -8,11 +8,35 @@ odoo.define('oql_web.oql_search_toggle', function (require) {
 
     console.log('[OQL] Module loaded');
 
+    // Try multiple times with increasing delays
+    function trySetup(attempt) {
+        if (window.__oql_done) return;
+        
+        var $searchBox = $('.o_searchview_input_container');
+        
+        if ($searchBox.length > 0) {
+            console.log('[OQL] Search box found on attempt', attempt);
+            setupToggle($searchBox);
+            window.__oql_done = true;
+        } else {
+            console.log('[OQL] Attempt', attempt, '- No search box, retrying...');
+            if (attempt < 20) {
+                setTimeout(function() {
+                    trySetup(attempt + 1);
+                }, 500);
+            }
+        }
+    }
+
+    // Start trying after DOM ready
     $(document).ready(function() {
-        setTimeout(setupToggle, 1500);
+        console.log('[OQL] Document ready, starting setup attempts');
+        setTimeout(function() {
+            trySetup(1);
+        }, 1000);
     });
 
-    function setupToggle() {
+    function setupToggle($searchBox) {
         if (window.__oql_done) return;
         window.__oql_done = true;
 
