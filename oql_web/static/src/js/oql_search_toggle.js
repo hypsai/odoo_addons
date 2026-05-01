@@ -48,13 +48,30 @@ odoo.define('oql_web.oql_search_toggle', function (require) {
 
         console.log('[OQL] Setting up toggle button');
 
-        // Add button on the left
-        var $btn = $('<button class="btn btn-sm o_oql_toggle_btn" type="button" style="margin-right:5px;">' +
+        // Get the search view container
+        var $searchView = $searchBox.closest('.o_searchview');
+        if ($searchView.length === 0) {
+            $searchView = $searchBox.parent();
+        }
+        
+        // Get the parent of search view and make it flex (not inline-flex)
+        var $parent = $searchView.parent();
+        $parent.css('display', 'flex');
+        $parent.css('align-items', 'center');
+        $parent.css('flex-wrap', 'nowrap');
+        $parent.css('width', '100%');
+        
+        // Add button BEFORE the search view
+        var $btn = $('<button class="btn btn-sm o_oql_toggle_btn" type="button" style="margin-right:5px;flex-shrink:0;">' +
                      '<i class="fa fa-code"></i> OQL</button>');
-        $searchBox.before($btn);
+        $searchView.before($btn);
+        
+        // Make search view take remaining space
+        $searchView.css('flex', '1');
+        $searchView.css('min-width', '0');
 
-        // Add editor container
-        var $editorDiv = $('<div class="o_oql_editor_container" style="display:none;flex:1;margin-left:5px;"></div>');
+        // Add editor container INSIDE the search box container
+        var $editorDiv = $('<div class="o_oql_editor_container" style="display:none;width:100%;"></div>');
         $searchBox.after($editorDiv);
 
         var useOQL = false;
@@ -64,16 +81,20 @@ odoo.define('oql_web.oql_search_toggle', function (require) {
             useOQL = !useOQL;
 
             if (useOQL) {
+                // Switch to OQL mode
                 $btn.addClass('active');
-                $searchBox.hide();
+                // Hide only the input field, not the whole container
+                $searchBox.find('input, .o_searchview_input').hide();
                 $editorDiv.show();
 
                 if (!editor) {
                     createEditor($editorDiv);
                 }
             } else {
+                // Switch back to normal search
                 $btn.removeClass('active');
-                $searchBox.show();
+                // Show the input field again
+                $searchBox.find('input, .o_searchview_input').show();
                 $editorDiv.hide();
 
                 if (editor) {
@@ -98,13 +119,21 @@ odoo.define('oql_web.oql_search_toggle', function (require) {
                 editor = CodeMirror.fromTextArea($ta[0], {
                     mode: 'text/x-oql',
                     lineNumbers: false,
+                    viewportMargin: Infinity,
                     extraKeys: {
                         "Enter": function(cm) {
                             doSearch(cm.getValue());
                         }
                     }
                 });
-                editor.refresh();
+                
+                // Force refresh and set size
+                setTimeout(function() {
+                    editor.refresh();
+                    editor.setSize('100%', 'auto');
+                    console.log('[OQL] Editor size set to 100%');
+                }, 50);
+                
                 editor.focus();
                 console.log('[OQL] Editor ready');
             }, 100);

@@ -3,6 +3,8 @@
     transition: all 0.3s ease;
     border: 1px solid #dee2e6;
     margin-right: 5px;
+    display: inline-block;
+    vertical-align: top;
 }
 
 .o_oql_toggle_btn:hover {
@@ -20,18 +22,9 @@
     background-color: #357abd !important;
 }
 
-/* Ensure search container uses flexbox for horizontal layout */
-.o_searchview_input_container {
-    display: inline-flex !important;
-    align-items: center;
-    flex: 1;
-}
-
-/* OQL Editor Container in Search */
+/* OQL Editor Container - only affects OQL editor, not native search */
 .o_oql_editor_container {
-    display: flex;
-    align-items: center;
-    flex: 1;
+    width: 100%;
 }
 
 .o_oql_editor_container .CodeMirror {
@@ -41,7 +34,7 @@
     border-radius: 4px;
     font-size: 13px;
     background-color: #fff;
-    flex: 1;
+    width: 100%;
 }
 
 .o_oql_editor_container .CodeMirror-focused {
@@ -59,6 +52,15 @@
 
 .o_oql_editor_container .CodeMirror pre {
     padding: 0 4px;
+}
+
+/* Ensure CodeMirror takes full width */
+.o_oql_editor_container .CodeMirror-wrap {
+    width: 100% !important;
+}
+
+.o_oql_editor_container .CodeMirror-sizer {
+    min-width: 0 !important;
 }
 
 /* OQL Hint Styles for Search */
