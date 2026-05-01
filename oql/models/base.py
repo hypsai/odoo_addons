@@ -15,6 +15,17 @@ class OqlBase(models.AbstractModel):
         result = reader.query(oql_where, OqlTransformer(self.env, self._name))
         return result
 
+    def get_oql_hints(self, field: str, query: str, cursor: int, limit=100):
+        """
+        Get OQL code completion hints. Typically used by frontends.
+        :param field: The field in this model the query belongs to.
+        :param query: The query to be completed.
+        :param cursor: The cursor position in query to generate completion hints.
+        :param limit: Count limit of hints.
+        :return: List of hint.
+        """
+        pass
+
     def _valid_field_parameter(self, field, name):
         if name == "oql_model":
             return True

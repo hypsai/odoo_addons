@@ -11,11 +11,11 @@
 
     "assets": {
         "web.assets_backend": [
-            "oql/static/lib/codemirror/lib/*",
-            "oql/static/lib/codemirror/addon/**/*",
-            "oql/static/src/xml/*",
-            "oql/static/src/css/*",
-            "oql/static/src/js/*",
+            "oql_web/static/lib/codemirror/lib/*",
+            "oql_web/static/lib/codemirror/addon/**/*",
+            "oql_web/static/src/xml/*",
+            "oql_web/static/src/css/*",
+            "oql_web/static/src/js/*",
         ],
     },
 
