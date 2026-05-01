@@ -248,15 +248,24 @@ odoo.define('oql_web.oql_search_toggle', function (require) {
                 
                 var result = response.result;
                 console.log('[OQL] Success! Result:', result);
+                console.log('[OQL] Result type:', typeof result);
+                console.log('[OQL] Result string:', String(result));
                 
                 // searcho returns a recordset, not a domain
                 // We need to extract the IDs and create a domain
                 if (result) {
                     // Check if result is a recordset string like "oql.term(881,)"
-                    var recordsetMatch = String(result).match(/\(([^)]+)\)/);
+                    var resultStr = String(result);
+                    console.log('[OQL] Checking for recordset pattern in:', resultStr);
+                    
+                    var recordsetMatch = resultStr.match(/\(([^)]+)\)/);
+                    console.log('[OQL] Recordset match:', recordsetMatch);
+                    
                     if (recordsetMatch) {
                         // Extract IDs from recordset
                         var idsStr = recordsetMatch[1];
+                        console.log('[OQL] IDs string:', idsStr);
+                        
                         var ids = idsStr.split(',').map(function(id) {
                             return parseInt(id.trim());
                         }).filter(function(id) {
@@ -270,19 +279,40 @@ odoo.define('oql_web.oql_search_toggle', function (require) {
                             var domain = [['id', 'in', ids]];
                             console.log('[OQL] Created domain:', domain);
                             
-                            // Store domain in session or URL for reload
-                            var currentUrl = window.location.href;
-                            var separator = currentUrl.includes('?') ? '&' : '?';
-                            var newUrl = currentUrl + separator + 'domain=' + encodeURIComponent(JSON.stringify(domain));
-                            
-                            console.log('[OQL] Reloading with domain...');
-                            window.location.href = newUrl;
+                            // Apply the domain to the current view using Odoo's internal API
+                            // Try to find the control panel and apply filter
+                            var $controlPanel = $('.o_control_panel');
+                            if ($controlPanel.length > 0) {
+                                console.log('[OQL] Found control panel, applying domain...');
+                                
+                                // Simple approach: reload with domain in hash
+                                var currentHash = window.location.hash;
+                                var newHash = currentHash.split('&domain=')[0]; // Remove old domain
+                                newHash += '&domain=' + encodeURIComponent(JSON.stringify(domain));
+                                
+                                console.log('[OQL] New hash:', newHash);
+                                window.location.hash = newHash;
+                                
+                                // Force reload to apply the domain
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 100);
+                            } else {
+                                // Fallback: just show alert with results
+                                alert('Found ' + ids.length + ' record(s). IDs: ' + ids.join(', '));
+                            }
                         } else {
                             alert('No records found matching your query');
                         }
                     } else {
                         console.warn('[OQL] Unexpected result format:', result);
-                        alert('Search completed but result format is unexpected');
+                        console.warn('[OQL] Result type:', typeof result);
+                        console.warn('[OQL] Is array?', Array.isArray(result));
+                        if (Array.isArray(result)) {
+                            console.warn('[OQL] Array length:', result.length);
+                            console.warn('[OQL] First few items:', result.slice(0, 3));
+                        }
+                        alert('Search completed but result format is unexpected. Check console for details.');
                     }
                 } else {
                     console.warn('[OQL] No result returned');
