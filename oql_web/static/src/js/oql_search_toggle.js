@@ -142,30 +142,157 @@ odoo.define('oql_web.oql_search_toggle', function (require) {
         function doSearch(query) {
             if (!query || !query.trim()) return;
 
-            var action = window.action_manager_current_action;
-            var model = action ? action.res_model : null;
+            // Try multiple ways to get the current model
+            var model = null;
+            
+            // Method 1: From action manager (Odoo 14+)
+            if (window.action_manager_current_action && window.action_manager_current_action.res_model) {
+                model = window.action_manager_current_action.res_model;
+            }
+            
+            // Method 2: From list view data attribute
+            if (!model) {
+                var $listView = $('.o_list_view');
+                if ($listView.length > 0) {
+                    model = $listView.data('model');
+                }
+            }
+            
+            // Method 3: From form view data attribute
+            if (!model) {
+                var $formView = $('.o_form_view');
+                if ($formView.length > 0) {
+                    model = $formView.data('model');
+                }
+            }
+            
+            // Method 4: From URL hash parameters (Odoo uses hash URLs)
+            if (!model) {
+                var hash = window.location.hash;  // #cids=1&menu_id=4&action=87&model=oql.term...
+                if (hash && hash.startsWith('#')) {
+                    // Remove the # and parse parameters
+                    var hashContent = hash.substring(1);  // cids=1&menu_id=4&action=87&model=oql.term...
+                    var hashParams = new URLSearchParams(hashContent);
+                    model = hashParams.get('model');
+                    console.log('[OQL] Debug - URL hash:', hash);
+                    console.log('[OQL] Debug - hash content:', hashContent);
+                    console.log('[OQL] Debug - model from hash:', model);
+                }
+            }
+            
+            // Method 5: From URL search parameters
+            if (!model) {
+                var urlParams = new URLSearchParams(window.location.search);
+                model = urlParams.get('model') || urlParams.get('res_model');
+            }
+            
+            // Method 5: From body data attribute
+            if (!model) {
+                model = $('body').data('model');
+            }
+
+            console.log('[OQL] Detected model:', model);
 
             if (!model) {
-                console.error('[OQL] No model');
-                alert('Cannot determine current model');
+                console.error('[OQL] No model found');
+                console.log('[OQL] Debug - action_manager:', window.action_manager_current_action);
+                console.log('[OQL] Debug - list view:', $('.o_list_view').data('model'));
+                console.log('[OQL] Debug - URL:', window.location.href);
+                alert('Cannot determine current model. Please try from a list view.');
                 return;
             }
 
-            console.log('[OQL] Searching:', query);
+            console.log('[OQL] Searching:', query, 'on model:', model);
 
-            ajax.rpc('/web/dataset/call_kw', {
-                model: model,
-                method: 'searcho',
-                args: [query],
-                kwargs: {}
-            }).done(function(result) {
-                console.log('[OQL] Result:', result);
-                if (result && result.domain) {
-                    window.location.reload();
+            // Use jQuery ajax directly for better control
+            console.log('[OQL] Calling searcho via $.ajax...');
+            
+            // Add timeout to prevent hanging
+            var requestTimeout = setTimeout(function() {
+                console.error('[OQL] Request timeout after 10 seconds');
+                alert('OQL Error: Request timeout. Please check:\n1. OQL module is installed\n2. searcho method exists\n3. Server is running');
+            }, 10000);
+            
+            // Prepare the RPC payload - correct format for call_kw
+            var payload = {
+                jsonrpc: '2.0',
+                method: 'call',
+                params: {
+                    model: model,
+                    method: 'searcho',
+                    args: [[], query],  // First arg is ids (empty list), second is oql_where
+                    kwargs: {}
+                },
+                id: Math.round(Math.random() * 1000)
+            };
+            
+            console.log('[OQL] Payload:', JSON.stringify(payload));
+            
+            // Make the AJAX call
+            $.ajax({
+                url: '/web/dataset/call_kw',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                dataType: 'json',
+                timeout: 10000
+            }).done(function(response) {
+                clearTimeout(requestTimeout);
+                console.log('[OQL] Response:', response);
+                
+                if (response.error) {
+                    console.error('[OQL] Server error:', response.error);
+                    alert('OQL Error: ' + (response.error.data?.message || response.error.message || 'Server error'));
+                    return;
                 }
-            }).fail(function(err) {
-                console.error('[OQL] Error:', err);
-                alert('OQL Error: ' + (err.data?.message || 'Invalid query'));
+                
+                var result = response.result;
+                console.log('[OQL] Success! Result:', result);
+                
+                // searcho returns a recordset, not a domain
+                // We need to extract the IDs and create a domain
+                if (result) {
+                    // Check if result is a recordset string like "oql.term(881,)"
+                    var recordsetMatch = String(result).match(/\(([^)]+)\)/);
+                    if (recordsetMatch) {
+                        // Extract IDs from recordset
+                        var idsStr = recordsetMatch[1];
+                        var ids = idsStr.split(',').map(function(id) {
+                            return parseInt(id.trim());
+                        }).filter(function(id) {
+                            return !isNaN(id);
+                        });
+                        
+                        console.log('[OQL] Extracted IDs:', ids);
+                        
+                        if (ids.length > 0) {
+                            // Create domain with 'in' operator
+                            var domain = [['id', 'in', ids]];
+                            console.log('[OQL] Created domain:', domain);
+                            
+                            // Store domain in session or URL for reload
+                            var currentUrl = window.location.href;
+                            var separator = currentUrl.includes('?') ? '&' : '?';
+                            var newUrl = currentUrl + separator + 'domain=' + encodeURIComponent(JSON.stringify(domain));
+                            
+                            console.log('[OQL] Reloading with domain...');
+                            window.location.href = newUrl;
+                        } else {
+                            alert('No records found matching your query');
+                        }
+                    } else {
+                        console.warn('[OQL] Unexpected result format:', result);
+                        alert('Search completed but result format is unexpected');
+                    }
+                } else {
+                    console.warn('[OQL] No result returned');
+                    alert('Search completed but no results found');
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                clearTimeout(requestTimeout);
+                console.error('[OQL] AJAX failed:', textStatus, errorThrown);
+                console.error('[OQL] Response:', jqXHR.responseText);
+                alert('OQL Error: ' + (errorThrown || textStatus || 'Request failed'));
             });
         }
     }
