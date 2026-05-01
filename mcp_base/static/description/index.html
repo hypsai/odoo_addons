@@ -195,79 +195,9 @@ class ResPartner(models.Model):
             </div>
 
             <!-- Quick Test -->
-            <div style="background: #28a745; color: white; padding: 20px; border-radius: 10px; text-align: center;">
+            <div style="background: white; border: 3px solid #28a745; color: #28a745; padding: 20px; border-radius: 10px; text-align: center;">
                 <h5 style="margin: 0 0 10px 0; font-weight: 700;"><i class="fa fa-rocket mr-2"></i>You're All Set!</h5>
                 <p style="margin: 0; font-size: 15px;">Your Odoo methods are now accessible to AI agents. Start asking natural language questions about your data!</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- What You Get -->
-    <div class="row oe_spaced mt-5">
-        <div class="col-12">
-            <h3 class="text-center mb-4" style="font-weight: 700; color: #667eea;"><i class="fa fa-gift mr-2"></i>Key Features</h3>
-            <ul style="list-style: none; padding: 0;">
-                <li style="padding: 10px 0 10px 35px; position: relative; font-size: 15px; border-bottom: 1px solid #f1f1f1;">
-                    <i class="fa fa-check-circle" style="position: absolute; left: 0; color: #667eea; font-size: 18px;"></i>
-                    Expose any Odoo model method to AI agents with <code>@mcp_tool</code>
-                </li>
-                <li style="padding: 10px 0 10px 35px; position: relative; font-size: 15px; border-bottom: 1px solid #f1f1f1;">
-                    <i class="fa fa-check-circle" style="position: absolute; left: 0; color: #667eea; font-size: 18px;"></i>
-                    Automatic JSON schema from Python type annotations - zero manual work
-                </li>
-                <li style="padding: 10px 0 10px 35px; position: relative; font-size: 15px; border-bottom: 1px solid #f1f1f1;">
-                    <i class="fa fa-check-circle" style="position: absolute; left: 0; color: #667eea; font-size: 18px;"></i>
-                    Smart docstring parsing extracts parameter descriptions automatically
-                </li>
-                <li style="padding: 10px 0 10px 35px; position: relative; font-size: 15px; border-bottom: 1px solid #f1f1f1;">
-                    <i class="fa fa-check-circle" style="position: absolute; left: 0; color: #667eea; font-size: 18px;"></i>
-                    Built-in Streamable HTTP transport (MCP 2025-03-26)
-                </li>
-                <li style="padding: 10px 0 10px 35px; position: relative; font-size: 15px; border-bottom: 1px solid #f1f1f1;">
-                    <i class="fa fa-check-circle" style="position: absolute; left: 0; color: #667eea; font-size: 18px;"></i>
-                    Works seamlessly with Claude, ChatGPT, Cursor, and other LLMs
-                </li>
-                <li style="padding: 10px 0 10px 35px; position: relative; font-size: 15px;">
-                    <i class="fa fa-check-circle" style="position: absolute; left: 0; color: #667eea; font-size: 18px;"></i>
-                    No external dependencies beyond Odoo core
-                </li>
-            </ul>
-            
-            <div style="background: #f5f7fa; padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 4px solid #667eea;">
-                <p style="margin: 0; font-size: 15px; color: #333;"><strong>Ideal for:</strong> AI-powered customer service bots, intelligent sales assistants, automated inventory management, smart reporting dashboards, natural language ERP queries, and any use case where you want AI to interact with your Odoo data.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Client Configuration -->
-    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
-        <div class="col-12">
-            <h3 class="text-center mb-4" style="font-weight: 700; color: #667eea;"><i class="fa fa-cogs mr-2"></i>Client Configuration</h3>
-            <p class="text-center text-muted">Connect your favorite AI clients to Odoo MCP Server in minutes.</p>
-            
-            <div class="row mt-4">
-                <div class="col-md-4 mb-3">
-                    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; text-align: center; height: 100%;">
-                        <h5 style="font-weight: 700;">ChatWise</h5>
-                        <p class="text-muted small">Add MCP Server <i class="fa fa-arrow-right mx-1"></i> Streamable HTTP <i class="fa fa-arrow-right mx-1"></i> Enter URL</p>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; text-align: center; height: 100%;">
-                        <h5 style="font-weight: 700;">Cursor</h5>
-                        <p class="text-muted small">Settings <i class="fa fa-arrow-right mx-1"></i> MCP <i class="fa fa-arrow-right mx-1"></i> Add Server <i class="fa fa-arrow-right mx-1"></i> Streamable HTTP</p>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; text-align: center; height: 100%;">
-                        <h5 style="font-weight: 700;">Claude Desktop</h5>
-                        <p class="text-muted small">Edit config.json <i class="fa fa-arrow-right mx-1"></i> Add MCP server</p>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background: #f5f7fa; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 4px solid #667eea;">
-                <p style="margin: 0; font-size: 14px; color: #333;"><strong><i class="fa fa-lightbulb-o mr-1"></i>Tip:</strong> Your MCP endpoint will be: <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">http://your-odoo-server:8069/mcp</code></p>
             </div>
         </div>
     </div>
@@ -278,7 +208,7 @@ class ResPartner(models.Model):
             <h3 class="text-center mb-4" style="font-weight: 700; color: #667eea;"><i class="fa fa-shield mr-2"></i>Security &amp; Authentication</h3>
             <p class="text-center text-muted">Protect your Odoo data with proper authentication. We strongly recommend using API key authentication for production environments.</p>
             
-            <div style="background: #fff3cd; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #f39c12;">
+            <div style="background: white; border: 2px solid #f39c12; padding: 20px; border-radius: 10px; margin: 20px 0;">
                 <p style="margin: 0; font-size: 15px; color: #856404;"><strong><i class="fa fa-exclamation-triangle mr-1"></i>Important:</strong> If the <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">auth_api_key</code> module is not installed, the MCP server runs with administrator privileges. This is convenient for development but <strong>NOT recommended for production</strong>.</p>
             </div>
 
@@ -327,7 +257,7 @@ class ResPartner(models.Model):
                 </div>
             </div>
 
-            <div style="background: #fff3cd; color: #856404; padding: 25px; border-radius: 10px; text-align: center; margin-top: 25px;">
+            <div style="background: white; border: 2px solid #f39c12; color: #856404; padding: 25px; border-radius: 10px; text-align: center; margin-top: 25px;">
                 <h3 style="margin: 0 0 10px 0; font-size: 22px; color: #856404;"><i class="fa fa-lock mr-2"></i>Secure Your MCP Server Today</h3>
                 <p style="margin: 0; font-size: 15px; color: #856404;">Install auth_api_key and protect your Odoo data with enterprise-grade authentication.</p>
             </div>
@@ -337,7 +267,7 @@ class ResPartner(models.Model):
     <!-- Final CTA -->
     <div class="row oe_spaced mt-5 py-4 text-center">
         <div class="col-12">
-            <div style="background: #e8eaf6; color: #283593; padding: 30px; border-radius: 15px;">
+            <div style="background: white; border: 2px solid #667eea; color: #283593; padding: 30px; border-radius: 15px;">
                 <h3 style="margin: 0 0 10px 0; font-size: 24px; color: #283593;">Ready to Make Your Odoo AI-Ready?</h3>
                 <p style="margin: 0 0 20px 0; font-size: 16px; color: #283593;">Install Odoo MCP Framework and expose your first method with <code>@mcp_tool</code> in under 2 minutes.</p>
                 <a href="https://github.com/chrisking94/odoo_addons" target="_blank" class="btn btn-primary btn-lg px-5" style="border-radius: 50px; font-weight: 700; background-color: #667eea; border-color: #667eea; color: #ffffff;">
