@@ -95,7 +95,7 @@ def search_customers(self, name: str):
                                 <i class="fa fa-folder-open mr-2" style="color: #667eea;"></i>
                                 <strong>Extract and Place in Addons Directory</strong><br>
                                 <span style="font-size: 0.9em; color: #888;">Extract the zip file and copy the <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">mcp_base</code> folder to your Odoo addons path, for example:<br>
-                                <code style="background: #f5f5f5; padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px; font-size: 0.9em;">/opt/odoo/addons/mcp_base</code> (Linux) or <code style="background: #f5f5f5; padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px; font-size: 0.9em;">C:\\Program Files\\Odoo 15.0\\server\\addons\\mcp_base</code> (Windows)</span><br>
+                                <code style="background: #f5f5f5; padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px; font-size: 0.9em;">/opt/odoo/addons/mcp_base</code> (Linux) or <code style="background: #f5f5f5; padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px; font-size: 0.9em;">C:\Program Files\Odoo 15.0\server\addons\mcp_base</code> (Windows)</span><br>
                                 <span style="font-size: 0.85em; color: #999; margin-top: 5px; display: block;">
                                     <i class="fa fa-info-circle mr-1"></i>Can't find your addons path? Check your Odoo config file:<br>
                                     - Linux: <code style="background: #f5f5f5; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">/etc/odoo/odoo.conf</code> (look for <code style="background: #f5f5f5; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">addons_path</code>)<br>
@@ -139,11 +139,7 @@ class ResPartner(models.Model):
         :param name: Customer name to search for
         :param limit: Maximum number of results
         """
-        partners = self.search([('name', 'ilike', name)], limit=limit)
-        return [
-            {'id': p.id, 'name': p.name, 'email': p.email}
-            for p in partners
-        ]</pre>
+        return self.search_read([('name', 'ilike', name)], fields=['name', 'email'], limit=limit)</pre>
                         </div>
                     </div>
                 </div>
@@ -218,7 +214,7 @@ class ResPartner(models.Model):
                 <div class="col-md-4 mb-3">
                     <div style="background-color: #f8f9fa; border-radius: 10px; padding: 15px;">
                         <div class="text-center" style="width: 30px; height: 30px; line-height: 30px; border-radius: 50%; font-weight: 700; margin-bottom: 10px; background-color: #667eea; color: #ffffff;">1</div>
-                        <h6 style="font-weight: 700;">Install auth_api_key</h6>
+                        <h6 style="font-weight: 700;">Install <span onclick="window.open('https://apps.odoo.com/apps/modules/15.0/auth_api_key', '_blank')" style="color: #667eea; cursor: pointer; text-decoration: underline; text-underline-offset: 3px;">auth_api_key</span></h6>
                         <p class="text-muted small">Get it from Odoo App Store</p>
                     </div>
                 </div>
@@ -242,8 +238,8 @@ class ResPartner(models.Model):
                 <p style="margin: 0; font-size: 0.9rem; color: #333333;">
                     <i class="fa fa-book mr-1" style="color: #667eea;"></i>
                     <strong>For detailed API key configuration, please refer to the </strong>
-                    <a href="https://www.odoo.com/apps/modules/browse?search=auth_api_key" target="_blank" style="color: #667eea; text-decoration: underline;">
-                        auth_api_key module documentation
+                    <a href="https://apps.odoo.com/apps/modules/15.0/auth_api_key" target="_blank" style="color: #667eea; text-decoration: underline; text-underline-offset: 3px; font-weight: 600;">
+                        Auth Api Key module documentation
                     </a>
                 </p>
             </div>
