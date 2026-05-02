@@ -8,7 +8,29 @@ odoo.define('oql_web.oql_search_bar', function (require) {
     var ajax = require('web.ajax');
     var patch = require('web.utils').patch;
 
-    console.log('[OQL] Loading OQL SearchBar extension...');
+    // Constants
+    var SELECTORS = {
+        SEARCH_VIEW: '.o_searchview',
+        SEARCH_BOX: '.o_searchview_input_container',
+        TOGGLE_BTN: '.o_oql_toggle_btn'
+    };
+
+    var STYLES = {
+        FLEX_CONTAINER: {
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'nowrap',
+            width: '100%'
+        },
+        FLEX_ITEM: {
+            flex: '1',
+            minWidth: '0'
+        },
+        BUTTON: {
+            marginRight: '5px',
+            flexShrink: '0'
+        }
+    };
 
     // Extend SearchBar using patch()
     patch(SearchBar.prototype, 'oql_web.SearchBar', {
@@ -24,8 +46,6 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             
             // Add OQL button to DOM
             this._addOQLButton();
-            
-            console.log('[OQL] SearchBar mounted with OQL support');
         },
 
         willUnmount: function () {
@@ -44,65 +64,38 @@ odoo.define('oql_web.oql_search_bar', function (require) {
          */
         _addOQLButton: function () {
             var self = this;
+            var $searchView = $(this.el).closest(SELECTORS.SEARCH_VIEW);
             
-            // Use jQuery to find elements in the component's DOM
-            // this.el might be the input container, so we need to go up to find the searchview
-            var $current = $(this.el);
-            console.log('[OQL] Current element:', this.el.className);
-            
-            // Try to find o_searchview from current element or its parents
-            var $searchView = $current.closest('.o_searchview');
             if ($searchView.length === 0) {
-                $searchView = $current.find('.o_searchview');
-            }
-            if ($searchView.length === 0) {
-                $searchView = $current.siblings('.o_searchview');
+                console.warn('[OQL] Search view not found');
+                return;
             }
             
-            var $searchBox = $current.closest('.o_searchview_input_container');
+            var $searchBox = $searchView.find(SELECTORS.SEARCH_BOX);
             if ($searchBox.length === 0) {
-                $searchBox = $current.find('.o_searchview_input_container');
-            }
-            
-            console.log('[OQL] Found searchView:', $searchView.length, $searchView[0]);
-            console.log('[OQL] Found searchBox:', $searchBox.length, $searchBox[0]);
-            
-            if ($searchView.length === 0) {
-                console.warn('[OQL] Search view not found, trying alternative...');
-                // Last resort: search from document
-                $searchView = $('.o_searchview').first();
-                $searchBox = $('.o_searchview_input_container').first();
-                console.log('[OQL] Alternative search - searchView:', $searchView.length);
-            }
-            
-            if ($searchView.length === 0) {
-                console.error('[OQL] Cannot find search view anywhere');
+                console.warn('[OQL] Search box not found');
                 return;
             }
             
             // Check if button already exists
-            if ($searchView.parent().find('.o_oql_toggle_btn').length > 0) {
-                console.log('[OQL] OQL button already exists');
+            if ($searchView.parent().find(SELECTORS.TOGGLE_BTN).length > 0) {
                 return;
             }
             
-            // Get parent and make it flex
+            // Setup flex container
             var $parent = $searchView.parent();
-            $parent.css('display', 'flex');
-            $parent.css('align-items', 'center');
-            $parent.css('flex-wrap', 'nowrap');
-            $parent.css('width', '100%');
+            Object.assign($parent[0].style, STYLES.FLEX_CONTAINER);
             
-            // Add button BEFORE the search view
-            var $btn = $('<button class="btn btn-sm o_oql_toggle_btn" type="button" style="margin-right:5px;flex-shrink:0;">' +
+            // Create and insert button BEFORE the search view
+            var $btn = $('<button class="btn btn-sm o_oql_toggle_btn" type="button">' +
                          '<i class="fa fa-code"></i> OQL</button>');
+            Object.assign($btn[0].style, STYLES.BUTTON);
             $searchView.before($btn);
             
             // Make search view take remaining space
-            $searchView.css('flex', '1');
-            $searchView.css('min-width', '0');
+            Object.assign($searchView[0].style, STYLES.FLEX_ITEM);
             
-            // Add editor container INSIDE the search box container
+            // Add editor container AFTER the search box
             var $editorDiv = $('<div class="o_oql_editor_container" style="display:none;width:100%;"></div>');
             $searchBox.after($editorDiv);
             
@@ -110,8 +103,6 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             $btn.on('click', function () {
                 self._toggleOQL($btn, $searchBox, $editorDiv);
             });
-            
-            console.log('[OQL] OQL button added successfully');
         },
 
         /**
@@ -161,7 +152,8 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             var $ta = $('<textarea placeholder="Enter OQL query..." style="width:100%;min-height:38px;"></textarea>');
             $container.append($ta);
             
-            setTimeout(function () {
+            // Initialize CodeMirror after DOM update
+            requestAnimationFrame(function () {
                 self.oqlCodeMirror = CodeMirror.fromTextArea($ta[0], {
                     mode: 'text/x-oql',
                     lineNumbers: false,
@@ -173,16 +165,11 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                     }
                 });
                 
-                // Force refresh and set size
-                setTimeout(function () {
-                    self.oqlCodeMirror.refresh();
-                    self.oqlCodeMirror.setSize('100%', 'auto');
-                    console.log('[OQL] Editor size set to 100%');
-                }, 50);
-                
+                // Refresh and focus
+                self.oqlCodeMirror.refresh();
+                self.oqlCodeMirror.setSize('100%', 'auto');
                 self.oqlCodeMirror.focus();
-                console.log('[OQL] Editor ready');
-            }, 100);
+            });
         },
 
         /**
@@ -196,12 +183,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 return;
             }
             
-            console.log('[OQL] Searching:', query);
-            
-            // Get current model from searchModel
             var model = this.model.config.modelName;
-            console.log('[OQL] Current model:', model);
-            
             if (!model) {
                 console.error('[OQL] No model found');
                 return;
@@ -214,8 +196,6 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 args: [[], query],
                 kwargs: {}
             }).then(function (result) {
-                console.log('[OQL] Result:', result);
-                
                 // Extract IDs from recordset string like "oql.term(881,)"
                 var ids = [];
                 if (typeof result === 'string') {
@@ -227,24 +207,14 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                     }
                 }
                 
-                console.log('[OQL] Extracted IDs:', ids);
-                
                 if (ids.length > 0) {
-                    // Create domain
-                    var model = self.model;
-                    var domain = [['id', 'in', ids]];
-                    var queryObj = model.get('query');
-                    queryObj.domain = domain;
-
-                    model.trigger("search", queryObj);
-                } else {
-                    console.log('No records found matching your query');
+                    var queryObj = self.model.get('query');
+                    queryObj.domain = [['id', 'in', ids]];
+                    self.model.trigger("search", queryObj);
                 }
             }).catch(function (error) {
-                console.error('[OQL] Error:', error);
+                console.error('[OQL] Search error:', error);
             });
         },
     });
-
-    console.log('[OQL] SearchBar extension complete');
 });
