@@ -7,6 +7,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
     var SearchBar = require('web.SearchBar');
     var ajax = require('web.ajax');
     var patch = require('web.utils').patch;
+    var OQLEditorCore = require('oql_web.oql_editor_core');
 
     // Constants
     var SELECTORS = {
@@ -42,7 +43,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             
             // Add OQL state
             this.oqlEnabled = false;
-            this.oqlCodeMirror = null;
+            this.oqlEditor = null;
             
             // Add OQL button to DOM
             this._addOQLButton();
@@ -51,10 +52,10 @@ odoo.define('oql_web.oql_search_bar', function (require) {
         willUnmount: function () {
             this._super.apply(this, arguments);
             
-            // Cleanup CodeMirror if exists
-            if (this.oqlCodeMirror) {
-                this.oqlCodeMirror.toTextArea();
-                this.oqlCodeMirror = null;
+            // Cleanup OQL editor if exists
+            if (this.oqlEditor) {
+                this.oqlEditor.destroy();
+                this.oqlEditor = null;
             }
         },
 
@@ -119,8 +120,10 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 $searchBox.hide();
                 $editorDiv.show();
                 
-                if (!this.oqlCodeMirror) {
-                    this._initCodeMirror($editorDiv);
+                if (!this.oqlEditor) {
+                    this._initOQLEditor($editorDiv);
+                } else {
+                    this.oqlEditor.focus();
                 }
             } else {
                 // Switch back to normal search
@@ -128,47 +131,43 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 $searchBox.show();
                 $editorDiv.hide();
                 
-                if (this.oqlCodeMirror) {
-                    this.oqlCodeMirror.toTextArea();
-                    this.oqlCodeMirror = null;
+                if (this.oqlEditor) {
+                    this.oqlEditor.destroy();
+                    this.oqlEditor = null;
                     $editorDiv.empty();
                 }
             }
         },
 
         /**
-         * Initialize CodeMirror editor
+         * Initialize OQL Editor using OQLEditorCore
          * @private
          */
-        _initCodeMirror: function ($container) {
+        _initOQLEditor: function ($container) {
             var self = this;
+            var model = this.model.config.modelName;
             
-            if (typeof CodeMirror === 'undefined') {
-                console.error('[OQL] CodeMirror not loaded!');
+            if (!model) {
+                console.error('[OQL] No model found');
                 return;
             }
             
-            $container.empty();
-            var $ta = $('<textarea placeholder="Enter OQL query..." style="width:100%;min-height:38px;"></textarea>');
-            $container.append($ta);
+            // Create OQL Editor Core instance
+            this.oqlEditor = new OQLEditorCore({
+                container: $container,
+                model: model,
+                res_id: null,  // Search bar mode doesn't have a record ID
+                fieldName: null,  // Search bar mode doesn't have a field name
+                readonly: false,
+                lineNumbers: false,
+                onSearch: function (query) {
+                    self._doOQLSearch(query);
+                }
+            });
             
-            // Initialize CodeMirror after DOM update
-            requestAnimationFrame(function () {
-                self.oqlCodeMirror = CodeMirror.fromTextArea($ta[0], {
-                    mode: 'text/x-oql',
-                    lineNumbers: false,
-                    viewportMargin: Infinity,
-                    extraKeys: {
-                        "Enter": function (cm) {
-                            self._doOQLSearch(cm.getValue());
-                        }
-                    }
-                });
-                
-                // Refresh and focus
-                self.oqlCodeMirror.refresh();
-                self.oqlCodeMirror.setSize('100%', 'auto');
-                self.oqlCodeMirror.focus();
+            // Start the editor
+            this.oqlEditor.start().then(function () {
+                self.oqlEditor.focus();
             });
         },
 

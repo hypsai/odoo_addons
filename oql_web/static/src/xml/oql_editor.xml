@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="oql_editor_templates" xml:space="preserve">
-    <!-- 提示项模板 -->
     <t t-name="oql_editor.HintItem">
         <div class="oql-hint-item">
             <span class="oql-hint-value">
