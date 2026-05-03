@@ -194,12 +194,12 @@ odoo.define('oql_web.oql_editor_core', function (require) {
             var cursor = cm.getCursor();
             var doc = cm.getDoc();
             var content = doc.getValue();
-            var cursor_index = doc.indexFromPos(cursor);
+            var cursor_index = doc.indexFromPos(cursor);  // Absolute position from document start
             var token = self._getCurrentToken(cm);
-            var prefix = content.substring(0, cursor.ch - token.length);
+            var prefix = content.substring(0, cursor_index - token.length);  // Use absolute position
             var context = prefix.trim();
-            var tokenStart = cursor.ch - token.length;
-            var from = { line: cursor.line, ch: tokenStart };
+            var tokenStart = cursor_index - token.length;  // Use absolute position
+            var from = doc.posFromIndex(tokenStart);  // Convert back to {line, ch}
             var to = cursor;
             var limit = 100;
 
