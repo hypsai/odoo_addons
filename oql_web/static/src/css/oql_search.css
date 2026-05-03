@@ -47,7 +47,8 @@
     min-height: 38px;
     border: 1px solid #ced4da;
     border-radius: 4px 0 0 4px;
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.4;
     background-color: #fff;
     flex: 1;
     min-width: 0;
@@ -114,11 +115,12 @@
 }
 
 .o_oql_editor_container .CodeMirror-lines {
-    padding: 8px 0;
+    padding: 0;
 }
 
-.o_oql_editor_container .CodeMirror pre {
-    padding: 0 4px;
+.o_oql_editor_container .CodeMirror pre.CodeMirror-line,
+.o_oql_editor_container .CodeMirror pre.CodeMirror-line-like {
+    padding: 8px 4px;
 }
 
 /* Ensure CodeMirror takes full width */
