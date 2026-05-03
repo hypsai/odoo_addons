@@ -122,8 +122,6 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             $btn.on('click', function () {
                 self._toggleOQL($btn, $searchView, $editorDiv);
             });
-            
-            console.log('[OQL] Button added successfully');
         },
 
         /**
@@ -447,6 +445,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 }
                 
                 var queryObj = self.model.get('query');
+                queryObj.context['active_test'] = false;
                 queryObj.domain = [['id', 'in', ids]];
                 self.model.trigger("search", queryObj);
             }).catch(function (error) {
@@ -764,7 +763,6 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                     if (savedPos) {
                         try {
                             cursor = JSON.parse(savedPos);
-                            console.log('[OQL] Saved cursor position:', cursor);
                         } catch (e) {
                             console.warn('[OQL] Failed to parse cursor position:', e);
                         }
@@ -779,14 +777,11 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                             try {
                                 var doc = self.oqlEditor.editor.getDoc();
                                 var lineCount = doc.lineCount();
-                                
-                                console.log('[OQL] Current line count:', lineCount, 'Target cursor:', cursor);
-                                
+
                                 if (cursor.line >= 0 && cursor.line < lineCount) {
                                     var lineLength = doc.getLine(cursor.line).length;
                                     if (cursor.ch >= 0 && cursor.ch <= lineLength) {
                                         self.oqlEditor.editor.setCursor(cursor);
-                                        console.log('[OQL] Cursor restored successfully');
                                     } else {
                                         console.warn('[OQL] Cursor ch out of range:', cursor.ch, 'vs', lineLength);
                                     }

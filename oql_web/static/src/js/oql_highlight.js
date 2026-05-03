@@ -90,8 +90,6 @@ odoo.define('oql_web.oql_highlight', function (require) {
 
         // Also define MIME type
         CodeMirror.defineMIME('text/x-oql', 'text/x-oql');
-
-        console.log('[OQL Highlight] Mode registered successfully');
     }
 
     /**
@@ -126,7 +124,6 @@ odoo.define('oql_web.oql_highlight', function (require) {
         ].join('\n');
 
         document.head.appendChild(styleElement);
-        console.log('[OQL Highlight] Styles applied');
     }
 
     // Auto-register when module loads
