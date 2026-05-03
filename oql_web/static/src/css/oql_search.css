@@ -27,19 +27,64 @@
     width: 100%;
 }
 
-.o_oql_editor_container .CodeMirror {
-    height: auto;
-    min-height: 38px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 13px;
-    background-color: #fff;
+/* Combobox wrapper for OQL input + history button */
+.oql_combobox_wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
     width: 100%;
 }
 
-.o_oql_editor_container .CodeMirror-focused {
+.oql_combobox_wrapper .CodeMirror {
+    height: auto;
+    min-height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 4px 0 0 4px;
+    font-size: 13px;
+    background-color: #fff;
+    flex: 1;
+    min-width: 0;
+}
+
+.oql_combobox_wrapper .CodeMirror-focused {
     border-color: #4a90e2;
+    box-shadow: none;
+}
+
+/* When wrapper has focus, style both input and button */
+.oql_combobox_wrapper.oql-focused .CodeMirror,
+.oql_combobox_wrapper.oql-focused .oql_history_trigger {
+    border-color: #4a90e2;
+}
+
+.oql_combobox_wrapper.oql-focused .CodeMirror {
     box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+}
+
+/* History button styling */
+.oql_combobox_wrapper .oql_history_trigger {
+    border: 1px solid #ced4da;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    background-color: #fff;
+    color: #6c757d;
+    padding: 6px 10px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.oql_combobox_wrapper .oql_history_trigger:hover {
+    background-color: #f8f9fa;
+    color: #4a90e2;
+    border-color: #4a90e2;
+}
+
+.oql_combobox_wrapper .CodeMirror-focused + .oql_history_trigger,
+.oql_combobox_wrapper .oql_history_trigger:hover {
+    border-color: #4a90e2;
 }
 
 .o_oql_editor_container .CodeMirror-scroll {
@@ -124,4 +169,75 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* OQL History Dropdown */
+.oql_history_dropdown {
+    animation: oqlHistoryFadeIn 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 5px 0;
+    margin-top: -1px; /* Overlap with input border */
+}
+
+@keyframes oqlHistoryFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.oql_history_item {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.oql_history_item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.oql_history_item:hover .btn-link {
+    color: #d9534f !important;
+}
+
+.oql_history_clear:hover {
+    background-color: #fff5f5 !important;
+    color: #d9534f;
+}
+
+/* OQL History Button */
+.oql_history_button_container {
+    transition: opacity 0.2s ease;
+}
+
+.oql_history_trigger {
+    color: #999;
+    font-size: 16px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.oql_history_trigger:hover {
+    color: #4a90e2;
+    background-color: rgba(74, 144, 226, 0.1);
+}
+
+/* History Item with CodeMirror */
+.oql_history_item .CodeMirror {
+    border: none;
+    background-color: #fafafa;
+    font-size: 12px;
+    height: auto;
+}
+
+.oql_history_item .CodeMirror-scroll {
+    min-height: 40px;
+    max-height: 80px;
 }

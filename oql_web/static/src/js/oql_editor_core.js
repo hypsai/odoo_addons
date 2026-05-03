@@ -18,6 +18,8 @@ odoo.define('oql_web.oql_editor_core', function (require) {
      * @param {boolean} [options.lineNumbers=false] Show line numbers
      * @param {Function} [options.onSearch] Callback when Enter is pressed (for search bar mode)
      * @param {Function} [options.onChange] Callback when content changes (for field mode)
+     * @param {Array} [options.history=[]] Initial history items
+     * @param {Function} [options.onHistorySelect] Callback when history item is selected
      */
     var OQLEditorCore = Class.extend({
         init: function (options) {
@@ -29,10 +31,14 @@ odoo.define('oql_web.oql_editor_core', function (require) {
             this.lineNumbers = options.lineNumbers || false;
             this.onSearch = options.onSearch || null;
             this.onChange = options.onChange || null;
+            this.history = options.history || [];
+            this.onHistorySelect = options.onHistorySelect || null;
             
             this.editor = null;
             this.$textarea = null;
             this._cachedHintsGroup = {};
+            this.$historyDropdown = null;
+            this.historyEditors = [];  // Store CodeMirror instances for history items
         },
 
         /**
