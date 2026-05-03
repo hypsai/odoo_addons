@@ -110,13 +110,14 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             // Make search view take remaining space
             Object.assign($searchView[0].style, STYLES.FLEX_ITEM);
             
-            // Add editor container AFTER the search box
-            var $editorDiv = $('<div class="o_oql_editor_container" style="display:none;width:100%;"></div>');
-            $searchBox.after($editorDiv);
+            // Create editor container that will REPLACE the native search box
+            // Insert it AFTER the entire search view (not inside search box)
+            var $editorDiv = $('<div class="o_oql_editor_container" style="display:none;width:100%;position:relative;"></div>');
+            $searchView.after($editorDiv);
             
             // Toggle button click handler
             $btn.on('click', function () {
-                self._toggleOQL($btn, $searchBox, $editorDiv);
+                self._toggleOQL($btn, $searchView, $editorDiv);
             });
             
             console.log('[OQL] Button added successfully');
@@ -126,14 +127,14 @@ odoo.define('oql_web.oql_search_bar', function (require) {
          * Toggle OQL mode on/off
          * @private
          */
-        _toggleOQL: function ($btn, $searchBox, $editorDiv) {
+        _toggleOQL: function ($btn, $searchView, $editorDiv) {
             var self = this;
             this.oqlEnabled = !this.oqlEnabled;
             
             if (this.oqlEnabled) {
-                // Switch to OQL mode
+                // Switch to OQL mode - hide entire native search view
                 $btn.addClass('active');
-                $searchBox.hide();
+                $searchView.hide();
                 $editorDiv.show();
                 
                 if (!this.oqlEditor) {
@@ -142,9 +143,9 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                     this.oqlEditor.focus();
                 }
             } else {
-                // Switch back to normal search
+                // Switch back to normal search - show native search view
                 $btn.removeClass('active');
-                $searchBox.show();
+                $searchView.show();
                 $editorDiv.hide();
                 
                 if (this.oqlEditor) {

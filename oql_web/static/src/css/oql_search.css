@@ -22,7 +22,7 @@
     background-color: #357abd !important;
 }
 
-/* OQL Editor Container - only affects OQL editor, not native search */
+/* OQL Editor Container - replaces native search box */
 .o_oql_editor_container {
     width: 100%;
 }
@@ -33,6 +33,13 @@
     display: flex;
     align-items: flex-start; /* Align to top instead of center */
     width: 100%;
+}
+
+/* Remove any inherited borders from parent containers */
+.o_searchview .oql_combobox_wrapper,
+.o_searchview_input_container .oql_combobox_wrapper {
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .oql_combobox_wrapper .CodeMirror {
