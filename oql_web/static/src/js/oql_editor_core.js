@@ -93,11 +93,9 @@ odoo.define('oql_web.oql_editor_core', function (require) {
             }
 
             // Ctrl key for hint in field mode
-            if (this.lineNumbers) {
-                keys["Ctrl"] = function (cm) {
-                    self._showHint(cm, true);
-                };
-            }
+            keys["Ctrl"] = function (cm) {
+                self._showHint(cm, true);
+            };
 
             return keys;
         },
