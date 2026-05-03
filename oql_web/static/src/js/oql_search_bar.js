@@ -13,7 +13,9 @@ odoo.define('oql_web.oql_search_bar', function (require) {
     // Storage keys
     var STORAGE_KEYS = {
         TOGGLE_STATE: 'oql_toggle_state_',
-        HISTORY: 'oql_search_history_'
+        HISTORY: 'oql_search_history_',
+        LAST_QUERY: 'oql_last_query_',  // Cache for last OQL query per user+model+view
+        CURSOR_POSITION: 'oql_cursor_pos_'  // Cache for cursor position
     };
     
     // Max history items
@@ -55,6 +57,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             this.oqlEnabled = false;
             this.oqlEditor = null;
             this.oqlHistory = this._loadHistory();
+            this.isRestoringQuery = false;  // Flag to prevent saving cursor during restore
             
             // Add OQL button to DOM
             this._addOQLButton();
@@ -215,6 +218,11 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 // Add change handler to clear error state
                 self.oqlEditor.editor.on('change', function () {
                     self._clearErrorState();
+                });
+                
+                // Add cursor activity handler to save cursor position
+                self.oqlEditor.editor.on('cursorActivity', function () {
+                    self._saveCursorPosition();
                 });
                 
                 // Add history button after editor is ready
@@ -417,6 +425,9 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             // Add to history before searching
             this._addToHistory(query);
             
+            // Save as last query for restore after page refresh
+            this._saveLastQuery(query);
+            
             // Call searcho method via RPC
             return ajax.jsonRpc('/web/dataset/call_kw', 'call', {
                 model: model,
@@ -555,7 +566,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 // Toggle state only by user
                 return STORAGE_KEYS[type] + userId;
             } else {
-                // History by user + model
+                // History and last query by user + model
                 var model = this.model ? this.model.config.modelName : 'unknown';
                 return STORAGE_KEYS[type] + userId + '_' + model;
             }
@@ -566,6 +577,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
          * @private
          */
         _restoreToggleState: function () {
+            var self = this;
             try {
                 var key = this._getStorageKey('TOGGLE_STATE');
                 var saved = localStorage.getItem(key);
@@ -574,6 +586,11 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                     var $btn = $('.o_oql_toggle_btn').first();
                     if ($btn.length > 0 && !this.oqlEnabled) {
                         $btn.trigger('click');
+                        
+                        // After toggle is enabled, restore last query and auto-search
+                        setTimeout(function() {
+                            self._restoreLastQuery();
+                        }, 300);  // Wait for editor to initialize
                     }
                 }
             } catch (e) {
@@ -705,6 +722,136 @@ odoo.define('oql_web.oql_search_bar', function (require) {
         _clearHistory: function () {
             this.oqlHistory = [];
             this._saveHistory();
+        },
+        
+        /**
+         * Save last OQL query to localStorage
+         * @param {string} query OQL query
+         * @private
+         */
+        _saveLastQuery: function (query) {
+            try {
+                if (!query || !query.trim()) {
+                    // Clear saved query if empty
+                    var key = this._getStorageKey('LAST_QUERY');
+                    localStorage.removeItem(key);
+                    return;
+                }
+                
+                var key = this._getStorageKey('LAST_QUERY');
+                localStorage.setItem(key, query);
+            } catch (e) {
+                console.warn('[OQL] Failed to save last query:', e);
+            }
+        },
+        
+        /**
+         * Restore last OQL query and auto-search
+         * @private
+         */
+        _restoreLastQuery: function () {
+            var self = this;
+            try {
+                var key = this._getStorageKey('LAST_QUERY');
+                var savedQuery = localStorage.getItem(key);
+                
+                if (savedQuery && this.oqlEditor) {
+                    // Get saved cursor position before setting value
+                    var cursorKey = this._getStorageKey('CURSOR_POSITION');
+                    var savedPos = localStorage.getItem(cursorKey);
+                    var cursor = null;
+                    
+                    if (savedPos) {
+                        try {
+                            cursor = JSON.parse(savedPos);
+                            console.log('[OQL] Saved cursor position:', cursor);
+                        } catch (e) {
+                            console.warn('[OQL] Failed to parse cursor position:', e);
+                        }
+                    }
+                    
+                    // Set the query in editor (this resets cursor to beginning)
+                    this.oqlEditor.setValue(savedQuery);
+                    
+                    // Restore cursor position after setValue
+                    setTimeout(function() {
+                        if (cursor && self.oqlEditor && self.oqlEditor.editor) {
+                            try {
+                                var doc = self.oqlEditor.editor.getDoc();
+                                var lineCount = doc.lineCount();
+                                
+                                console.log('[OQL] Current line count:', lineCount, 'Target cursor:', cursor);
+                                
+                                if (cursor.line >= 0 && cursor.line < lineCount) {
+                                    var lineLength = doc.getLine(cursor.line).length;
+                                    if (cursor.ch >= 0 && cursor.ch <= lineLength) {
+                                        self.oqlEditor.editor.setCursor(cursor);
+                                        console.log('[OQL] Cursor restored successfully');
+                                    } else {
+                                        console.warn('[OQL] Cursor ch out of range:', cursor.ch, 'vs', lineLength);
+                                    }
+                                } else {
+                                    console.warn('[OQL] Cursor line out of range:', cursor.line, 'vs', lineCount);
+                                }
+                            } catch (e) {
+                                console.error('[OQL] Error restoring cursor:', e);
+                            }
+                        }
+                        
+                        // Auto-trigger search after a short delay
+                        setTimeout(function() {
+                            self._doOQLSearch(savedQuery);
+                        }, 100);
+                    }, 50);
+                }
+            } catch (e) {
+                console.warn('[OQL] Failed to restore last query:', e);
+            }
+        },
+        
+        /**
+         * Save cursor position to localStorage
+         * @private
+         */
+        _saveCursorPosition: function () {
+            if (!this.oqlEditor || !this.oqlEnabled) return;
+            
+            try {
+                var cursor = this.oqlEditor.editor.getCursor();
+                var key = this._getStorageKey('CURSOR_POSITION');
+                localStorage.setItem(key, JSON.stringify(cursor));
+            } catch (e) {
+                console.warn('[OQL] Failed to save cursor position:', e);
+            }
+        },
+        
+        /**
+         * Restore cursor position from localStorage
+         * @private
+         */
+        _restoreCursorPosition: function () {
+            if (!this.oqlEditor) return;
+            
+            try {
+                var key = this._getStorageKey('CURSOR_POSITION');
+                var savedPos = localStorage.getItem(key);
+                
+                if (savedPos) {
+                    var cursor = JSON.parse(savedPos);
+                    // Validate cursor position
+                    var doc = this.oqlEditor.editor.getDoc();
+                    var lineCount = doc.lineCount();
+                    
+                    if (cursor.line >= 0 && cursor.line < lineCount) {
+                        var lineLength = doc.getLine(cursor.line).length;
+                        if (cursor.ch >= 0 && cursor.ch <= lineLength) {
+                            this.oqlEditor.editor.setCursor(cursor);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[OQL] Failed to restore cursor position:', e);
+            }
         },
     });
 });
