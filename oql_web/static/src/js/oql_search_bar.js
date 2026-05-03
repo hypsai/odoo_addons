@@ -662,9 +662,39 @@ odoo.define('oql_web.oql_search_bar', function (require) {
          */
         _removeFromHistory: function (index) {
             if (index >= 0 && index < this.oqlHistory.length) {
+                // Find and remove the DOM element directly for smooth UX
+                var $listContainer = this.$historyDropdown ? this.$historyDropdown.find('.oql_history_list') : null;
+                if ($listContainer && $listContainer.length > 0) {
+                    var $items = $listContainer.find('.oql_history_item');
+                    if ($items.length > index) {
+                        // Animate removal
+                        var $itemToRemove = $items.eq(index);
+                        $itemToRemove.css({
+                            'transition': 'all 0.2s ease',
+                            'opacity': '0',
+                            'max-height': '0',
+                            'padding': '0',
+                            'margin': '0'
+                        });
+                        
+                        // Remove after animation
+                        setTimeout(function () {
+                            $itemToRemove.remove();
+                            
+                            // Check if list is now empty
+                            if ($listContainer.find('.oql_history_item').length === 0) {
+                                // Show empty state
+                                $listContainer.append(
+                                    $('<div class="dropdown-item text-muted" style="padding: 10px;">No search history</div>')
+                                );
+                            }
+                        }, 200);
+                    }
+                }
+                
+                // Update data
                 this.oqlHistory.splice(index, 1);
                 this._saveHistory();
-                this._renderHistoryDropdown();
             }
         },
         
