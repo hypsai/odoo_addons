@@ -106,6 +106,7 @@ odoo.define('oql_web.oql_editor_core', function (require) {
          */
         _setupEventListeners: function () {
             var self = this;
+            var hintTimeout = null;
 
             // Always setup change listener for auto-hints
             this.editor.on('change', function (cm, change) {
@@ -115,13 +116,15 @@ odoo.define('oql_web.oql_editor_core', function (require) {
                         self.onChange(cm.getValue());
                     }
                     
-                    // Auto-show hints for operators (always enabled)
-                    var oprs = new Set(['.', ',', '=', '>', '<', '?', 'like', 'ilike', 'in', 'child_of', 'parent_of', 'not', 'and', 'or']);
-                    var prevToken = self._getPreviousToken(cm);
-                    var curToken = self._getCurrentToken(cm);
-                    if (curToken === '.' || (curToken === '' && oprs.has(prevToken))) {
-                        self._showHint(cm);
+                    // Debounce hint display (similar to PyCharm)
+                    if (hintTimeout) {
+                        clearTimeout(hintTimeout);
                     }
+                    
+                    hintTimeout = setTimeout(function() {
+                        // Show hints on any character input (PyCharm-style)
+                        self._showHint(cm);
+                    }, 150); // 150ms debounce delay
                 }
             });
         },
