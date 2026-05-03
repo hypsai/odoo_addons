@@ -11,6 +11,7 @@ import odoo.cli
 import sys
 
 root = os.path.abspath(os.path.join(__file__, "../../"))
+pro_addons = os.path.join(os.path.dirname(root), "odoo_addons_pro")
 if len(sys.argv) < 3:
     raise Exception("Must specify version and name of target test addon！")
 ver = sys.argv[1]
@@ -18,7 +19,7 @@ target = sys.argv[2]
 del sys.argv[1:3]
 
 sys.argv.append(f"--config={root}/test/odoo.conf")
-sys.argv.append(f"--addons-path={root}")
+sys.argv.append(f"--addons-path={root},{pro_addons}")
 sys.argv.append(f"--data-dir=C:/data/odoo_addons_v{ver}")
 sys.argv.append(f"--database=odoo_addons_v{ver}")
 # sys.argv.append(f"--init={target}")

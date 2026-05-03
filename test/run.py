@@ -11,12 +11,13 @@ import odoo.cli
 import sys
 
 root = os.path.normpath(os.path.join(__file__, "../../"))
+pro_addons = os.path.join(os.path.dirname(root), "odoo_addons_pro")
 if len(sys.argv) < 2:
     raise Exception("Must specify odoo version！")
 ver = sys.argv[1]
 del sys.argv[1]
 
-sys.argv.append(f"--addons-path={root}")
+sys.argv.append(f"--addons-path={root},{pro_addons}")
 sys.argv.append(f"--config={root}/test/odoo.conf")
 sys.argv.append(f"--data-dir=C:/data/odoo_addons_v{ver}")
 sys.argv.append(f"--database=odoo_addons_v{ver}")
