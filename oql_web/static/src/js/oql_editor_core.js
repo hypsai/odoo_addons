@@ -330,8 +330,8 @@ odoo.define('oql_web.oql_editor_core', function (require) {
             var prefix = lineText.substring(0, cursor.ch);
             var token = this._getLastToken(prefix);
             
-            // Dot is a special token that precedes an empty token
-            if (token === '.') {
+            // '.' and '(' are special tokens that precedes an empty token
+            if (token === '.' || token === '(') {
                 return '';
             }
             return token;
