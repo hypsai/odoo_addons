@@ -242,7 +242,7 @@ class OqlTransformer(lark.Transformer):
     FLOAT = float
 
     def __init__(self, env, model: str):
-        super().__init__(False)
+        super().__init__(True)
         self.env = env
         self.recs = env[model]
         self._meta = OqlMeta(env)

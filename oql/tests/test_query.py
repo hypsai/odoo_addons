@@ -21,6 +21,7 @@ class TestOql(TransactionCase):
         # 2.1 Product
         prod_cold = env["test.oql.product"].create({"name": "Cold Boot"})
         prod_hot = env["test.oql.product"].create({"name": "Hot Boot"})
+        prod_inactive = env["test.oql.product"].create({"name": "Inactive Boot", "active": False})
         # 2.2 Attribute
         attr_size = env["test.oql.attribute"].create({"name": "Size"})
         attr_width = env["test.oql.attribute"].create({"name": "Width"})
@@ -45,9 +46,9 @@ class TestOql(TransactionCase):
         attr_size.term_ids = [Command.link(term_size.id)]
         attr_width.term_ids = [Command.link(term_width.id)]
         # 3.2 Tag
-        term_hot = env["oql.term"].create({"name": "Hot"})
-        term_waterproof = env["oql.term"].create({"name": "Waterproof"})
-        term_weather = env["oql.term"].create({"name": "WeatherAware"})
+        term_hot = self._create("oql.term", {"name": "Hot"}, "name")
+        term_waterproof = self._create("oql.term", {"name": "Waterproof"}, "name")
+        term_weather = self._create("oql.term", {"name": "WeatherAware"}, "name")
         term_weather_domain = env["oql.term.domain"].create({
             "name": "WeatherSelector",
             "term_id": term_weather.id,
@@ -63,6 +64,17 @@ class TestOql(TransactionCase):
         line3 = env["oql.alias.line"].create({"alias": "attrs_records", "rule_id": rule1.id, "path": "attribute_value_ids.attribute_id", 'enable_shorthand': True})
         line2 = env["oql.alias.line"].create({"alias": "tag_records", "rule_id": rule1.id, "path": "tag_ids", 'enable_shorthand': True})
         line3 = env["oql.alias.line"].create({"alias": "tags", "rule_id": rule1.id, "path": "tag_ids.name", 'enable_shorthand': False})
+
+    def _create(self, model: str, data: dict, key_field: str = None):
+        Model = self.env[model]
+        if key_field:
+            key_value = data.get(key_field)
+            if key_value is None:
+                raise ValueError(f"Missing `{key_field}` from `{data}`.")
+            recs = Model.search([(key_field, "=", key_value)], limit=1)
+            if recs:
+                return recs
+        return Model.create(data)
 
     def tearDown(self):
         super().tearDown()
@@ -153,6 +165,17 @@ class TestOql(TransactionCase):
         # Combine waterproof with weather
         res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and (tag_ids.name='Weather:Cold')")
         self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+
+    @tagged("oql.const")
+    def test_constants_true_false_null(self):
+        """Test TRUE, FALSE, NULL constants in OQL queries."""
+        # Test TRUE constant - should return all products with active=True
+        res_true = self.env["test.oql.product"].searcho("active = true")
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res_true.mapped("name")))
+        
+        # Test FALSE constant - should return all products with active=False
+        res_false = self.env["test.oql.product"].searcho("active = false")
+        self.assertEqual({"Inactive Boot"}, set(res_false.mapped("name")))
 
     def assertHints(self, expected, actual):
         self.assertEqual(expected, {x["value"] for x in actual})

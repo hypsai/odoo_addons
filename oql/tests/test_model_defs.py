@@ -37,6 +37,7 @@ class TestOqlProduct(models.Model):
     name = fields.Char("Name")
     attribute_value_ids = fields.One2many("test.oql.attribute.value", "product_id")
     tag_ids = fields.One2many("test.oql.tag", "product_id")
+    active = fields.Boolean("Active", default=True)
 
 
 class TestOqlAttribute(models.Model):
