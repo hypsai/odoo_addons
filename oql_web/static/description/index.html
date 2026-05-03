@@ -116,61 +116,38 @@ products = env['product.product'].search(domain)</pre>
                 </div>
             </div>
 
-            <!-- Step 2: Configure Terms and Aliases -->
+            <!-- Step 2: Use OQL Search -->
             <div class="mb-4">
                 <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4a90e2;">
                     <div class="d-flex align-items-center" style="margin-bottom: 15px;">
                         <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4a90e2; color: #ffffff;">2</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #1565c0;">Configure Terms and Aliases</h4>
+                        <h4 style="margin: 0; font-weight: 700; color: #1565c0;">Use OQL Search</h4>
                     </div>
                     <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">Set up Terms and Aliases through the Odoo interface - no code needed:</p>
-                        <div style="background-color: #f5f5f5; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #e0e0e0; margin-bottom: 15px;">
-                            <p style="margin: 0; color: #333333; font-size: 0.9rem;">
-                                <i class="fa fa-arrow-right mr-2" style="color: #4a90e2;"></i>
-                                Go to: <strong>Settings</strong> &rarr; <strong>Technical</strong> &rarr; <strong>OQL</strong> &rarr; [<strong>Terms</strong>, <strong>Aliases</strong>]
-                            </p>
-                        </div>
-                        <div style="text-align: center; margin: 20px 0;">
-                            <img src="oql_settings.png" alt="OQL Settings Menu" style="max-width: 100%; border-radius: 10px; border: 2px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                        </div>
-                        <p style="color: #555; margin-bottom: 10px;"><strong>Configuration Options:</strong></p>
+                        <p style="color: #555; margin-bottom: 15px;">Switch to OQL mode and start searching with business language:</p>
                         <ul style="list-style: none; padding: 0; color: #666;">
                             <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
-                                <i class="fa fa-check-circle mr-2" style="color: #4a90e2;"></i>
-                                <strong>Terms:</strong> Map business concepts to records using domain rules or relationship fields
+                                <i class="fa fa-toggle-on mr-2" style="color: #4a90e2;"></i>
+                                <strong>Click the OQL Toggle Button</strong><br>
+                                <span style="font-size: 0.9em; color: #888;">Look for the <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">OQL</code> button on the left side of the native search bar. Click it to switch to OQL mode.</span>
+                            </li>
+                            <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
+                                <i class="fa fa-keyboard-o mr-2" style="color: #4a90e2;"></i>
+                                <strong>Type Your OQL Query</strong><br>
+                                <span style="font-size: 0.9em; color: #888;">The native search box will be replaced with an OQL editor featuring syntax highlighting and intelligent autocomplete (with oql_pro).</span>
                             </li>
                             <li style="padding: 8px 0;">
-                                <i class="fa fa-check-circle mr-2" style="color: #4a90e2;"></i>
-                                <strong>Aliases:</strong> Shorten long field paths for cleaner queries
+                                <i class="fa fa-search mr-2" style="color: #4a90e2;"></i>
+                                <strong>Press Enter to Search</strong><br>
+                                <span style="font-size: 0.9em; color: #888;">Simply press <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">Enter</code> to execute your query. Results will appear just like native Odoo search.</span>
                             </li>
                         </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 3: Use searcho() -->
-            <div class="mb-4">
-                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4a90e2;">
-                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
-                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4a90e2; color: #ffffff;">3</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #1565c0;">Replace search() with searcho()</h4>
-                    </div>
-                    <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">Use <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">searcho()</code> instead of <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">search()</code> with business language queries:</p>
-                        <div style="background-color: #f5f5f5; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #e0e0e0; margin-bottom: 15px;">
-                            <pre style="margin: 0; color: #333333; font-size: 0.85rem; background: transparent; border: none;">
-<span style="color: #999;"># Instead of complex domain construction...</span>
-<span style="color: #4a90e2; font-weight: bold;">products</span> = env[<span style="color: #4caf50;">'product.product'</span>].searcho(
-    <span style="color: #4caf50;">"CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"</span>
-)</pre>
-                        </div>
-                        <div style="background: #e3f2fd; padding: 15px; border-radius: 10px; border-left: 4px solid #4a90e2;">
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 10px; border-left: 4px solid #4a90e2; margin-top: 15px;">
                             <p style="margin: 0; font-size: 14px; color: #1565c0;">
-                                <strong><i class="fa fa-lightbulb-o mr-1"></i>What Happens Automatically:</strong><br>
-                                <i class="fa fa-check mr-1"></i> Terms resolve to record sets &nbsp;&nbsp;
-                                <i class="fa fa-check mr-1"></i> Aliases expand to field paths &nbsp;&nbsp;
-                                <i class="fa fa-check mr-1"></i> Query parses and executes
+                                <strong><i class="fa fa-lightbulb-o mr-1"></i>Pro Tips:</strong><br>
+                                <i class="fa fa-check mr-1"></i> Your search history is automatically saved &nbsp;&nbsp;
+                                <i class="fa fa-check mr-1"></i> Toggle back to native search anytime &nbsp;&nbsp;
+                                <i class="fa fa-check mr-1"></i> State persists across page refreshes
                             </p>
                         </div>
                     </div>
@@ -199,8 +176,8 @@ products = env['product.product'].search(domain)</pre>
                     <p style="margin: 0 0 10px 0; font-size: 14px; color: #856404;">
                         <strong><i class="fa fa-link mr-1"></i>Get oql_pro:</strong>
                     </p>
-                    <a href="https://apps.odoo.com/apps/modules/15.0/oql" target="_blank" style="color: #4a90e2; text-decoration: underline; font-size: 15px; display: inline-block;">
-                        <i class="fa fa-external-link mr-1"></i>https://apps.odoo.com/apps/modules/15.0/oql
+                    <a href="https://apps.odoo.com/apps/modules/15.0/oql_pro" target="_blank" style="color: #4a90e2; text-decoration: underline; font-size: 15px; display: inline-block;">
+                        <i class="fa fa-external-link mr-1"></i>https://apps.odoo.com/apps/modules/15.0/oql_pro
                     </a>
                 </div>
             </div>
