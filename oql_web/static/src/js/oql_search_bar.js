@@ -172,7 +172,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             }
             
             // Wrap container for combobox layout
-            var $wrapper = $('<div class="oql_combobox_wrapper" style="position: relative; display: flex; align-items: center; width: 100%;"></div>');
+            var $wrapper = $('<div class="oql_combobox_wrapper" style="position: relative; display: flex; align-items: flex-start; width: 100%;"></div>');
             $container.append($wrapper);
             
             // Create editor container inside wrapper
@@ -207,6 +207,13 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 });
                 self.oqlEditor.editor.on('blur', function () {
                     $wrapper.removeClass('oql-focused');
+                    // Clear error tooltip on blur
+                    self._hideErrorTooltip();
+                });
+                
+                // Add change handler to clear error state
+                self.oqlEditor.editor.on('change', function () {
+                    self._clearErrorState();
                 });
                 
                 // Add history button after editor is ready
@@ -274,11 +281,15 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             // Get wrapper width for matching
             var wrapperWidth = $wrapper.outerWidth();
             
-            // Create dropdown container
-            this.$historyDropdown = $('<div class="dropdown-menu oql_history_dropdown" style="display: block; width: ' + wrapperWidth + 'px; max-height: 400px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;"></div>');
+            // Create dropdown container with scrollable area
+            this.$historyDropdown = $('<div class="dropdown-menu oql_history_dropdown" style="display: block; width: ' + wrapperWidth + 'px; position: absolute; top: 100%; left: 0; z-index: 1000;"></div>');
             
-            // Render history items
-            this._renderHistoryDropdown();
+            // Create scrollable list container
+            var $listContainer = $('<div class="oql_history_list" style="max-height: 350px; overflow-y: auto;"></div>');
+            this.$historyDropdown.append($listContainer);
+            
+            // Render history items into the list container
+            this._renderHistoryDropdown($listContainer);
             
             // Append dropdown to wrapper (will be positioned absolutely below)
             $wrapper.append(this.$historyDropdown);
@@ -297,35 +308,28 @@ odoo.define('oql_web.oql_search_bar', function (require) {
         
         /**
          * Render history items in dropdown
+         * @param {jQuery} $listContainer List container for scrollable area
          * @private
          */
-        _renderHistoryDropdown: function () {
+        _renderHistoryDropdown: function ($listContainer) {
             var self = this;
             
-            if (!this.$historyDropdown) {
+            if (!this.$historyDropdown || !$listContainer) {
                 return;
             }
             
-            this.$historyDropdown.empty();
+            $listContainer.empty();
             
             if (this.oqlHistory.length === 0) {
-                this.$historyDropdown.append(
+                $listContainer.append(
                     $('<div class="dropdown-item text-muted" style="padding: 10px;">No search history</div>')
                 );
+                // Add clear button outside list even when empty
+                this._addClearButtonOutsideList();
                 return;
             }
             
-            // Add clear all button
-            var $clearBtn = $('<button class="dropdown-item oql_history_clear" type="button">' +
-                             '<i class="fa fa-trash-o"></i> Clear All History</button>');
-            $clearBtn.on('click', function () {
-                self._clearHistory();
-                self._hideHistoryDropdown();
-            });
-            this.$historyDropdown.append($clearBtn);
-            this.$historyDropdown.append('<div class="dropdown-divider"></div>');
-            
-            // Add history items
+            // Add history items to scrollable list
             this.oqlHistory.forEach(function (item, index) {
                 var $itemContainer = $('<div class="dropdown-item oql_history_item" style="padding: 8px; position: relative;"></div>');
                 
@@ -343,7 +347,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 });
                 $itemContainer.append($deleteBtn);
                 
-                this.$historyDropdown.append($itemContainer);
+                $listContainer.append($itemContainer);
                 
                 // Initialize CodeMirror for this item
                 setTimeout(function () {
@@ -367,6 +371,29 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                     });
                 }, 0);
             }.bind(this));
+            
+            // Add clear button outside the scrollable list
+            this._addClearButtonOutsideList();
+        },
+        
+        /**
+         * Add clear all button outside the scrollable list
+         * @private
+         */
+        _addClearButtonOutsideList: function () {
+            var self = this;
+            
+            // Add divider
+            this.$historyDropdown.append('<div class="dropdown-divider" style="margin: 5px 0;"></div>');
+            
+            // Add clear all button
+            var $clearBtn = $('<button class="dropdown-item oql_history_clear" type="button" style="font-weight: bold;">' +
+                             '<i class="fa fa-trash-o"></i> Clear All History</button>');
+            $clearBtn.on('click', function () {
+                self._clearHistory();
+                self._hideHistoryDropdown();
+            });
+            this.$historyDropdown.append($clearBtn);
         },
 
         /**
@@ -412,7 +439,109 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 self.model.trigger("search", queryObj);
             }).catch(function (error) {
                 console.error('[OQL] Search error:', error);
+                // Extract error message using optional chaining
+                var errorMessage = error?.message?.data?.message || error?.message || 'OQL query error';
+                self._showErrorState(errorMessage);
             });
+        },
+        
+        /**
+         * Show error state with red border and tooltip
+         * @param {string} errorMessage Error message to display
+         * @private
+         */
+        _showErrorState: function (errorMessage) {
+            var self = this;
+            var $wrapper = $('.oql_combobox_wrapper', this.$el);
+            
+            if ($wrapper.length === 0) {
+                return;
+            }
+            
+            // Add error class for red border
+            $wrapper.addClass('oql-error');
+            
+            // Store error message
+            this.oqlErrorMessage = errorMessage;
+            
+            // Setup hover on CodeMirror editor only (not the whole wrapper)
+            var $editor = $wrapper.find('.CodeMirror').first();
+            $editor.off('mouseenter.oqlError').on('mouseenter.oqlError', function () {
+                if (self.oqlErrorMessage) {
+                    // Delay showing tooltip on hover
+                    self._hoverTooltipTimeout = setTimeout(function () {
+                        self._showErrorTooltip(self.oqlErrorMessage);
+                    }, 500);
+                }
+            });
+            
+            $editor.off('mouseleave.oqlError').on('mouseleave.oqlError', function () {
+                if (self._hoverTooltipTimeout) {
+                    clearTimeout(self._hoverTooltipTimeout);
+                    self._hoverTooltipTimeout = null;
+                }
+                self._hideErrorTooltip();
+            });
+        },
+        
+        /**
+         * Clear error state (remove red border)
+         * @private
+         */
+        _clearErrorState: function () {
+            var $wrapper = $('.oql_combobox_wrapper', this.$el);
+            
+            if ($wrapper.length === 0) {
+                return;
+            }
+            
+            // Remove error class
+            $wrapper.removeClass('oql-error');
+            
+            // Clear error message
+            this.oqlErrorMessage = null;
+            
+            // Hide tooltip
+            this._hideErrorTooltip();
+            
+            // Remove hover handlers
+            $wrapper.off('mouseenter.oqlError mouseleave.oqlError');
+        },
+        
+        /**
+         * Show error tooltip
+         * @param {string} message Error message
+         * @private
+         */
+        _showErrorTooltip: function (message) {
+            var self = this;
+            
+            // Hide existing tooltip
+            this._hideErrorTooltip();
+            
+            var $wrapper = $('.oql_combobox_wrapper', this.$el);
+            if ($wrapper.length === 0) {
+                return;
+            }
+            
+            // Create tooltip element - display below the input
+            this.$errorTooltip = $('<div class="oql_error_tooltip" style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; padding: 10px; background-color: #dc3545; color: white; border-radius: 4px; font-size: 12px; z-index: 1001; box-shadow: 0 2px 8px rgba(0,0,0,0.15); animation: oqlTooltipFadeIn 0.2s ease;">' +
+                                   '<i class="fa fa-exclamation-circle" style="margin-right: 5px;"></i>' +
+                                   _.escape(message) +
+                                   '</div>');
+            
+            $wrapper.append(this.$errorTooltip);
+        },
+        
+        /**
+         * Hide error tooltip
+         * @private
+         */
+        _hideErrorTooltip: function () {
+            if (this.$errorTooltip) {
+                this.$errorTooltip.remove();
+                this.$errorTooltip = null;
+            }
         },
         
         /**

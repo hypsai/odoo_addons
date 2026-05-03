@@ -31,7 +31,7 @@
 .oql_combobox_wrapper {
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Align to top instead of center */
     width: 100%;
 }
 
@@ -44,6 +44,7 @@
     background-color: #fff;
     flex: 1;
     min-width: 0;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .oql_combobox_wrapper .CodeMirror-focused {
@@ -61,7 +62,19 @@
     box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
 }
 
-/* History button styling */
+/* Error state styling - apply to main editor but exclude history dropdown items */
+.oql_combobox_wrapper.oql-error .CodeMirror {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Exclude CodeMirror instances inside history dropdown */
+.oql_history_dropdown .CodeMirror {
+    border-color: inherit !important;
+    box-shadow: none !important;
+}
+
+/* History button styling - align to bottom */
 .oql_combobox_wrapper .oql_history_trigger {
     border: 1px solid #ced4da;
     border-left: none;
@@ -69,11 +82,13 @@
     background-color: #fff;
     color: #6c757d;
     padding: 6px 10px;
-    height: 38px;
+    min-height: 38px;
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    align-self: stretch; /* Stretch to match editor height */
 }
 
 .oql_combobox_wrapper .oql_history_trigger:hover {
@@ -183,6 +198,17 @@
 }
 
 @keyframes oqlHistoryFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes oqlTooltipFadeIn {
     from {
         opacity: 0;
         transform: translateY(-5px);

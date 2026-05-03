@@ -1,6 +1,7 @@
 import logging
 
 from odoo import models
+from odoo.exceptions import UserError
 
 from ..oql import reader, OqlTransformer, TermChipInfo
 
@@ -12,8 +13,12 @@ class OqlBase(models.AbstractModel):
 
     def searcho(self, oql_where: str):
         """Search with OQL."""
-        result = reader.query(oql_where, OqlTransformer(self.env, self._name))
-        return result
+        try:
+            result = reader.query(oql_where, OqlTransformer(self.env, self._name))
+            return result
+        except Exception as e:
+            _logger.debug(f"OQL query error: {e}", exc_info=True)
+            raise UserError(str(e))
 
     def get_oql_hints(self, field: str, query: str, cursor: int, limit=100):
         """
