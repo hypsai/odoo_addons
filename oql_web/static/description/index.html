@@ -1,3 +1,222 @@
-<html>
+<section class="oe_container" style="font-family: 'Montserrat', sans-serif; background-color: #fcfcfc; padding: 20px;">
+    <!-- Introduction Section -->
+    <div class="row oe_spaced">
+        <div class="col-lg-8">
+            <h1 style="color: #212529; font-weight: 700; border-left: 6px solid #4a90e2; padding-left: 20px; text-transform: uppercase;">
+                OQL Web - Enhanced Search Interface
+            </h1>
+            <p class="mt-3" style="font-size: 1.15rem; color: #555; line-height: 1.8;">
+                Beautiful web interface for writing and executing OQL queries with syntax highlighting, autocomplete, and intelligent search capabilities.
+            </p>
+        </div>
+        <div class="col-lg-4 text-center">
+            <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <i class="fa fa-search-plus fa-3x mb-3" style="color: #4a90e2;"></i>
+                <h5 style="font-weight: 700;">Syntax Highlighting. Autocomplete. Smart Search.</h5>
+                <p class="small text-muted"><strong>OQL Editor, Advanced Search, SQL</strong></p>
+            </div>
+        </div>
+    </div>
 
-</html>
+    <!-- Preview Section -->
+    <div class="row oe_spaced mt-4">
+        <div class="col-12">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="preview.gif" alt="OQL Query Demo" style="max-width: 100%; border-radius: 10px; border: 2px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Example -->
+    <div class="row oe_spaced mt-4">
+        <div class="col-12">
+            <div style="background-color: #e3f2fd; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(74, 144, 226, 0.2);">
+                <h3 style="color: #1565c0; margin-bottom: 20px; text-align: center;"><i class="fa fa-magic mr-2"></i>From Complex to Simple</h3>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 style="color: #d32f2f; font-weight: 700;"><i class="fa fa-times-circle mr-2"></i>Traditional Domain (30+ lines)</h5>
+                        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #e0e0e0; font-size: 0.85rem;">
+                            <pre style="margin: 0; color: #666;"># 4 preparatory searches
+boot_catg = env['product.category'].search(...)
+danner_brand = env['product.category'].search(...)
+size_values = env['product.attribute.value'].search(...)
+waterproof_tags = env['product.template.tag'].search(...)
+
+# Complex domain
+domain = [
+    ('categ_id', 'child_of', danner_brand.ids),
+    ('product_template_attribute_value_ids...', 'in', size_values.ids),
+    ('tag_ids', 'in', waterproof_tags.ids)
+]
+products = env['product.product'].search(domain)</pre>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 style="color: #388e3c; font-weight: 700;"><i class="fa fa-check-circle mr-2"></i>OQL (1 line)</h5>
+                        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #e0e0e0; font-size: 0.85rem;">
+                            <pre style="margin: 0; color: #333;"><span style="color: #4a90e2; font-weight: bold;">products</span> = env[<span style="color: #4caf50;">'product.product'</span>].searcho(
+    <span style="color: #4caf50;">"CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"</span>
+)</pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <p style="text-align: center; margin-top: 20px; color: #1565c0; font-size: 0.95rem;">
+                    <i class="fa fa-check-circle mr-1"></i> Business terms &nbsp;&nbsp;
+                    <i class="fa fa-check-circle mr-1"></i> No prep searches &nbsp;&nbsp;
+                    <i class="fa fa-check-circle mr-1"></i> Readable by anyone
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step by Step Usage -->
+    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
+        <div class="col-12">
+            <h3 class="text-center mb-4" style="font-weight: 700; color: #4a90e2;"><i class="fa fa-list-ol mr-2"></i>Get Started in 3 Steps</h3>
+
+            <!-- Step 1: Install Module -->
+            <div class="mb-4">
+                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4a90e2;">
+                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
+                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4a90e2; color: #ffffff;">1</div>
+                        <h4 style="margin: 0; font-weight: 700; color: #1565c0;">Install Module</h4>
+                    </div>
+                    <div style="padding-left: 55px;">
+                        <p style="color: #555; margin-bottom: 15px;">Install the required dependencies for oql_web:</p>
+                        <ul style="list-style: none; padding: 0; color: #666;">
+                            <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
+                                <i class="fa fa-exclamation-circle mr-2" style="color: #ff9800;"></i>
+                                <strong>Required: Install OQL Module</strong><br>
+                                <span style="font-size: 0.9em; color: #888;">oql_web depends on the <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">oql</code> module. Install it first:<br>
+                                <a href="https://apps.odoo.com/apps/modules/15.0/oql" target="_blank" style="color: #4a90e2; text-decoration: underline; display: inline-block; margin-top: 5px;">
+                                    <i class="fa fa-external-link mr-1"></i>https://apps.odoo.com/apps/modules/15.0/oql</a></span>
+                            </li>
+                            <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
+                                <i class="fa fa-download mr-2" style="color: #4a90e2;"></i>
+                                <strong>Download oql_web from Odoo App Store</strong><br>
+                                <span style="font-size: 0.9em; color: #888;">You'll receive a file named <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">oql_web-x.x.x.zip</code></span>
+                            </li>
+                            <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
+                                <i class="fa fa-folder-open mr-2" style="color: #4a90e2;"></i>
+                                <strong>Extract and Place in Addons Directory</strong><br>
+                                <span style="font-size: 0.9em; color: #888;">Extract the zip file and copy the <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">oql_web</code> folder to your Odoo addons path</span>
+                            </li>
+                            <li style="padding: 8px 0;">
+                                <i class="fa fa-cogs mr-2" style="color: #4a90e2;"></i>
+                                <strong>Install via Odoo Interface</strong><br>
+                                <span style="font-size: 0.9em; color: #888;">
+                                    Enable Developer Mode by adding <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">?debug=1</code> to your URL<br>
+                                    Then go to: <strong>Apps</strong> &rarr; Click <strong>Update Apps List</strong> (top menu) &rarr; Search "<strong>oql_web</strong>" &rarr; Click <strong>Install</strong>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Configure Terms and Aliases -->
+            <div class="mb-4">
+                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4a90e2;">
+                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
+                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4a90e2; color: #ffffff;">2</div>
+                        <h4 style="margin: 0; font-weight: 700; color: #1565c0;">Configure Terms and Aliases</h4>
+                    </div>
+                    <div style="padding-left: 55px;">
+                        <p style="color: #555; margin-bottom: 15px;">Set up Terms and Aliases through the Odoo interface - no code needed:</p>
+                        <div style="background-color: #f5f5f5; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #e0e0e0; margin-bottom: 15px;">
+                            <p style="margin: 0; color: #333333; font-size: 0.9rem;">
+                                <i class="fa fa-arrow-right mr-2" style="color: #4a90e2;"></i>
+                                Go to: <strong>Settings</strong> &rarr; <strong>Technical</strong> &rarr; <strong>OQL</strong> &rarr; [<strong>Terms</strong>, <strong>Aliases</strong>]
+                            </p>
+                        </div>
+                        <div style="text-align: center; margin: 20px 0;">
+                            <img src="oql_settings.png" alt="OQL Settings Menu" style="max-width: 100%; border-radius: 10px; border: 2px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        </div>
+                        <p style="color: #555; margin-bottom: 10px;"><strong>Configuration Options:</strong></p>
+                        <ul style="list-style: none; padding: 0; color: #666;">
+                            <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
+                                <i class="fa fa-check-circle mr-2" style="color: #4a90e2;"></i>
+                                <strong>Terms:</strong> Map business concepts to records using domain rules or relationship fields
+                            </li>
+                            <li style="padding: 8px 0;">
+                                <i class="fa fa-check-circle mr-2" style="color: #4a90e2;"></i>
+                                <strong>Aliases:</strong> Shorten long field paths for cleaner queries
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Use searcho() -->
+            <div class="mb-4">
+                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4a90e2;">
+                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
+                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4a90e2; color: #ffffff;">3</div>
+                        <h4 style="margin: 0; font-weight: 700; color: #1565c0;">Replace search() with searcho()</h4>
+                    </div>
+                    <div style="padding-left: 55px;">
+                        <p style="color: #555; margin-bottom: 15px;">Use <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">searcho()</code> instead of <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">search()</code> with business language queries:</p>
+                        <div style="background-color: #f5f5f5; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #e0e0e0; margin-bottom: 15px;">
+                            <pre style="margin: 0; color: #333333; font-size: 0.85rem; background: transparent; border: none;">
+<span style="color: #999;"># Instead of complex domain construction...</span>
+<span style="color: #4a90e2; font-weight: bold;">products</span> = env[<span style="color: #4caf50;">'product.product'</span>].searcho(
+    <span style="color: #4caf50;">"CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"</span>
+)</pre>
+                        </div>
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 10px; border-left: 4px solid #4a90e2;">
+                            <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                                <strong><i class="fa fa-lightbulb-o mr-1"></i>What Happens Automatically:</strong><br>
+                                <i class="fa fa-check mr-1"></i> Terms resolve to record sets &nbsp;&nbsp;
+                                <i class="fa fa-check mr-1"></i> Aliases expand to field paths &nbsp;&nbsp;
+                                <i class="fa fa-check mr-1"></i> Query parses and executes
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Test -->
+            <div style="background: white; border: 3px solid #28a745; color: #28a745; padding: 20px; border-radius: 10px; text-align: center;">
+                <h5 style="margin: 0 0 10px 0; font-weight: 700;"><i class="mr-2"></i>You're All Set!</h5>
+                <p style="margin: 0; font-size: 15px;">Start writing business-focused queries and simplify your Odoo data searches today!</p>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Optional Enhancement -->
+    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
+        <div class="col-12">
+            <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 15px; padding: 25px; border-left: 5px solid #f39c12;">
+                <h4 style="color: #856404; margin-bottom: 15px;"><i class="fa fa-star mr-2"></i>Optional: Enhanced Autocomplete</h4>
+                <p style="color: #856404; margin-bottom: 15px; font-size: 15px;">
+                    Want the intelligent autocomplete feature shown in the preview GIF above? Install the <strong>oql_pro</strong> module for advanced code completion and smart suggestions.
+                </p>
+                <div style="background: rgba(255, 255, 255, 0.7); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #856404;">
+                        <strong><i class="fa fa-link mr-1"></i>Get oql_pro:</strong>
+                    </p>
+                    <a href="https://apps.odoo.com/apps/modules/15.0/oql" target="_blank" style="color: #4a90e2; text-decoration: underline; font-size: 15px; display: inline-block;">
+                        <i class="fa fa-external-link mr-1"></i>https://apps.odoo.com/apps/modules/15.0/oql
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final CTA -->
+    <div class="row oe_spaced mt-5 py-4 text-center">
+        <div class="col-12">
+            <div style="background: #e3f2fd; color: #1565c0; padding: 30px; border-radius: 15px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 24px; color: #1565c0;">Ready to Enhance Your OQL Experience?</h3>
+                <p style="margin: 0 0 20px 0; font-size: 16px; color: #1565c0;">Install OQL Web and start writing queries with syntax highlighting and intelligent search!</p>
+                <a href="https://github.com/chrisking94/odoo_addons/tree/main/oql_web" target="_blank" class="btn btn-primary btn-lg px-5" style="border-radius: 50px; font-weight: 700; background-color: #4a90e2; border-color: #4a90e2; color: #ffffff;">
+                    <i class="fa fa-github mr-2"></i> View on GitHub
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
