@@ -230,7 +230,7 @@ Once configured, use aliases to simplify your queries:
 3. Operator Overloading - Custom Query Logic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For advanced scenarios, you can customize how terms behave in queries by implementing the ``__oql_bin__`` method on your models.
+For advanced scenarios, you can customize how operator behave in queries by implementing the ``__oql_bin__`` method on your models.
 
 Implementing __oql_bin__
 ************************
@@ -244,10 +244,12 @@ Add the ``__oql_bin__`` method to your model:
         
         def __oql_bin__(self, term, opr, value, value_term):
             """Custom logic for term-based binary operations.
+            e.g. term           opr     value
+                 EuShoeSize     =       '40'
             
             Args:
-                term: The Term object being queried
-                opr: The operator (=, !=, in, etc.)
+                term: Term info of `self` recordset.
+                opr: Operator (=, !=, in, etc.)
                 value: The value being compared
                 value_term: Value term if applicable
             """
@@ -345,7 +347,7 @@ Check for existence without specifying values::
     # Products that have attribute values
     searcho("attribute_value_ids")
 
-    # Products with the Waterproof term
+    # Products with the tags carrying `Waterproof` term
     searcho("Waterproof")
 
 Installation
@@ -389,23 +391,11 @@ Naming Conventions
 ~~~~~~~~~~~~~~~~~~
 
 - Use clear, business-oriented term names (e.g., ``EuShoeSize`` not ``eu_size_attr``)
-- Keep aliases short but descriptive (e.g., ``spu`` for stock keeping unit)
+- Keep aliases short but descriptive (e.g., ``spu`` for standard product unit)
 - Document term meanings for team reference
 
 Advanced Features
 -----------------
-
-Custom Hint Methods
-~~~~~~~~~~~~~~~~~~~
-
-Implement ``__oql_hnt__`` to provide autocomplete suggestions::
-
-    def __oql_hnt__(self, opr: str):
-        """Return hints for query completion."""
-        if opr == "?":
-            return self.value_ids  # Return possible record completions
-        else:
-            return self.value_ids.mapped("name")  # Return value suggestions
 
 Lazy Loading
 ~~~~~~~~~~~~
