@@ -80,6 +80,16 @@ With traditional Odoo domains, you need **4 preparatory searches + 1 complex dom
    - ✅ **Accessible**: Business analysts can write and review queries
    - ✅ **Efficient**: No preparatory searches needed
 
+Live Demo
+---------
+
+See OQL in action! The following demo shows how to search for products using OQL:
+
+.. image:: static/description/preview.gif
+   :alt: OQL Search Demo - Writing business-focused queries in Odoo
+   :align: center
+   :width: 100%
+
 Quick Start
 -----------
 

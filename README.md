@@ -1,62 +1,59 @@
 # Odoo Addons
 
-Welcome to this Odoo addons repository.  
-This collection contains custom modules designed to enhance the Odoo user experience and provide developers with more flexible tools.
+A collection of custom Odoo modules designed to enhance user experience and provide developers with flexible tools.
 
 ---
 
-## 🛠 Available Addons
+## Available Addons
 
-| Module Name          | Description                                                                 | Link                                  |
-|----------------------|-----------------------------------------------------------------------------|---------------------------------------|
-| MCP Framework        | [NEW] Transform Odoo into AI-ready MCP Server with one decorator.           | [View Module](./mcp_base)             |
-| Web Widget Pill Icon | Dynamic icons & semantic colors for any field via XML options.              | [View Module](./web_widget_pill_icon) |
-| Web Widget YAML      | Advanced YAML editor with customizable Ace editor options.                  | [View Module](./web_widget_yaml)      |
-
----
-
-## 🚀 Featured: Odoo MCP Framework
-
-The **Odoo MCP Framework** transforms your Odoo instance into a Model Context Protocol (MCP) Server, enabling seamless integration with AI agents and LLMs.
-
-### Key Highlights:
-
-- **One-Line Setup**: Expose methods to AI with `@mcp_tool` decorator
-- **Type-Safe**: Automatic JSON schema generation from Python type hints
-- **Modern Protocol**: Implements MCP Streamable HTTP (2025-03-26)
-- **Zero Config**: Install and start decorating—no additional setup needed
-- **Production Ready**: Built-in error handling, logging, and CORS support
-
-### Quick Example:
-
-```python
-from odoo.addons.mcp_base import mcp_tool
-
-@mcp_tool(description="Search customers by name")
-def search_customers(self, name: str):
-    partners = self.search([('name', 'ilike', name)])
-    return [{'id': p.id, 'name': p.name} for p in partners]
-```
+| Module               | Description                                                                 |
+|----------------------|-----------------------------------------------------------------------------|
+| [MCP Framework](./mcp_base)      | Transform Odoo into AI-ready MCP Server with one decorator                  |
+| [OQL](./oql)                     | Query Odoo with intuitive, business-focused syntax                        |
+| [OQL Web](./oql_web)             | Advanced search interface with syntax highlighting and autocomplete       |
+| [Web Widget Pill Icon](./web_widget_pill_icon) | Dynamic icons & semantic colors for any field                             |
+| [Web Widget YAML](./web_widget_yaml)           | Advanced YAML editor with customizable Ace editor options               |
 
 ---
 
-## 💎 Also Available: Web Widget Pill Icon
+## Highlights
 
-The **Web Widget Pill Icon** is a highly flexible, pure frontend widget that transforms boring text, selection, or numeric fields into stylish "Pills" or "Badges".
+### MCP Framework
+Transform your Odoo into a Model Context Protocol (MCP) Server for seamless AI integration.
+- One-line setup with `@mcp_tool` decorator
+- Automatic JSON schema generation from type hints
+- Implements MCP Streamable HTTP protocol
 
-### Key Highlights:
+### OQL - Odoo Query Language
+Write queries in business language instead of technical domain expressions.
+- Use terms like "Waterproof" instead of complex field paths
+- SQL-like syntax: AND, OR, IN, LIKE operators
+- Configure entirely through Odoo UI, no code needed
+- Reduce 30+ lines of domain code to a single line
 
-- **Decoupled Logic**: Configure icons and semantic colors (`success`, `danger`, `warning`) entirely in the XML `options` attribute.
-- **Type Agnostic**: Works seamlessly with `Selection`, `Char`, `Integer`, and `Many2one` fields.
-- **Visual Polish**: Includes built-in CSS fixes for Odoo 15 List View alignment and selection issues.
-- **Easy Styling**: Supports global base classes like `pill`, `outline`, and `sm`.
+### OQL Web
+Enhanced search interface that transforms the native Odoo search bar.
+- Real-time syntax highlighting
+- Smart autocomplete for terms and aliases
+- Automatic search history management
+- Toggle between native and OQL search instantly
+
+### Web Widget Pill Icon
+Transform text, selection, or numeric fields into stylish pills and badges.
+- Configure icons and colors entirely in XML options
+- Works with Selection, Char, Integer, and Many2one fields
+- Built-in CSS fixes for Odoo 15 List View alignment
+- Support for global styling classes (pill, outline, sm)
+
+### Web Widget YAML
+Advanced YAML code editor extending the standard Ace Editor.
+- Syntax highlighting and validation
+- Customizable editor options
+- Ideal for configuration management
+- Seamless integration with Odoo forms
 
 ---
 
-## ⚙️ Also Available: Web Widget YAML
+For detailed documentation and installation instructions, click on any module link above.
 
-If you need advanced configuration management, check out **Web Widget YAML**, which provides a dedicated YAML code editor extending the standard Ace Editor.
-
----
-
-💡 If you find these modules useful, please consider giving this repository a **Star**! 🌟
+If you find these modules useful, please consider giving this repository a star.
