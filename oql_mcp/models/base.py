@@ -10,12 +10,12 @@ class OqlMcpBase(models.AbstractModel):
     _inherit = "base"
 
     @mcp_tool
-    def oql_search(self, model: str, where=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):
+    @api.model
+    def oql_search(self, model: str, where, fields=None, offset=0, limit=None, order=None, **read_kwargs):
         """Search with OQL where clause and return given fields as dicts.
 
         :param model: Target model to query, such as 'res.partner'.
         :param where: Search where clause in OQL (Odoo Query Language) grammar.
-            Defaults to an empty domain that will match all records.
             OQL grammar is similar to SQL. But in addition, It:
                 - supports dot path for field access, e.g. company.name = 'MyCompany'
                 - adds new concepts Term (preselected records from other model) and Alias (field path short name)
@@ -35,7 +35,7 @@ class OqlMcpBase(models.AbstractModel):
         :rtype: list(dict).
         """
         this = self.env[model]
-        records = this.search(where or [], offset=offset, limit=limit, order=order)
+        records = this.searcho(where)
         if not records:
             return []
 
@@ -62,5 +62,5 @@ class OqlMcpBase(models.AbstractModel):
 
     @mcp_tool
     @api.model
-    def get_oql_hints(self, field: str, query: str, cursor: int, limit=100):
-        return super().get_oql_hints(field, query, cursor, limit)
+    def oql_hint(self, model: str, query: str, cursor: int, limit=100):
+        return self.env[model].hinto(query, cursor, limit)

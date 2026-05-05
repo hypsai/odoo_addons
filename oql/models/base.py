@@ -27,7 +27,7 @@ class OqlBase(models.AbstractModel):
         return self.searcho(oql_where).ids
 
     @api.model
-    def get_oql_hints(self, field: str, query: str, cursor: int, limit=100):
+    def hinto(self, field: str, query: str, cursor: int, limit=100):
         """
         Get OQL code completion hints. Typically used by frontends.
         :param field: The field in this model the query belongs to.
