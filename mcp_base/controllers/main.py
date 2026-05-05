@@ -12,6 +12,7 @@ from werkzeug.wrappers import Response as WerkzeugResponse
 
 from ..compatible import request_update_env, root_patch_get_request
 from ..mcputil import build_tool_info
+from ..typeutil import OdooMro
 
 _logger = logging.getLogger(__name__)
 root_patch_get_request()
@@ -231,7 +232,8 @@ class McpController(http.Controller):
         tools = []
 
         for model_name, model_cls in request.env.registry.models.items():
-            for def_cls in model_cls.__bases__:  # Use definition type.
+            bases = model_cls.__bases__
+            for i, def_cls in enumerate(bases):  # Use definition type.
                 for attr_name, method in def_cls.__dict__.items():
                     if callable(method) and getattr(method, '_is_mcp_tool', False):
                         tool_info = getattr(method, "_mcp_base_cache_tool_info", None)
@@ -242,7 +244,8 @@ class McpController(http.Controller):
                             inherit_docs = getattr(method, '_mcp_inherit_docs', True)
 
                             # Build tool info using mcputil
-                            tool_info = build_tool_info(method, custom_desc=custom_desc, inherit_docs=inherit_docs)
+                            mro = OdooMro(attr_name, bases[i:])
+                            tool_info = build_tool_info(mro, custom_desc=custom_desc, inherit_docs=inherit_docs)
                             tool_info["name"] = f"{model_name}:{attr_name}"
 
                             # Add built-in properties to schema

@@ -3,8 +3,12 @@
 # @Author       : Chris
 # @Description  : Type conversion utilities for MCP framework.
 import inspect
+import logging
 import re
 from typing import List, Dict, Any
+
+_logger = logging.getLogger(__file__)
+
 
 # Basic type mapping shared by both converters
 BASIC_TYPE_MAP = {
@@ -182,13 +186,24 @@ def docstring_type_to_json_type(type_str):
     return basic_types.get(type_str.lower(), 'string')
 
 
+class OdooMro:
+    def __init__(self, method: str, classes: List[type]):
+        self.method = method
+        self.classes = classes
+
+
 class ParameterMeta:
     """Metadata for a single parameter."""
-    def __init__(self, name: str, json_type: Any, description: str = '', default: Any = None):
+    json_type: str = None
+    description: str = None
+
+    def __init__(self, name: str, default):
         self.name = name
-        self.json_type = json_type  # Can be string or dict for complex types
-        self.description = description
         self.default = default
+
+    @property
+    def closed(self):
+        return self.json_type is not None and self.description is not None
 
 
 class MethodMeta:
@@ -199,254 +214,72 @@ class MethodMeta:
         self.params = params or []
 
 
-def resolve_method_metadata(func, inherit=True) -> MethodMeta:
-    """Resolve complete method metadata with intelligent inheritance.
-    
-    This function recursively searches up the class hierarchy to gather
-    complete metadata for a method and all its parameters. It merges
-    information from parent classes when child classes have incomplete
-    annotations or docstrings.
-    
-    For methods with *args/**kwargs, it drills down to find the actual
-    parameters from parent methods while preserving **kwargs in the final
-    signature (since code may use kwargs.get('xxx')).
-    
-    Args:
-        func: The method function to resolve metadata for.
-        inherit: If True, search parent classes for missing info. Default True.
-        
-    Returns:
-        dict: Complete metadata including:
-            - 'docstring': Best available method docstring
-            - 'annotations': Merged parameter type annotations
-            - 'signature': Method signature (may include **kwargs)
-            - 'param_descriptions': Parameter descriptions from docstring
-    """
-    # Try to get the class from __objclass__ (for bound methods)
-    cls = getattr(func, '__objclass__', None)
-    
-    # If not a bound method, try to extract class from __qualname__
-    if cls is None:
-        qualname = getattr(func, '__qualname__', '')
-        if '.' in qualname:
-            parts = qualname.rsplit('.', 1)
-            if len(parts) == 2:
-                class_name = parts[0]
-                # Try to get class from function's globals
-                func_globals = getattr(func, '__globals__', {})
-                cls = func_globals.get(class_name)
-                
-                # If not found in globals, try module
-                if cls is None:
-                    try:
-                        module = inspect.getmodule(func)
-                        if module:
-                            cls = getattr(module, class_name, None)
-                    except (AttributeError, ValueError):
-                        cls = None
-    
-    # Resolve metadata
-    if cls is not None and inherit:
-        # Class is available - resolve from hierarchy
-        method_name = func.__name__
-        return _resolve_from_class_hierarchy(cls, method_name)
-    else:
-        # No inheritance or class not available - use function's own metadata
-        return _build_method_meta_from_func(func)
-
-
-def _build_method_meta_from_func(func) -> MethodMeta:
-    """Build MethodMeta from a single function without inheritance."""
+def resolve_method_metadata(mro: OdooMro, inherit=True) -> MethodMeta:
     from .docstring import parse_docstring
-    
-    docstring = inspect.getdoc(func) or ''
-    parsed = parse_docstring(docstring)
-    description = parsed.get('description', '')
-    param_descriptions = parsed.get('params', {})
-    param_types_from_docstring = parsed.get('param_types', {})
-    annotations = getattr(func, '__annotations__', {})
-    
-    try:
+
+    # Resolve in MRO order
+    b_method_found = False
+    method_desc = ""
+    b_param_list_closed = False
+    name2p_meta: Dict[str, ParameterMeta] = {}
+    for cls in mro.classes:
+        func = getattr(cls, mro.method, None)
+        if not func:
+            continue
+
+        # Parse func
         signature = inspect.signature(func)
-    except (ValueError, TypeError):
-        signature = None
-    
-    params = []
-    if signature:
-        for name, param in signature.parameters.items():
-            if name == 'self':
-                continue
-            
-            # Determine type
-            if param.annotation != inspect.Parameter.empty:
-                json_type = python_type_to_json_type(param.annotation)
-            elif name in annotations:
-                json_type = python_type_to_json_type(annotations[name])
-            elif name in param_types_from_docstring:
-                json_type = param_types_from_docstring[name]
-            else:
-                json_type = 'string'
-            
-            # Get description
-            desc = param_descriptions.get(name, '')
-            
-            # Get default
-            default = param.default if param.default != inspect.Parameter.empty else None
-            
-            params.append(ParameterMeta(
-                name=name,
-                json_type=json_type,
-                description=desc,
-                default=default
-            ))
-    
-    return MethodMeta(
-        name=func.__name__,
-        description=description,
-        params=params
-    )
+        params_iter = iter(signature.parameters.values())
+        first_param = next(params_iter) if signature.parameters else None
+        if first_param is None or first_param.name != "self":
+            _logger.warning(f"{cls}.{mro.method} is not an instance method, ignored.")
+            continue
 
+        b_method_found = True
 
-def _resolve_from_class_hierarchy(cls, method_name) -> MethodMeta:
-    """Resolve method metadata by intelligently walking up the class hierarchy.
-    
-    For each parameter, searches up the inheritance chain until all information
-    is found (type from annotations, description from docstring). Handles *args/**kwargs
-    by drilling down to find actual parameters while preserving **kwargs in signature.
-    
-    Args:
-        cls: The class to start searching from
-        method_name: Name of the method to find
-        
-    Returns:
-        MethodMeta: Complete method metadata object
-    """
-    # Collect all methods with this name from the class hierarchy
-    methods_in_hierarchy = []
-    for klass in cls.__mro__:
-        if hasattr(klass, method_name):
-            method = getattr(klass, method_name)
-            if callable(method) and not isinstance(method, type):
-                methods_in_hierarchy.append((klass, method))
-    
-    if not methods_in_hierarchy:
-        return MethodMeta(name=method_name)
-    
-    # Start with the first (most derived) method
-    primary_cls, primary_method = methods_in_hierarchy[0]
-    
-    # Get primary method's signature
-    try:
-        primary_sig = inspect.signature(primary_method)
-    except (ValueError, TypeError):
-        primary_sig = None
-    
-    # Check if primary method uses *args/**kwargs
-    has_var_keyword = False
-    if primary_sig:
-        for param in primary_sig.parameters.values():
-            if param.kind == inspect.Parameter.VAR_KEYWORD:
-                has_var_keyword = True
-                break
-    
-    # If primary method has **kwargs, find the most specific parent signature
-    effective_sig = primary_sig
-    if has_var_keyword:
-        # Look for parent method with concrete parameters
-        for klass, method in methods_in_hierarchy[1:]:
-            try:
-                sig = inspect.signature(method)
-                # Check if this parent has concrete parameters
-                has_concrete_params = any(
-                    p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-                    for p in sig.parameters.values()
-                    if p.name != 'self'
-                )
-                if has_concrete_params:
-                    effective_sig = sig
-                    break
-            except (ValueError, TypeError):
+        # Parse param annotation.
+        b_var_args = False
+        for param in params_iter:
+            if b_param_list_closed and param.name not in name2p_meta:
+                continue  # Stop adding new params.
+            if param.kind == inspect.Parameter.VAR_POSITIONAL or param.kind == inspect.Parameter.VAR_KEYWORD:
+                b_var_args = True
                 continue
-    
-    # Merge annotations from all levels
-    best_annotations = {}
-    for klass, method in methods_in_hierarchy:
-        parent_annotations = getattr(method, '__annotations__', {})
-        for param_name, param_type in parent_annotations.items():
-            if param_name not in best_annotations:
-                best_annotations[param_name] = param_type
-    
-    # Merge docstrings - use first available non-empty docstring
-    best_docstring = ''
-    for klass, method in methods_in_hierarchy:
-        docstring = inspect.getdoc(method)
+            p_meta = name2p_meta.get(param.name)
+            if p_meta is None:
+                name2p_meta[param.name] = p_meta = ParameterMeta(param.name, param.default)
+            if p_meta.json_type is None and param.annotation != inspect.Parameter.empty:
+                p_meta.json_type = python_type_to_json_type(param.annotation)
+        if not b_var_args:
+            b_param_list_closed = True
+
+        # Parse docstring.
+        docstring = (func.__doc__ or "").strip()
         if docstring:
-            best_docstring = docstring
-            break
-    
-    # Parse docstring to extract descriptions
-    from .docstring import parse_docstring
-    parsed = parse_docstring(best_docstring)
-    description = parsed.get('description', '')
-    param_descriptions = parsed.get('params', {})
-    param_types_from_docstring = parsed.get('param_types', {})
-    
-    # Merge parameter descriptions from parent docstrings
-    if not param_descriptions:
-        for klass, method in methods_in_hierarchy[1:]:
-            docstring = inspect.getdoc(method)
-            if docstring:
-                parsed_parent = parse_docstring(docstring)
-                parent_descs = parsed_parent.get('params', {})
-                for param_name, desc in parent_descs.items():
-                    if param_name not in param_descriptions:
-                        param_descriptions[param_name] = desc
-    
-    # Build final signature: use effective_sig but preserve **kwargs if present
-    final_sig = effective_sig
-    if has_var_keyword and effective_sig and effective_sig != primary_sig:
-        params_list = list(effective_sig.parameters.values())
-        has_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params_list)
-        if not has_kwargs:
-            for param in primary_sig.parameters.values():
-                if param.kind == inspect.Parameter.VAR_KEYWORD:
-                    params_list.append(param)
-                    break
-            final_sig = primary_sig.replace(parameters=params_list)
-    
-    # Build ParameterMeta objects
-    params = []
-    if final_sig:
-        for name, param in final_sig.parameters.items():
-            if name == 'self':
-                continue
-            
-            # Determine type with priority
-            if param.annotation != inspect.Parameter.empty:
-                json_type = python_type_to_json_type(param.annotation)
-            elif name in best_annotations:
-                json_type = python_type_to_json_type(best_annotations[name])
-            elif name in param_types_from_docstring:
-                json_type = param_types_from_docstring[name]
-            else:
-                json_type = 'string'
-            
-            # Get description
-            desc = param_descriptions.get(name, '')
-            
-            # Get default
-            default = param.default if param.default != inspect.Parameter.empty else None
-            
-            params.append(ParameterMeta(
-                name=name,
-                json_type=json_type,
-                description=desc,
-                default=default
-            ))
-    
-    return MethodMeta(
-        name=method_name,
-        description=description,
-        params=params
-    )
+            doc_meta = parse_docstring(docstring)
+            method_desc = (method_desc or doc_meta["description"] or "").strip()
+            doc_name2param_desc = doc_meta["params"]
+            doc_name2param_type = doc_meta["param_types"]
+            for p_meta in name2p_meta.values():
+                if p_meta.closed:
+                    continue
+                p_meta.json_type = p_meta.json_type or doc_name2param_type.get(p_meta.name)
+                p_meta.description = p_meta.description or doc_name2param_desc.get(p_meta.name)
 
+        # Break directly when inherit is turned off.
+        if not inherit:
+            break
+
+        # Check close state to determine early return.
+        if (method_desc and
+                b_param_list_closed and
+                (not name2p_meta or all(x.closed for x in name2p_meta.values()))
+        ):
+            break
+
+    # Format and return.
+    if not b_method_found:
+        raise KeyError(f"Method `{mro.method}` not found on any of `{mro.classes}`.")
+    return MethodMeta(mro.method,
+                      method_desc,
+                      list(name2p_meta.values()))

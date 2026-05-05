@@ -2,17 +2,19 @@
 # @Time         : 11:53 2026/4/29
 # @Author       : Chris
 # @Description  : MCP Utility Functions
-from .typeutil import resolve_method_metadata
+import inspect
+
+from .typeutil import resolve_method_metadata, OdooMro
 
 
-def build_tool_info(method, custom_desc: str = None, inherit_docs: bool = True):
+def build_tool_info(mro: OdooMro, custom_desc: str = None, inherit_docs: bool = True):
     """Build complete tool information from a method.
     
     This function handles metadata resolution and JSON Schema generation.
     It's called by the controller at runtime when tools/list is requested.
     
     Args:
-        method: The method to analyze
+        mro: The method mro to analyze
         custom_desc: Custom description (overrides docstring)
         inherit_docs: Whether to inherit docs from parent classes
         
@@ -20,7 +22,7 @@ def build_tool_info(method, custom_desc: str = None, inherit_docs: bool = True):
         dict: Tool information with name, description, and inputSchema
     """
     # Resolve metadata
-    meta = resolve_method_metadata(method, inherit=inherit_docs)
+    meta = resolve_method_metadata(mro, inherit=inherit_docs)
     
     # Use custom description if provided, otherwise use resolved description
     tool_description = custom_desc or meta.description or "Odoo Tool"
@@ -42,7 +44,7 @@ def build_tool_info(method, custom_desc: str = None, inherit_docs: bool = True):
             prop_schema["description"] = param.description
         
         # Add default value if present
-        if param.default is not None:
+        if param.default != inspect.Parameter.empty:
             prop_schema["default"] = param.default
         else:
             required.append(param.name)
