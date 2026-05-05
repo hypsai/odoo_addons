@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>OQL MCP Integration</title>
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #fcfcfc;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #212529;
+            font-weight: 700;
+            border-left: 6px solid #667eea;
+            padding-left: 20px;
+            text-transform: uppercase;
+        }
+        h3 {
+            color: #667eea;
+            font-weight: 700;
+            margin-top: 30px;
+        }
+        .feature-box {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .code-example {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .highlight {
+            color: #667eea;
+            font-weight: 600;
+        }
+        ul {
+            line-height: 1.8;
+        }
+        li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OQL MCP Integration</h1>
+        
+        <p style="font-size: 1.15rem; color: #555; line-height: 1.8;">
+            Expose <span class="highlight">OQL query capabilities</span> to AI agents via Model Context Protocol (MCP). 
+            Enable natural language queries on Odoo data through Claude, ChatGPT, Cursor and other AI assistants.
+        </p>
+
+        <div class="feature-box">
+            <h3><i class="fa fa-bolt"></i> Key Features</h3>
+            <ul>
+                <li><strong>@mcp_tool decorated methods</strong> - Expose search_reado and get_oql_hints to AI agents</li>
+                <li><strong>Natural language queries</strong> - AI can use OQL syntax like "Waterproof and Size = '40'"</li>
+                <li><strong>Seamless integration</strong> - Works with all MCP-compatible AI clients</li>
+                <li><strong>Business terminology</strong> - Use terms and aliases instead of technical field paths</li>
+            </ul>
+        </div>
+
+        <h3><i class="fa fa-code"></i> Quick Example</h3>
+        
+        <div class="code-example">
+            <strong>AI asks:</strong> "Find waterproof Danner boots in size 40"<br><br>
+            
+            <strong>MCP Tool Call:</strong><br>
+            env['product.product'].search_reado(<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;where="CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize = '40' and Waterproof",<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;fields=['name', 'default_code', 'list_price']<br>
+            )
+        </div>
+
+        <h3><i class="fa fa-cogs"></i> Requirements</h3>
+        
+        <div class="feature-box">
+            <ul>
+                <li><strong>mcp_base</strong> - MCP framework for Odoo</li>
+                <li><strong>oql</strong> - OQL query engine</li>
+                <li>Odoo 13.0 or higher</li>
+            </ul>
+        </div>
+
+        <h3><i class="fa fa-rocket"></i> How It Works</h3>
+        
+        <div class="feature-box">
+            <p>The module extends base models with two MCP-enabled methods:</p>
+            <ul>
+                <li><strong>search_reado</strong> - Search and read records using OQL where clause</li>
+                <li><strong>get_oql_hints</strong> - Get autocomplete suggestions for OQL queries</li>
+            </ul>
+        </div>
+
+        <h3><i class="fa fa-lightbulb-o"></i> Usage Tips for AI Agents</h3>
+        
+        <div class="feature-box">
+            <ul>
+                <li>Use <code>get_oql_hints</code> to discover available fields and terms</li>
+                <li>Start with simple queries, then add complexity</li>
+                <li>Leverage configured Terms for business-friendly queries</li>
+                <li>Use Aliases to shorten field paths</li>
+            </ul>
+        </div>
+
+        <h3><i class="fa fa-question-circle"></i> Support</h3>
+        
+        <div class="feature-box">
+            <p>For issues or contributions, visit:<br>
+            <a href="https://github.com/chrisking94/odoo_addons/tree/main/oql_mcp" target="_blank">
+                https://github.com/chrisking94/odoo_addons/tree/main/oql_mcp
+            </a></p>
+        </div>
+    </div>
+</body>
+</html>
