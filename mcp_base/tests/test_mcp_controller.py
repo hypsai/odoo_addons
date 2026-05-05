@@ -16,16 +16,17 @@ class TestMCPController(common.HttpCase):
 
         # Create temporary access rights for test.mcp.base.tool model
         test_model = self.env['ir.model'].search([('model', '=', 'test.mcp.base.tool')], limit=1)
-        if test_model:
-            self.env['ir.model.access'].create({
-                'name': 'test.mcp.base.tool user access',
-                'model_id': test_model.id,
-                'group_id': self.env.ref('base.group_user').id,
-                'perm_read': True,
-                'perm_write': True,
-                'perm_create': True,
-                'perm_unlink': True,
-            })
+        self.assertIsNotNone(test_model, "Test model 'test.mcp.base.tool' not found")
+        
+        self.env['ir.model.access'].create({
+            'name': 'test.mcp.base.tool user access',
+            'model_id': test_model.id,
+            'group_id': self.env.ref('base.group_user').id,
+            'perm_read': True,
+            'perm_write': True,
+            'perm_create': True,
+            'perm_unlink': True,
+        })
     
     def test_mcp_endpoint_exists(self):
         """Test that MCP endpoint is accessible"""
@@ -176,8 +177,7 @@ class TestMCPController(common.HttpCase):
         )
         
         tools = list_response.json()['result']['tools']
-        if not tools:
-            self.skipTest("No MCP tools available for testing")
+        self.assertGreater(len(tools), 0, "No MCP tools available for testing")
         
         # Try to call the first available tool
         first_tool = tools[0]
@@ -225,8 +225,7 @@ class TestMCPController(common.HttpCase):
         )
         
         tools = list_response.json()['result']['tools']
-        if not tools:
-            self.skipTest("No MCP tools available for testing")
+        self.assertGreater(len(tools), 0, "No MCP tools available for testing")
         
         # Find a tool that has _search_ parameter
         tool_with_search = None
@@ -235,8 +234,7 @@ class TestMCPController(common.HttpCase):
                 tool_with_search = tool
                 break
         
-        if not tool_with_search:
-            self.skipTest("No tools with _search_ parameter found")
+        self.assertIsNotNone(tool_with_search, "No tools with _search_ parameter found")
         
         # Call tool with _search_ parameter
         call_payload = {
@@ -389,9 +387,9 @@ class TestMCPController(common.HttpCase):
         self.assertEqual(len(tools1), len(tools2))
         
         # Tool structures should be identical (cached)
-        if tools1 and tools2:
-            self.assertEqual(tools1[0]['name'], tools2[0]['name'])
-            self.assertEqual(tools1[0]['description'], tools2[0]['description'])
+        self.assertGreater(len(tools1), 0, "No tools found for caching test")
+        self.assertEqual(tools1[0]['name'], tools2[0]['name'])
+        self.assertEqual(tools1[0]['description'], tools2[0]['description'])
 
     def test_mcp_authentication_without_api_key(self):
         """Test authentication when auth_api_key module is not installed"""
@@ -425,7 +423,7 @@ class TestMCPController(common.HttpCase):
         self.assertIn('result', result)
     
     def test_mcp_tools_have_search_parameter(self):
-        """Test that all MCP tools include _search_ parameter in schema"""
+        """Test that non-model methods include _search_ parameter in schema"""
         payload = {
             "jsonrpc": "2.0",
             "id": 5,
@@ -444,30 +442,212 @@ class TestMCPController(common.HttpCase):
         result = response.json()
         tools = result['result']['tools']
         
-        # Check that at least some tools exist and have _search_ parameter
-        if tools:
-            for tool in tools[:3]:  # Check first 3 tools
-                schema = tool.get('inputSchema', {})
-                properties = schema.get('properties', {})
-                # Verify _search_ parameter is present
-                self.assertIn('_search_', properties, 
-                    f"Tool {tool['name']} should have _search_ parameter")
-                
-                # Verify _search_ has correct structure
-                search_prop = properties['_search_']
-                self.assertEqual(search_prop['type'], 'object')
-                self.assertIn('description', search_prop)
-                
-                # Verify nested properties exist (using 'args' instead of 'domain')
-                search_properties = search_prop.get('properties', {})
-                self.assertIn('args', search_properties, "Should have 'args' parameter")
-                self.assertIn('offset', search_properties)
-                self.assertIn('limit', search_properties)
-                self.assertIn('order', search_properties)
-                
-                # Verify 'args' is required
-                required = search_prop.get('required', [])
-                self.assertIn('args', required, "'args' should be required")
+        # Find get_customer_detail tool (not marked with @api.model, should have _search_)
+        target_tool = None
+        for tool in tools:
+            if 'get_customer_detail' in tool['name']:
+                target_tool = tool
+                break
+        
+        # Must find the tool - fail if not found
+        self.assertIsNotNone(target_tool, "Tool 'get_customer_detail' not found in tools list")
+        
+        schema = target_tool.get('inputSchema', {})
+        properties = schema.get('properties', {})
+        
+        # Verify _search_ parameter is present for non-model methods
+        self.assertIn('_search_', properties, 
+            f"Tool {target_tool['name']} should have _search_ parameter")
+        
+        # Verify _search_ has correct structure
+        search_prop = properties['_search_']
+        self.assertEqual(search_prop['type'], 'object')
+        self.assertIn('description', search_prop)
+        
+        # Verify nested properties exist
+        search_properties = search_prop.get('properties', {})
+        self.assertIn('args', search_properties, "Should have 'args' parameter")
+        self.assertIn('offset', search_properties)
+        self.assertIn('limit', search_properties)
+        self.assertIn('order', search_properties)
+        
+        # Verify 'args' is required
+        required = search_prop.get('required', [])
+        self.assertIn('args', required, "'args' should be required")
+
+    def test_mcp_tool_get_customer_detail(self):
+        """Test calling get_customer_detail with parameters"""
+        call_payload = {
+            "jsonrpc": "2.0",
+            "id": 20,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:get_customer_detail",
+                "arguments": {
+                    "name": "Mary"
+                }
+            }
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(call_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertIn('result', result)
+        self.assertFalse(result['result'].get('isError', False))
+        
+        # Check content
+        content = result['result']['content'][0]['text']
+        import json as json_module
+        data = json_module.loads(content)
+        self.assertEqual(data['name'], 'Mary')
+        self.assertEqual(data['email'], 'mary@example.com')
+        self.assertEqual(data['status'], 'active')
+
+    def test_mcp_tool_greet_customer(self):
+        """Test calling greet_customer with default and custom parameters"""
+        # Test with default greeting
+        call_payload = {
+            "jsonrpc": "2.0",
+            "id": 21,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:greet_customer",
+                "arguments": {
+                    "name": "Tom"
+                }
+            }
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(call_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertFalse(result['result'].get('isError', False))
+        
+        content = result['result']['content'][0]['text']
+        self.assertIn('Hello, Tom!', content)
+        
+        # Test with custom greeting
+        call_payload['params']['arguments']['greeting'] = 'Hi'
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(call_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        result = response.json()
+        content = result['result']['content'][0]['text']
+        self.assertIn('Hi, Tom!', content)
+
+    def test_mcp_tool_inheritance_override(self):
+        """Test that inherited method overrides parent with enhanced features"""
+        call_payload = {
+            "jsonrpc": "2.0",
+            "id": 22,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:get_customer_detail",
+                "arguments": {
+                    "name": "Mary"
+                }
+            }
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(call_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        
+        content = result['result']['content'][0]['text']
+        import json as json_module
+        data = json_module.loads(content)
+        
+        # Should have enhanced fields from inheritance
+        self.assertIn('premium', data)
+        self.assertIn('vip_level', data)
+        self.assertTrue(data['premium'])  # Mary has 5 orders > 2
+        self.assertEqual(data['vip_level'], 'Gold')  # 5 orders > 4
+
+    def test_mcp_tool_not_found_customer(self):
+        """Test calling get_customer_detail with non-existent customer"""
+        call_payload = {
+            "jsonrpc": "2.0",
+            "id": 23,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:get_customer_detail",
+                "arguments": {
+                    "name": "NonExistent"
+                }
+            }
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(call_payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        
+        content = result['result']['content'][0]['text']
+        import json as json_module
+        data = json_module.loads(content)
+        
+        # Should return error message
+        self.assertIn('error', data)
+        self.assertIn('NonExistent', data['error'])
+
+    def test_mcp_tool_schema_with_custom_description(self):
+        """Test that custom description in @mcp_tool decorator is applied"""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 24,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        tools = result['result']['tools']
+        
+        # Find get_customer_detail tool
+        target_tool = None
+        for tool in tools:
+            if 'get_customer_detail' in tool['name']:
+                target_tool = tool
+                break
+        
+        self.assertIsNotNone(target_tool, "Tool 'get_customer_detail' not found for description test")
+        
+        # Should have custom description from inherited class
+        self.assertIn('enhanced', target_tool['description'].lower())
 
 
 @tagged('post_install', '-at_install')
@@ -477,21 +657,18 @@ class TestMCPIntegration(common.TransactionCase):
     def test_mcp_tool_registration(self):
         """Test that MCP tools can be discovered in registry"""
 
-        # Create a test model with MCP tool
-        test_model = self.env.registry.models.get('res.partner')
-        if test_model:
-            # Check that we can iterate over models
-            tools_found = 0
-            for model_name, model_obj in self.env.registry.models.items():
-                for attr_name in dir(model_obj):
-                    if attr_name.startswith('_'):
-                        continue
-                    try:
-                        method = getattr(model_obj, attr_name)
-                        if callable(method) and getattr(method, '_is_mcp_tool', False):
-                            tools_found += 1
-                    except:
-                        continue
-            
-            # At least the test should complete without errors
-            self.assertIsInstance(tools_found, int)
+        # Check that we can iterate over models
+        tools_found = 0
+        for model_name, model_obj in self.env.registry.models.items():
+            for attr_name in dir(model_obj):
+                if attr_name.startswith('_'):
+                    continue
+                try:
+                    method = getattr(model_obj, attr_name)
+                    if callable(method) and getattr(method, '_is_mcp_tool', False):
+                        tools_found += 1
+                except:
+                    continue
+        
+        # Should find at least some MCP tools
+        self.assertGreater(tools_found, 0, "No MCP tools found in registry")

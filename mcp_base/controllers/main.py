@@ -231,27 +231,28 @@ class McpController(http.Controller):
         tools = []
 
         for model_name, model_cls in request.env.registry.models.items():
-            for attr_name, method in model_cls.__base__.__dict__.items():  # Get from definition type.
-                if callable(method) and getattr(method, '_is_mcp_tool', False):
-                    tool_info = getattr(method, "_mcp_base_cache_tool_info", None)
+            for def_cls in model_cls.__bases__:  # Use definition type.
+                for attr_name, method in def_cls.__dict__.items():
+                    if callable(method) and getattr(method, '_is_mcp_tool', False):
+                        tool_info = getattr(method, "_mcp_base_cache_tool_info", None)
 
-                    if not tool_info:
-                        # Get stored decorator parameters
-                        custom_desc = getattr(method, '_mcp_custom_description', None)
-                        inherit_docs = getattr(method, '_mcp_inherit_docs', True)
+                        if not tool_info:
+                            # Get stored decorator parameters
+                            custom_desc = getattr(method, '_mcp_custom_description', None)
+                            inherit_docs = getattr(method, '_mcp_inherit_docs', True)
 
-                        # Build tool info using mcputil
-                        tool_info = build_tool_info(method, custom_desc=custom_desc, inherit_docs=inherit_docs)
-                        tool_info["name"] = f"{model_name}:{attr_name}"
+                            # Build tool info using mcputil
+                            tool_info = build_tool_info(method, custom_desc=custom_desc, inherit_docs=inherit_docs)
+                            tool_info["name"] = f"{model_name}:{attr_name}"
 
-                        # Add built-in properties to schema
-                        schema = tool_info['inputSchema']
-                        schema = self._add_built_in_properties(method, schema)
-                        tool_info["inputSchema"] = schema
+                            # Add built-in properties to schema
+                            schema = tool_info['inputSchema']
+                            schema = self._add_built_in_properties(method, schema)
+                            tool_info["inputSchema"] = schema
 
-                        method._mcp_base_cache_tool_info = tool_info
+                            method._mcp_base_cache_tool_info = tool_info
 
-                    tools.append(tool_info)
+                        tools.append(tool_info)
         
         _logger.debug(f"MCP found {len(tools)} tools")
         return {"tools": tools}

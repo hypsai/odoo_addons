@@ -2,7 +2,7 @@
 # @Time         : 11:10 2026/4/28
 # @Author       : Chris
 # @Description  :
-from odoo import models
+from odoo import models, api
 
 from ..decorators import mcp_tool
 
@@ -12,9 +12,68 @@ class TestMcpBaseTool(models.Model):
     _description = "MCP Tool Test"
 
     @mcp_tool
+    @api.model
     def get_customers(self):
         """Get all customers."""
         return [{"name": "Mary"}, {"name": "Lily"}, {"name": "Tom"}]
+
+    @mcp_tool
+    def get_customer_detail(self, name: str):
+        """Get detailed information about a specific customer.
+        
+        :param name: Customer name to look up (e.g., 'Mary', 'Lily', 'Tom')
+        :return: Dictionary with customer details including name, email, and status
+        """
+        customers = {
+            "Mary": {
+                "name": "Mary",
+                "email": "mary@example.com",
+                "status": "active",
+                "orders_count": 5
+            },
+            "Lily": {
+                "name": "Lily",
+                "email": "lily@example.com",
+                "status": "active",
+                "orders_count": 3
+            },
+            "Tom": {
+                "name": "Tom",
+                "email": "tom@example.com",
+                "status": "inactive",
+                "orders_count": 0
+            }
+        }
+        return customers.get(name, {"error": f"Customer '{name}' not found"})
+
+
+class TestMcpBaseToolInherited(models.Model):
+    _inherit = "test.mcp.base.tool"
+
+    @mcp_tool(description="Get enhanced customer details with additional information")
+    def get_customer_detail(self, name: str):
+        """Override to provide enhanced customer details.
+        
+        :param name: Customer name to look up
+        :return: Enhanced customer information with premium status
+        """
+        # Call parent method
+        result = super().get_customer_detail(name)
+        if "error" not in result:
+            # Add enhanced information
+            result["premium"] = result.get("orders_count", 0) > 2
+            result["vip_level"] = "Gold" if result.get("orders_count", 0) > 4 else "Silver"
+        return result
+
+    @mcp_tool
+    def greet_customer(self, name: str, greeting: str = "Hello"):
+        """Send a personalized greeting to a customer.
+        
+        :param name: Customer name to greet
+        :param greeting: Greeting message template (default: 'Hello')
+        :return: Personalized greeting message
+        """
+        return f"{greeting}, {name}! Welcome back."
 
 
 def ensure_model_meta(env, model_names):
