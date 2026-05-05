@@ -3,7 +3,7 @@
 import sys
 import unittest
 from typing import List, Dict, Optional, Union, Tuple, Set, Any
-from mcp_base.typeutil import python_type_to_json_type, docstring_type_to_json_type, resolve_method_metadata
+from mcp_base.typeutil import python_type_to_json_type, docstring_type_to_json_type, resolve_method_metadata, OdooMro
 from typeutil_test_classes import (
     _TestBaseClass,
     _TestChildClass,
@@ -132,7 +132,8 @@ class TestTypeUtil(unittest.TestCase):
 
     def test_resolve_method_metadata_basic(self):
         """Test basic method metadata resolution."""
-        meta = resolve_method_metadata(_TestBaseClass.search)
+        mro = OdooMro(method='search', classes=[_TestBaseClass])
+        meta = resolve_method_metadata(mro)
         
         # Check it's a MethodMeta object
         self.assertTrue(hasattr(meta, 'name'))
@@ -160,7 +161,8 @@ class TestTypeUtil(unittest.TestCase):
 
     def test_resolve_method_metadata_inheritance(self):
         """Test metadata resolution with class inheritance."""
-        meta = resolve_method_metadata(_TestChildClass.search)
+        mro = OdooMro(method='search', classes=[_TestChildClass, _TestBaseClass])
+        meta = resolve_method_metadata(mro)
         
         # Should inherit description from base
         self.assertIsNotNone(meta.description)
@@ -182,7 +184,8 @@ class TestTypeUtil(unittest.TestCase):
 
     def test_resolve_method_metadata_partial_override(self):
         """Test metadata resolution with partial override."""
-        meta = resolve_method_metadata(_TestChildCustomer.create_customer)
+        mro = OdooMro(method='create_customer', classes=[_TestChildCustomer, _TestBaseCustomer])
+        meta = resolve_method_metadata(mro)
         
         # Should use child's description
         self.assertIsNotNone(meta.description)
@@ -202,7 +205,8 @@ class TestTypeUtil(unittest.TestCase):
 
     def test_resolve_method_metadata_multi_level(self):
         """Test metadata resolution with multi-level inheritance."""
-        meta = resolve_method_metadata(_TestChild.search)
+        mro = OdooMro(method='search', classes=[_TestChild, _TestParent, _TestGrandparent])
+        meta = resolve_method_metadata(mro)
         
         # Should inherit from grandparent through parent
         self.assertIsNotNone(meta.description)
@@ -218,7 +222,8 @@ class TestTypeUtil(unittest.TestCase):
 
     def test_method_meta_structure(self):
         """Test MethodMeta and ParameterMeta structure."""
-        meta = resolve_method_metadata(_TestBaseClass.search)
+        mro = OdooMro(method='search', classes=[_TestBaseClass])
+        meta = resolve_method_metadata(mro)
         
         # Check MethodMeta attributes
         self.assertIsInstance(meta.name, str)
