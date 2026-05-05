@@ -426,31 +426,20 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             // Save as last query for restore after page refresh
             this._saveLastQuery(query);
             
-            // Call searcho method via RPC
+            // Call searcho_ids method via RPC
             return ajax.jsonRpc('/web/dataset/call_kw', 'call', {
                 model: model,
-                method: 'searcho',
-                args: [[], query],
+                method: 'searcho_ids',
+                args: [query],
                 kwargs: {}
             }).then(function (result) {
                 // Extract IDs from recordset string like "oql.term(881,)"
-                var ids = [];
-                if (typeof result === 'string') {
-                    var match = result.match(/\(([^)]+)\)/);
-                    if (match) {
-                        ids = match[1].split(',')
-                            .map(function (id) { return parseInt(id.trim()); })
-                            .filter(function (id) { return !isNaN(id); });
-                    }
-                }
-                
+                var ids = result;
                 var queryObj = self.model.get('query');
                 queryObj.context['active_test'] = false;
                 queryObj.domain = [['id', 'in', ids]];
                 self.model.trigger("search", queryObj);
             }).catch(function (error) {
-                console.error('[OQL] Search error:', error);
-                // Extract error message using optional chaining
                 var errorMessage = error?.message?.data?.message || error?.message || 'OQL query error';
                 self._showErrorState(errorMessage);
             });

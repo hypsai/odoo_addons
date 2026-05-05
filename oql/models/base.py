@@ -1,6 +1,6 @@
 import logging
 
-from odoo import models
+from odoo import models, api
 from odoo.exceptions import UserError
 
 from ..oql import reader, OqlTransformer, TermChipInfo
@@ -11,6 +11,7 @@ _logger = logging.getLogger(__name__)
 class OqlBase(models.AbstractModel):
     _inherit = "base"
 
+    @api.model
     def searcho(self, oql_where: str):
         """Search with OQL."""
         try:
@@ -20,6 +21,12 @@ class OqlBase(models.AbstractModel):
             _logger.debug(f"OQL query error: {e}", exc_info=True)
             raise UserError(str(e))
 
+    @api.model
+    def searcho_ids(self, oql_where: str):
+        """Search with OQL and return record ids."""
+        return self.searcho(oql_where).ids
+
+    @api.model
     def get_oql_hints(self, field: str, query: str, cursor: int, limit=100):
         """
         Get OQL code completion hints. Typically used by frontends.
