@@ -13,6 +13,7 @@ from werkzeug.wrappers import Response as WerkzeugResponse
 from ..compatible import request_update_env, root_patch_get_request
 from ..mcputil import build_tool_info
 from ..typeutil import OdooMro
+from .. import jsonutil
 
 _logger = logging.getLogger(__name__)
 root_patch_get_request()
@@ -194,7 +195,7 @@ class McpController(http.Controller):
     def _json_response(self, data, status=200):
         """Create JSON response with CORS headers."""
         return WerkzeugResponse(
-            json.dumps(data, ensure_ascii=False),
+            jsonutil.dumps(data),
             status=status,
             mimetype='application/json',
             headers={'Access-Control-Allow-Origin': '*'}
@@ -287,7 +288,7 @@ class McpController(http.Controller):
             return {
                 "content": [{
                     "type": "text",
-                    "text": json.dumps(result) if not isinstance(result, str) else result
+                    "text": jsonutil.dumps(result) if not isinstance(result, str) else result
                 }]
             }
             
