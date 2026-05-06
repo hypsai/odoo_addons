@@ -54,7 +54,7 @@ class OqlMeta:
     def _load_term_fields(self):
         """Load fields that have a relation to `oql.term`."""
         env = self.env
-        fields = env['ir.model.fields'].search([
+        fields = env['ir.model.fields'].sudo().search([
             '|', ('ttype', '=', 'many2one'), ('ttype', '=', 'many2many'),
             ('relation', '=', "oql.term"),
             ('model', '!=', 'oql.term.domain'),
