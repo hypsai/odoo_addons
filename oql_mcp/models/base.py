@@ -11,28 +11,20 @@ class OqlMcpBase(models.AbstractModel):
 
     @mcp_tool
     @api.model
-    def oql_search(self, model: str, where, fields=None, offset=0, limit=None, order=None, **read_kwargs):
-        """Search with OQL where clause and return given fields as dicts.
+    def oql_mcp_select(self, model: str, where: str, fields=None, offset=0, limit=None, order=None, **read_kwargs):
+        """Execute OQL search and return records as dicts.
 
-        :param model: Target model to query, such as 'res.partner'.
-        :param where: Search where clause in OQL (Odoo Query Language) grammar.
-            OQL grammar is similar to SQL. But in addition, It:
-                - supports dot path for field access, e.g. company.name = 'MyCompany'
-                - adds new concepts Term (preselected records from other model) and Alias (field path short name)
-                  They can be both treated as virtual fields and used like normal fields.
-            You can use `get_oql_hints` tool to find out available fields, terms, aliases, values at current cursor.
-        :param fields: List of fields to read, see ``fields`` parameter in :meth:`read`.
-            Defaults to all fields.
-        :param int offset: Number of records to skip, see ``offset`` parameter in :meth:`search`.
-            Defaults to 0.
-        :param int limit: Maximum number of records to return, see ``limit`` parameter in :meth:`search`.
-            Defaults to no limit.
-        :param order: Columns to sort result, see ``order`` parameter in :meth:`search`.
-            Defaults to no sort.
-        :param read_kwargs: All read keywords arguments used to call read(..., **read_kwargs) method
-            E.g. you can use search_read(..., load='') in order to avoid computing name_get
-        :return: List of dictionaries containing the asked fields.
-        :rtype: list(dict).
+        OQL is a PostgreSQL-compatible query language for Odoo. It supports dot paths (e.g., `company.name`) and virtual fields (Terms/Aliases).
+        Use `oql_hint` only when you need auto-completion or are unsure of the syntax.
+
+        :param model: Target model (e.g., 'res.partner').
+        :param where: Complete OQL WHERE clause. Must be a valid, executable statement.
+        :param fields: List of fields to return. Defaults to all.
+        :param offset: Records to skip (default: 0).
+        :param limit: Max records to return (default: no limit).
+        :param order: Sort columns (e.g., 'name desc').
+        :param read_kwargs: Extra args for `read()` (e.g., load='' to skip name_get).
+        :return: List of record dictionaries.
         """
         this = self.env[model]
         records = this.searcho(where)
@@ -62,5 +54,15 @@ class OqlMcpBase(models.AbstractModel):
 
     @mcp_tool
     @api.model
-    def oql_hint(self, model: str, query: str, cursor: int, limit=100):
-        return self.env[model].hinto(query, cursor, limit)
+    def oql_mcp_hint(self, model: str, partial_input: str, cursor: int = None, limit=30):
+        """Auto-complete INCOMPLETE OQL fragments. NOT for executing queries.
+
+        Use when constructing a query to find valid fields or values matching the current input.
+        Example: partial_input="name = ma" -> returns ['Mary', 'JackMa'].
+
+        :param model: Target model (e.g., 'res.partner').
+        :param partial_input: The unfinished text typed so far. NEVER a complete statement.
+        :param cursor: Typing position (zero-based). None means end of string.
+        :param limit: Max candidates to return (default: 30).
+        """
+        return self.env[model].hinto(partial_input, cursor, limit)
