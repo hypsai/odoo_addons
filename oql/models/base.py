@@ -27,10 +27,9 @@ class OqlBase(models.AbstractModel):
         return self.searcho(oql_where).ids
 
     @api.model
-    def hinto(self, field: str, query: str, cursor: int, limit=100):
+    def hinto(self, query: str, cursor: int, limit=100):
         """
         Get OQL code completion hints. Typically used by frontends.
-        :param field: The field in this model the query belongs to.
         :param query: The query to be completed.
         :param cursor: The cursor position in query to generate completion hints.
         :param limit: Count limit of hints.
