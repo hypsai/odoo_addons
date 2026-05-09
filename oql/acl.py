@@ -2,7 +2,8 @@
 # @Time         : 11:38 2026/5/6
 # @Author       : Chris
 # @Description  :
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Set, Literal
+
 from .util import KeyPassingDefaultDict
 
 
@@ -21,39 +22,44 @@ class OqlAcl:
 
 
 class OqlModelAcl:
+    """Model level ACL."""
+
     def __init__(self, env, model_name: str):
         self.env = env
         self.model_name = model_name
-        self._field2acl: Dict[str, OqlFieldAcl] = KeyPassingDefaultDict(self._load_field)
-        self._perm_cache: Dict[str, bool] = {}
+        self._mode2fields: Dict[str, set] = KeyPassingDefaultDict(self._check_fields)
 
-    def __getitem__(self, field_name: Union[str, List[str]]) -> Union["OqlFieldAcl", Dict[str, "OqlFieldAcl"]]:
+    def __getitem__(self, field_name: Union[str, List[str]]) -> Union["OqlFieldAcl", List["OqlFieldAcl"]]:
+        """Get field or fields ACL."""
         if isinstance(field_name, list):
-            return {f: self._field2acl[f] for f in field_name}
-        return self._field2acl[field_name]
+            return [OqlFieldAcl(x, self) for x in field_name]
+        return OqlFieldAcl(field_name, self)
 
-    def _load_field(self, field_name: str) -> "OqlFieldAcl":
-        perm = self._get_model_perm()
-        return OqlFieldAcl(perm_read=perm.get('perm_read', False))
+    def perm_fields(self, mode: Literal["read", "write"]) -> Set["str"]:
+        """Return fields that have the specified `mode` access."""
+        return self._mode2fields[mode]
 
-    def _get_model_perm(self) -> dict:
-        if 'perm' not in self._perm_cache:
-            IrModelAccess = self.env['ir.model.access']
-            perm = IrModelAccess.check(self.model_name, raise_exception=False)
-            # check returns True/False for general access, we need detailed perms
-            # Using search to get the most permissive rule for the current user's groups
-            domain = [('model_id.model', '=', self.model_name)]
-            rules = IrModelAccess.search(domain)
-            
-            max_perm = {'perm_read': False, 'perm_write': False, 'perm_create': False, 'perm_unlink': False}
-            for rule in rules:
-                if rule.active:
-                    for key in max_perm:
-                        max_perm[key] = max_perm[key] or getattr(rule, key, False)
-            self._perm_cache['perm'] = max_perm
-        return self._perm_cache['perm']
+    def _check_fields(self, mode: str):
+        return set(self.env["oql.acl.field"].check_fields(self.model_name, mode))
 
 
 class OqlFieldAcl:
-    def __init__(self, perm_read: bool = False):
-        self.perm_read = perm_read
+    """Lazy loading field ACL."""
+
+    def __init__(self, name: str, mac: OqlModelAcl):
+        self.name = name
+        self._mac = mac
+        self._perm_read = None
+        self._perm_write = None
+
+    @property
+    def perm_read(self):
+        if self._perm_read is None:
+            self._perm_read = self.name in self._mac.perm_fields("read")
+        return self._perm_read
+
+    @property
+    def perm_write(self):
+        if self._perm_write is None:
+            self._perm_write = self.name in self._mac.perm_fields("write")
+        return self._perm_write

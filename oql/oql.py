@@ -9,6 +9,7 @@ import lark
 from odoo import models, _
 from odoo.tools.safe_eval import safe_eval
 
+from .acl import OqlAcl
 from .alias import AliasRule
 from .recs import *
 from .util import KeyPassingDefaultDict, tn
@@ -19,6 +20,7 @@ _logger = logging.getLogger(__name__)
 class OqlMeta:
     def __init__(self, env):
         self.env = env
+        self.acl = OqlAcl(env)
         self._term_fields = self._load_term_fields()
         self._term2domains: Dict[Term, List[TermDomain]] = KeyPassingDefaultDict(self._load_domains)  # Lazy loading.
         self._model2rule: Dict[str, AliasRule] = KeyPassingDefaultDict(self._load_rule)  # Lazy loading.
