@@ -231,7 +231,7 @@ odoo.define('oql_web.oql_editor_core', function (require) {
                 hints = await ajax.jsonRpc('/web/dataset/call_kw', 'call', {
                     model: self.model,
                     method: 'hinto',
-                    args: [[self.res_id], content, cursor_index, limit],
+                    args: [content, cursor_index, limit],
                     kwargs: {}
                 }).catch(function (error) {
                     console.error('[OQL Core] Failed to fetch hints:', error);
