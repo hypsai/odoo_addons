@@ -31,6 +31,7 @@ Menu: Settings > Technical > OQL
         "security/ir.model.access.csv",
         "views/oql_term_views.xml",
         "views/oql_alias_views.xml",
+        "views/ir_model_access_views.xml",
         "views/oql_menu.xml",
     ],
     "demo": [],
