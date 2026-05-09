@@ -266,7 +266,7 @@ class McpController(http.Controller):
         name = params.get('name')
         arguments = params.get('arguments', {})
         
-        _logger.debug(f"MCP calling tool: {name} with args: {arguments}")
+        _logger.info(f"User[{request.env.user.id}] calling MCP tool: {name} with args: {arguments}")
         
         try:
             model_name, method_name = name.split(':')

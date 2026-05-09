@@ -264,8 +264,8 @@ class OqlTransformer(lark.Transformer):
             return left & right
         return left and right
 
-    def bin_expr(self, left, opr, right):
-        left: FieldAccess
+    def bin_expr(self, left: FieldAccess, opr: str, right):
+        opr = opr.lower()
         if left.next:  # Contains term.
             return left.eval_bin(opr, right)
         else:
@@ -273,8 +273,7 @@ class OqlTransformer(lark.Transformer):
             result = left.recs.search([(fullpath, opr, right)])
             return RecordSets([RecordSet(result, TermDomain.MISSING)])
 
-    def dot_expr(self, field):
-        field: FieldAccess
+    def dot_expr(self, field: FieldAccess):
         if field.next:  # Contains term.
             return field.eval_una("bool")
         else:

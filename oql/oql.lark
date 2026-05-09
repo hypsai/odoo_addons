@@ -4,9 +4,9 @@ root: expr
 
 ?expr: or_expr
 
-?or_expr: and_expr | or_expr "or" and_expr
-?and_expr: not_expr | and_expr "and" not_expr
-?not_expr: "not" not_expr | _opr_expr
+?or_expr: and_expr | or_expr "or"i and_expr
+?and_expr: not_expr | and_expr "and"i not_expr
+?not_expr: "not"i not_expr | _opr_expr
 
 _opr_expr: bin_expr
          | una_expr
@@ -18,7 +18,7 @@ _opr_expr: bin_expr
 una_expr: UNA_OPR field
 bin_expr: field BIN_OPR _value
 get_expr: field "[" _value "]"  // For Many2one relation, e.g. partner[1]
-nul_expr: field "is" ("null" | "not" "null")
+nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
 field: CNAME ("." CNAME)*  // Dot-style field access
@@ -37,7 +37,7 @@ array: "(" [_value ("," _value)*] ")"
 string: ESCAPED_STRING
 
 // Operators
-UNA_OPR: "size"
+UNA_OPR: "size"i
 
 BIN_OPR: "="
         | "!="
@@ -46,17 +46,17 @@ BIN_OPR: "="
         | "<="
         | ">"
         | ">="
-        | "like"
-        | /not[ \t]+like/
-        | "ilike"
-        | /not[ \t]+ilike/
-        | "in"
-        | /not[ \t]+in/
-        | "=like"
-        | "=ilike"
+        | "like"i
+        | /not[ \t]+like/i
+        | "ilike"i
+        | /not[ \t]+ilike/i
+        | "in"i
+        | /not[ \t]+in/i
+        | "=like"i
+        | "=ilike"i
         | "=?"
-        | "child_of"
-        | "parent_of"
+        | "child_of"i
+        | "parent_of"i
 
 // Ignore white chars
 %ignore " "
@@ -69,9 +69,9 @@ CNAME: ("_"|LETTER) ("_"|LETTER|DIGIT)*
 ESCAPED_STRING: /'[^']*'/ | /"[^"]*"/
 INT: /[-+]?\d+/
 FLOAT: /[-+]?\d+\.\d+/
-TRUE: "true"
-FALSE: "false"
-NULL: "null"
+TRUE: "true"i
+FALSE: "false"i
+NULL: "null"i
 
 // Imports
 %import common.LETTER
