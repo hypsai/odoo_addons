@@ -124,13 +124,13 @@ class OqlMeta:
         return term2domains
 
     def _load_rule(self, model: str) -> Optional[AliasRule]:
-        recs = self.env["oql.alias"].search([("model_id.model", "=", model)], limit=1)
+        recs = self.env["oql.alias"].sudo().search([("model_id.model", "=", model)], limit=1)
         if not recs:
             return None
         return AliasRule.from_orm(recs)[0]
 
     def _load_alias(self, model: str) -> Dict[str, str]:
-        recs = self.env["oql.alias.line"].search([("rule_id.model_id.model", "=", model)])
+        recs = self.env["oql.alias.line"].sudo().search([("rule_id.model_id.model", "=", model)])
         alias2path = {x.alias: x.path for x in recs}
         return alias2path
 
