@@ -200,12 +200,12 @@ def parse_docstring(docstring):
     # Try parsers in order: Sphinx > Google > NumPy
     for parser in (_parse_sphinx_complete, _parse_google_complete, _parse_numpy_complete):
         result = parser(cleaned)
-        if result['params']:
+        if result.get('params') or result.get("param_types") or result.get("returns"):
             return result
     
-    # Fallback: use first line as description
+    # Fallback: use full docstring as description.
     return {
-        'description': cleaned.split('\n')[0].strip(),
+        'description': cleaned,
         'params': {},
         'param_types': {},
         'returns': ''
