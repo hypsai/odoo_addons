@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 from odoo import models, api
 from odoo.exceptions import UserError
@@ -14,9 +15,10 @@ class OqlBase(models.AbstractModel):
     @api.model
     def searcho(self, oql_where: str):
         """Search with OQL."""
+        prefix = f"FROM {self._name} SELECT id WHERE "
         try:
-            result = reader.query(oql_where, OqlTransformer(self.env, self._name))
-            return result
+            result = self.oql(f"{prefix}{oql_where}")
+            return self.browse([x["id"] for x in result])
         except Exception as e:
             _logger.debug(f"OQL query error: {e}", exc_info=True)
             raise UserError(str(e))
@@ -27,13 +29,36 @@ class OqlBase(models.AbstractModel):
         return self.searcho(oql_where).ids
 
     @api.model
-    def hinto(self, query: str, cursor: int = None, limit=100):
+    def hinto(self, partial_oql_where: str, cursor: int = None, limit=100):
         """
-        Get OQL code completion hints. Typically used by frontends.
-        :param query: The query to be completed.
+        Get OQL code completion hints.
+        * Note: FROM clause is defaulted to `self._name`.
+        :param partial_oql_where: A complete or incomplete OQL where clause criteria.
         :param cursor: The cursor position in query to generate completion hints.
         :param limit: Count limit of hints.
         :return: List of hint.
+        """
+        prefix = f"FROM {self._name} SELECT id WHERE "
+        oql = f"{prefix}{partial_oql_where}"
+        return self.oql_hint(oql, len(prefix)+cursor, limit)
+
+    @api.model
+    def oql(self, oql: str) -> List[dict]:
+        """
+        Execute an OQL query.
+        """
+        return reader.query(oql, OqlTransformer(self.env))
+
+    @api.model
+    def oql_hint(self, partial_oql: str, cursor: int = None, limit=100) -> List[dict]:
+        """
+        Hint an OQL query at given `cursor`.
+        * Note: This method is implemented in `oql_pro`, a professional addon for oql.
+            You can find it in Odoo App Store. Link: https://apps.odoo.com/apps/modules/15.0/oql_pro
+        :param partial_oql: A complete or incomplete OQL query string.
+        :param cursor: The cursor position in query to generate completion hints.
+        :param limit: Count limit of hints.
+        :return: [{'type': 'xxx', 'value': 'yyy', 'desc': 'zzz'}, ...]
         """
         pass
 

@@ -30,7 +30,9 @@ class OqlAclField(models.Model):
         if self.env.su:
             # User root have all accesses
             return list(self.env[model]._fields)
+
         self.flush(self._fields)
+
         sql = f"""
         SELECT d.name
         FROM res_groups_users_rel a
@@ -43,4 +45,9 @@ class OqlAclField(models.Model):
         HAVING BOOL_OR(COALESCE(e.perm_{mode}, b.perm_oql_fac_default_{mode}, FALSE))
         """
         self._cr.execute(sql, (self._uid, model))
-        return [row[0] for row in self._cr.fetchall()]
+        field_names = [row[0] for row in self._cr.fetchall()]
+
+        if mode == "read" and "id" not in field_names:
+            field_names.append("id")  # ID is always readable.
+
+        return field_names

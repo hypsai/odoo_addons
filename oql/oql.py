@@ -7,6 +7,7 @@ from typing import List, Dict, Optional
 
 import lark
 from odoo import models, _
+from odoo.fields import _RelationalMulti
 from odoo.tools.safe_eval import safe_eval
 
 from .acl import OqlAcl
@@ -67,7 +68,7 @@ class OqlMeta:
         if self._all_terms_loaded:
             return []  # No need to query anymore.
         term2domains = self._load_terms([term])
-        return next(iter(term2domains.values()))
+        return next(iter(term2domains.values())) if term2domains else []
 
     def _load_terms(self, terms: List[str]) -> Dict[Term, List[TermDomain]]:
         """
@@ -138,7 +139,11 @@ class OqlMeta:
 
 
 class FieldAccess:
-    def __init__(self, recs, names, meta: OqlMeta, domain=TermDomain.MISSING):
+
+    x2m: bool
+    """Whether there is any X2Many field on the access path."""
+
+    def __init__(self, recs, names: Iterable[str], meta: OqlMeta, domain=TermDomain.MISSING):
         self.meta = meta
         env = recs.env
         acl = meta.acl
@@ -147,12 +152,18 @@ class FieldAccess:
         plain_names = []
         p_recs = recs
         next_ = []
+        b_x2m = False
         i = 0
         while i < len(names):
             name = names[i]
             # Model Field
             if hasattr(p_recs, name):
                 acl.check_field(p_recs, name, "read")
+                # Check X2Many
+                if not b_x2m:
+                    f_meta = p_recs._fields[name]
+                    if isinstance(f_meta, _RelationalMulti):
+                        b_x2m = True
                 p_recs = p_recs[name]
                 plain_names.append(name)
                 i += 1
@@ -177,13 +188,32 @@ class FieldAccess:
         self.recs = recs
         self.names = plain_names
         self.domain: TermDomain = domain
+        self.x2m = b_x2m
         self.next: List[FieldAccess] = next_
+
+    @property
+    def as_(self):
+        return '.'.join(self.names)
 
     def eval_bin(self, opr: str, value):
         return self._eval(False, opr, value)
 
     def eval_una(self, opr: str):
         return self._eval(True, opr, None)
+
+    def read(self, recs) -> list:
+        """Read value from recs. Result is aligned with `recs`.
+        Note: If there is any X2Many field on the field path, the result item will be list type."""
+        # Check
+        if recs._name != self.recs._name:
+            raise Exception(f"Expect `{self.recs._name}` records, got `{recs._name}`.")
+        # Read
+        path = '.'.join(self.names)
+        recs.mapped(path)  # Prefetch
+        res = [x.mapped(path) for x in recs]
+        if not self.x2m:
+            res = [x[0] if x else None for x in res]
+        return res
 
     def get_rear_recs(self) -> List[Tuple[RecordSet, Optional[str]]]:
         """Get (RecordSet, field) at the rear of this field access."""
@@ -245,11 +275,44 @@ class OqlTransformer(lark.Transformer):
     INT = int
     FLOAT = float
 
-    def __init__(self, env, model: str):
+    def __init__(self, env):
         super().__init__(True)
         self.env = env
-        self.recs = env[model]
+        self.model_name = None
+        self.recs = None
         self._meta = OqlMeta(env)
+
+    def query(self, from_, select: List[FieldAccess], where):
+        # 1 Categorize field access into plain and dot fields.
+        dot_fas: List[FieldAccess] = []
+        plain_fields: List[str] = []
+        for fa in select:
+            if len(fa.names) == 1:
+                plain_fields.append(fa.names[0])
+            else:
+                dot_fas.append(fa)
+        # 2 Read data.
+        recs = where[0].data
+        # 2.1 Read plain fields.
+        rows = recs.read(plain_fields)
+        # 2.2 Read dot-style fields.
+        for fa in dot_fas:
+            for row, val in zip(rows, fa.read(recs), strict=True):
+                row[fa.as_] = val
+        return rows
+
+    def from_clause(self, model):
+        self.model_name = model
+        self.recs = self.env[model]
+
+    def select_clause(self, fields="*"):
+        if fields == "*":
+            fields = self._meta.acl[self.model_name].perm_fields("read")
+            fields = [FieldAccess(self.recs, [x], self._meta) for x in fields]
+        return fields
+
+    def where_clause(self, expr):
+        return expr
 
     def root(self, value):
         assert isinstance(value, RecordSets), "System Error, invalid root result."
@@ -285,8 +348,14 @@ class OqlTransformer(lark.Transformer):
             result = field.recs.search([(fullpath, "!=", False)])
             return RecordSets([RecordSet(result, TermDomain.MISSING)])
 
+    def model(self, *args):
+        return '.'.join(args)
+
     def field(self, *args: str):
         return FieldAccess(self.recs, args, self._meta)
+
+    def fields(self, *fields):
+        return fields
 
     def string(self, value):
         return value[1:-1]

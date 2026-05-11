@@ -1,6 +1,10 @@
-?start: root
+?start: query
 
-root: expr
+query: from_clause select_clause where_clause
+
+select_clause: "select"i ("*" | fields)
+from_clause: "from"i model
+where_clause: "where"i expr
 
 ?expr: or_expr
 
@@ -21,6 +25,9 @@ get_expr: field "[" _value "]"  // For Many2one relation, e.g. partner[1]
 nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
+fields: field ("," field)*  // Field list
+
+model: CNAME ("." CNAME)*  // Dot-style model name
 field: CNAME ("." CNAME)*  // Dot-style field access
 
 _value: string
@@ -37,7 +44,7 @@ array: "(" [_value ("," _value)*] ")"
 string: ESCAPED_STRING
 
 // Operators
-UNA_OPR: "size"i
+UNA_OPR: "_sizeof_"i
 
 BIN_OPR: "="
         | "!="

@@ -79,14 +79,15 @@ class TestOql(TransactionCase):
     def tearDown(self):
         super().tearDown()
 
+    @tagged("grammar")
     def test_grammar_parse(self):
         """Test basic OQL grammar parsing."""
-        parsed = reader.query("tag_ids.name = 'Waterproof:GTX'", self._get_transformer())
+        parsed = reader.query("from test.oql.product select name, tag_ids.name where tag_ids.name in ('Waterproof:GTX', 'Weather:Temperate')", self._get_transformer())
         self.assertIsNotNone(parsed)
 
     def test_simple_search(self):
         """Test search with field path navigation."""
-        res = reader.query("name = 'Hot Boot'", self._get_transformer())
+        res = self.env["test.oql.product"].searcho("name = 'Hot Boot'")
         # Should return both products
         self.assertEqual({"Hot Boot"}, set(res.mapped("name")))
 
@@ -181,4 +182,4 @@ class TestOql(TransactionCase):
         self.assertEqual(expected, {x["value"] for x in actual})
 
     def _get_transformer(self):
-        return OqlTransformer(self.env, "test.oql.product")
+        return OqlTransformer(self.env)
