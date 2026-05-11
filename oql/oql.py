@@ -140,9 +140,10 @@ class OqlMeta:
 class FieldAccess:
     def __init__(self, recs, names, meta: OqlMeta, domain=TermDomain.MISSING):
         self.meta = meta
+        env = recs.env
+        acl = meta.acl
         # Parse
         names = list(names)
-        env = recs.env
         plain_names = []
         p_recs = recs
         next_ = []
@@ -151,6 +152,7 @@ class FieldAccess:
             name = names[i]
             # Model Field
             if hasattr(p_recs, name):
+                acl.check_field(p_recs, name, "read")
                 p_recs = p_recs[name]
                 plain_names.append(name)
                 i += 1

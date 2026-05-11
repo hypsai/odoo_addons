@@ -4,6 +4,9 @@
 # @Description  :
 from typing import Dict, Union, List, Set, Literal
 
+from odoo import models, _
+from odoo.exceptions import AccessError
+
 from .util import KeyPassingDefaultDict
 
 
@@ -16,6 +19,13 @@ class OqlAcl:
 
     def __getitem__(self, model_name: str) -> "OqlModelAcl":
         return self._model2acl[model_name]
+
+    def check_field(self, recs: models.Model, field: str, mode: Literal["read", "write"]):
+        model = recs._name
+        if not self[model][field].check(mode):
+            document_kind = self.env['ir.model']._get(model).name or model
+            raise AccessError(_("You are not allowed to %s field '%s' of '%s' (%s) records.",
+                                mode, field, document_kind, model))
 
     def _load_model(self, model_name: str) -> "OqlModelAcl":
         return OqlModelAcl(self.env, model_name)
@@ -49,17 +59,14 @@ class OqlFieldAcl:
     def __init__(self, name: str, mac: OqlModelAcl):
         self.name = name
         self._mac = mac
-        self._perm_read = None
-        self._perm_write = None
 
     @property
     def perm_read(self):
-        if self._perm_read is None:
-            self._perm_read = self.name in self._mac.perm_fields("read")
-        return self._perm_read
+        return self.check("read")
 
     @property
     def perm_write(self):
-        if self._perm_write is None:
-            self._perm_write = self.name in self._mac.perm_fields("write")
-        return self._perm_write
+        return self.check("write")
+
+    def check(self, mode: Literal["read", "write"]):
+        return self.name in self._mac.perm_fields(mode)

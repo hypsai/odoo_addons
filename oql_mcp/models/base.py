@@ -2,6 +2,7 @@ import logging
 
 from odoo import models, api
 from odoo.addons.mcp_base import mcp_tool
+from odoo.addons.oql.acl import OqlAcl
 
 _logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ class OqlMcpBase(models.AbstractModel):
         if fields and fields == ['id']:
             # shortcut read if we only want the ids
             return [{'id': record.id} for record in records]
+
+        fields = fields or list(OqlAcl(self.env)[model].perm_fields("read"))
 
         # read() ignores active_test, but it would forward it to any downstream search call
         # (e.g. for x2m or function fields), and this is not the desired behavior, the flag

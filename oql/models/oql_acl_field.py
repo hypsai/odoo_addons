@@ -28,8 +28,8 @@ class OqlAclField(models.Model):
     def check_fields(self, model: str, mode: Literal["read", "write"]) -> List[str]:
         """Check field access rights of the given model, and return all the fields that have given `mode` access right."""
         if self.env.su:
-            # TODO: User root have all accesses
-            pass
+            # User root have all accesses
+            return list(self.env[model]._fields)
         self.flush(self._fields)
         sql = f"""
         SELECT d.name
