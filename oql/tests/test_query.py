@@ -12,7 +12,7 @@ class TestOql(TransactionCase):
         env = self.env
 
         # 1 Load model meta.
-        ensure_model_meta(env, ['test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value', 'test.oql.tag'])
+        ensure_model_meta(env)
         metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
         metaTag = env["ir.model"].search([("model", "=", "test.oql.tag")], limit=1)
@@ -35,9 +35,9 @@ class TestOql(TransactionCase):
                         "product_id": prod.id,
                         "attribute_id": attr.id})
         # 2.4 Tag
-        tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "product_id": prod_cold.id})
-        tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "product_id": prod_cold.id})
-        tag_hot = env["test.oql.tag"].create({"name": "Weather:Hot", "product_id": prod_hot.id})
+        tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "product_id": prod_cold.tmpl_id.id})
+        tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "product_id": prod_cold.tmpl_id.id})
+        tag_hot = env["test.oql.tag"].create({"name": "Weather:Hot", "product_id": prod_hot.tmpl_id.id})
 
         # 3 Terms
         # 3.1 Attr

@@ -5,10 +5,11 @@
 from odoo import models, fields
 
 
-def ensure_model_meta(env, model_names):
+def ensure_model_meta(env):
     """
     Insert model meta into `ir.model` manually.
     """
+    model_names = ['test.oql.template', 'test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value', 'test.oql.tag']
     for model_name in model_names:
         # Search for existing model record
         meta = env["ir.model"].search([("model", "=", model_name)], limit=1)
@@ -30,13 +31,30 @@ def ensure_model_meta(env, model_names):
             })
 
 
+class TestOqlTemplate(models.Model):
+    _name = "test.oql.template"
+    _description = "Test OQL Product Template"
+
+    tag_ids = fields.One2many("test.oql.tag", "tmpl_id")
+
+
+class TestOqlTag(models.Model):
+    _name = "test.oql.tag"
+    _description = 'Test OQL Tag'
+
+    name = fields.Char("Name")
+    tmpl_id = fields.Many2one("test.oql.template", "Template")
+    term_ids = fields.Many2many("oql.term", string="Terms")
+
+
 class TestOqlProduct(models.Model):
     _name = 'test.oql.product'
     _description = 'Test OQL Product'
+    _inherits = {"test.oql.template": "tmpl_id"}
 
     name = fields.Char("Name")
+    tmpl_id = fields.Many2one("test.oql.template", "Template", delegate=True)
     attribute_value_ids = fields.One2many("test.oql.attribute.value", "product_id")
-    tag_ids = fields.One2many("test.oql.tag", "product_id")
     active = fields.Boolean("Active", default=True)
 
 
@@ -67,12 +85,3 @@ class TestOqlAttributeValue(models.Model):
     name = fields.Char("Name")
     product_id = fields.Many2one("test.oql.product", "Product")
     attribute_id = fields.Many2one("test.oql.attribute", "Attribute")
-
-
-class TestOqlTag(models.Model):
-    _name = "test.oql.tag"
-    _description = 'Test OQL Tag'
-
-    name = fields.Char("Name")
-    product_id = fields.Many2one("test.oql.product", "Product")
-    term_ids = fields.Many2many("oql.term", string="Terms")

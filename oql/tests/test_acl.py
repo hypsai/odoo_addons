@@ -17,7 +17,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # 1. Load model meta
-        ensure_model_meta(env, ['test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value', 'test.oql.tag'])
+        ensure_model_meta(env)
         metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
         metaAttributeValue = env["ir.model"].search([("model", "=", "test.oql.attribute.value")], limit=1)
@@ -39,8 +39,8 @@ class TestOqlAcl(TransactionCase):
                         "product_id": prod.id,
                         "attribute_id": attr.id})
         
-        tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "product_id": prod_cold.id})
-        tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "product_id": prod_cold.id})
+        tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "tmpl_id": prod_cold.tmpl_id.id})
+        tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "tmpl_id": prod_cold.tmpl_id.id})
 
         # 3. Store references for tests
         self.prod_cold = prod_cold

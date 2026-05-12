@@ -135,6 +135,8 @@ class OqlMeta:
     def _load_alias(self, model: str) -> Dict[str, str]:
         recs = self.env["oql.alias.line"].sudo().search([("rule_id.model_id.model", "=", model)])
         alias2path = {x.alias: x.path for x in recs}
+        ok_paths = self.acl.perm_paths(model, alias2path.values(), "read")
+        alias2path = {k: v for k, v in alias2path.items() if v in ok_paths}
         return alias2path
 
 

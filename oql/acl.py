@@ -31,7 +31,7 @@ class OqlAcl:
             raise AccessError(_("You are not allowed to %s field '%s' of '%s' (%s) records.",
                                 mode, field, document_kind, model))
 
-    def perm_paths(self, model: str, paths: Iterable[str], mode: Literal["read", "write"]) -> List[str]:
+    def perm_paths(self, model: str, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
         """Find out dot-style paths on `model` that current user has access to."""
         env = self.env
 
@@ -39,7 +39,7 @@ class OqlAcl:
         model2stack_chips: Dict[str, List[Tuple[str, List[str]]]] = {
             model: [(x, list(reversed(x.split('.')))) for x in paths]
         }
-        ok_paths = []
+        ok_paths = set()
         while model2stack_chips:
             new_model2stack_chips: Dict[str, List[Tuple[str, List[str]]]] = defaultdict(list)
             for comodel, stack_chips in model2stack_chips.items():
@@ -58,7 +58,7 @@ class OqlAcl:
                         continue
                     if len(chips) == 0:
                         # This is a rear chip, path access completed.
-                        ok_paths.append(path)
+                        ok_paths.add(path)
                         continue
                     if not f_meta.relational:
                         _logger.warning(_(f"Path `%s` is invalid on model `%s`, field `%s`.`%s` is not relational field."),
