@@ -85,7 +85,7 @@ class OqlMeta:
         # 2.1 Reference
         model2field2term2ids = defaultdict(lambda: defaultdict(lambda: defaultdict(set)))
         term_criteria = [("name", "in", terms)] if terms else []
-        term_recs = self.env["oql.term"].search(term_criteria)
+        term_recs = self.env["oql.term"].sudo().search(term_criteria)
         for field in fields:
             model = field.model
             field_name = field.name
