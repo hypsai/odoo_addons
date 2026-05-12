@@ -670,3 +670,57 @@ class TestOqlAcl(TransactionCase):
         # Verify both are deleted
         self.assertFalse(temp_access.exists())
         self.assertFalse(acl_field.exists())
+
+    @tagged("acl.inheritance")
+    def test_acl_inherited_model_permissions(self):
+        """Test that permissions on parent model fields are inherited by child model."""
+        env = self.env
+        
+        # Get user group
+        user_group = self.test_user.groups_id.filtered(lambda g: g.name == 'Internal User')
+        
+        # Get template model metadata
+        metaTemplate = env["ir.model"].search([("model", "=", "test.oql.template")], limit=1)
+        
+        # Create access for template model with default deny
+        template_access = env["ir.model.access"].create({
+            'name': 'Template Model Access',
+            'model_id': metaTemplate.id,
+            'group_id': user_group.id,
+            'perm_read': True,
+            'perm_write': False,
+            'perm_oql_fac_default_read': False,  # Default: no read access
+            'perm_oql_fac_default_write': False,
+        })
+        
+        # Get tag_ids field from template model
+        tag_ids_field = env["ir.model.fields"].search([
+            ('model_id', '=', metaTemplate.id),
+            ('name', '=', 'tag_ids')
+        ], limit=1)
+        
+        self.assertTrue(tag_ids_field.exists(), "tag_ids field should exist in template model")
+        
+        # Grant read access to tag_ids field in template model
+        env["oql.acl.field"].create({
+            'mac_id': template_access.id,
+            'field_id': tag_ids_field.id,
+            'perm_read': True,
+            'perm_write': False,
+        })
+        
+        # Switch to test user
+        user_env = env(user=self.test_user)
+        acl = OqlAcl(user_env)
+        
+        # Check that product model (which inherits template) has access to tag_ids
+        product_acl = acl["test.oql.product"]
+        readable_fields = product_acl.perm_fields("read")
+        
+        # tag_ids should be readable in product model due to inheritance
+        self.assertIn("tag_ids", readable_fields, 
+                     "tag_ids field should be readable in product model through inheritance")
+        
+        # Also verify we can check the field without raising an error
+        recs = user_env["test.oql.product"].browse([self.prod_cold.id])
+        acl.check_field(recs, "tag_ids", "read")

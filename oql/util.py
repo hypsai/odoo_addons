@@ -121,6 +121,20 @@ def read_object(obj, path: str):
     return p
 
 
+def groupby(iterable, key, convert_item=None, returns_dict=False):
+    """
+    Similar to 'itertools.groupby', but this function can work on unsorted data.
+    * 'itertools.groupby' works only on ordered data.
+    """
+    if convert_item is None:
+        def convert_item(x):
+            return x
+    res_dict = defaultdict(list)
+    for item in iterable:
+        res_dict[key(item)].append(convert_item(item))
+    return res_dict if returns_dict else res_dict.items()
+
+
 class KeyPassingDefaultDict(defaultdict):
     def __init__(self, factory: Callable[[Any], Any]):
         super().__init__(factory)

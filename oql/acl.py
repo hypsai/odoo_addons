@@ -71,14 +71,15 @@ class OqlAcl:
         return ok_paths
 
     def _load_model(self, model_name: str) -> "OqlModelAcl":
-        return OqlModelAcl(self.env, model_name)
+        return OqlModelAcl(self, model_name)
 
 
 class OqlModelAcl:
     """Model level ACL."""
 
-    def __init__(self, env, model_name: str):
-        self.env = env
+    def __init__(self, acl: "OqlAcl", model_name: str):
+        self.acl = acl
+        self.env = acl.env
         self.model_name = model_name
         self._mode2fields: Dict[str, set] = KeyPassingDefaultDict(self._check_fields)
 
@@ -90,7 +91,17 @@ class OqlModelAcl:
 
     def perm_fields(self, mode: Literal["read", "write"]) -> Set["str"]:
         """Return fields that have the specified `mode` access."""
-        return self._mode2fields[mode]
+        ok_fields = self._mode2fields[mode]
+        # Check access rights for related fields.
+        acl = self.acl
+        for f_meta in self.env[self.model_name]._fields.values():
+            f_meta: fields.Field
+            rf_meta: fields.Field = f_meta.related_field
+            if f_meta.name in ok_fields or not rf_meta:
+                continue
+            if acl[rf_meta.model_name][rf_meta.name].check(mode):
+                ok_fields.add(f_meta.name)
+        return ok_fields
 
     def _check_fields(self, mode: str):
         return set(self.env["oql.acl.field"].check_fields(self.model_name, mode))
