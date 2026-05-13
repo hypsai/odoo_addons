@@ -13,6 +13,7 @@ class OqlMcpBase(models.AbstractModel):
     @api.model
     def oql_mcp_query(self, oql: str):
         """Execute OQL search and return records as dicts.
+        Attention: You must use LIMIT clause for any query. Use offset together with limit if you need paginated result.
 
         OQL is a PostgreSQL-like query language for Odoo. It supports dot paths (e.g., `company.name`) and virtual fields (Terms/Aliases).
         Differences from SQL:
@@ -23,7 +24,8 @@ class OqlMcpBase(models.AbstractModel):
             FROM product.product
             SELECT name, default_code, tag_ids.name
             WHERE Brand = 'Danner' and Waterproof and list_price > 1000
-            OFFSET 160 LIMIT 80
+            LIMIT 80
+            OFFSET 160
         Use `oql_mcp_hint` to find out valid model and field you have access to, or valid candidate values for a field.
 
         :return: List of record dictionaries.
