@@ -6,6 +6,7 @@ import logging
 from collections import defaultdict
 from typing import Tuple, Dict
 
+from odoo import fields
 from odoo.models import Model
 
 from .term import *
@@ -15,11 +16,18 @@ _logger = logging.getLogger(__name__)
 
 class RecordSet:
     def __init__(self, model: Model, domain: OqlDomain):
+        """
+        `None` domain means empty records.
+        """
         if domain.model != model._name:
             raise Exception(f"Domain `{domain}` is incompatible with model `{model._name}`")
-        self._model = model
+        self._model = model.browse()
         self.domain = domain
         self._recs = None
+
+    @classmethod
+    def from_recs(cls, recs: Model):
+        return RecordSet(recs, OqlDomain("from_recs", recs._name, [("id", "in", recs.ids)]))
 
     @property
     def model(self):
@@ -31,13 +39,25 @@ class RecordSet:
         return self._model._name
 
     @property
+    def fields(self) -> Dict[str, fields.Field]:
+        return self._model._fields
+
+    @property
+    def table(self) -> str:
+        """Database table name."""
+        return self._model._table
+
+    @property
     def env(self):
         return self._model.env
 
-    def get_recs(self):
-        if self._recs is None:
-            self._recs = self._model.search(self.domain.domain, order="id")
-        return self._recs
+    def get_recs(self, limit: int = None, offset: int = 0):
+        return self._model.search(self.domain.domain, offset, limit, order="id")
+
+    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):
+        """Search on current record set."""
+        domain = AND([self.domain.domain, domain or []])
+        return self._model.search_read(domain, fields, offset, limit, order, **read_kwargs)
 
     def __bool__(self):
         return len(self) > 0

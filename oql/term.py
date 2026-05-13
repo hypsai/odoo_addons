@@ -33,6 +33,10 @@ class OqlDomain:
         self.domain = domain
 
     @classmethod
+    def all(cls, model: str):
+        return OqlDomain("ALL", model, [])
+
+    @classmethod
     def normalize(cls, name: str, model: str, domain: list, term: Term):
         return cls(name, model, normalize_domain(domain), term)
 

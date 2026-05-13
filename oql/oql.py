@@ -192,7 +192,8 @@ class FieldAccess:
                 break
             prefix = ".".join([tn(model), *plain_names])
             raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term.") % (prefix, name))
-        self.recs = model
+        self.root = RecordSet(model, pre_domain or OqlDomain.all(model._name))
+        self.model = model
         self.names = plain_names
         self.pre_domain = pre_domain
         self.x2m = b_x2m
@@ -212,8 +213,8 @@ class FieldAccess:
         """Read value from recs. Result is aligned with `recs`.
         Note: If there is any X2Many field on the field path, the result item will be list type."""
         # Check
-        if recs._name != self.recs._name:
-            raise Exception(f"Expect `{self.recs._name}` records, got `{recs._name}`.")
+        if recs._name != self.root.name:
+            raise Exception(f"Expect `{self.root.name}` records, got `{recs._name}`.")
         # Read
         path = '.'.join(self.names)
         recs.mapped(path)  # Prefetch
@@ -221,22 +222,6 @@ class FieldAccess:
         if not self.x2m:
             res = [x[0] if x else None for x in res]
         return res
-
-    def get_rear_recs(self) -> List[Tuple[RecordSet, Optional[str]]]:
-        """Get (RecordSet, field) at the rear of this field access."""
-        if self.next:
-            return [y for x in self.next for y in x.get_rear_recs()]
-        else:
-            rear_recs = self.recs
-            rear_field = None
-            p = self.recs
-            for name in self.names:
-                p = p[name]
-                if isinstance(p, models.BaseModel):
-                    rear_recs = p
-                else:
-                    rear_field = name
-            return [(RecordSet(rear_recs, self.domain), rear_field)]
 
     def _eval(self, una: bool, opr: str, value):
         """
@@ -246,7 +231,7 @@ class FieldAccess:
         :param value: Could be None in unary model
         :return: Evaluation result
         """
-        recs = self.recs
+        recs = self.model
         if self.next:  # Branch node
             meta = self.meta
             list_rec_set_y = []
@@ -264,14 +249,14 @@ class FieldAccess:
             if opr == "bool":
                 return RecordSets([RecordSet(recs, self.pre_domain)])
             else:
-                raise NotImplementedError(f"Unary operator `{opr}({tn(self.recs)})` not implemented.")
+                raise NotImplementedError(f"Unary operator `{opr}({tn(self.model)})` not implemented.")
         else:
             value_domain = None  # Only RecordSet value has domain info.
             if isinstance(value, RecordSet):
                 value_domain = value.domain
                 value = value.get_recs()
             if self.pre_domain:
-                recs = self.recs.search(self.pre_domain.domain)  # Apply on pre-selected subset.
+                recs = self.model.search(self.pre_domain.domain)  # Apply on pre-selected subset.
             res = recs.__oql_bin__(self.pre_domain, opr, value, value_domain)
             if res is None:
                 raise NotImplementedError(f"Operation `{tn(recs)} {opr} {value}` not implemented yet. "
@@ -353,9 +338,9 @@ class OqlTransformer(lark.Transformer):
         else:
             fullpath = ".".join(left.names)
             domain = OqlDomain(f"{left} {opr} {right}",
-                               left.recs._name,
+                               left.root.name,
                                [(fullpath, opr, right)])
-            return RecordSets([RecordSet(left.recs, domain)])
+            return RecordSets([RecordSet(left.model, domain)])
 
     def dot_expr(self, field: FieldAccess):
         if field.next:  # Contains term.
@@ -363,9 +348,9 @@ class OqlTransformer(lark.Transformer):
         else:
             fullpath = ".".join(field.names)
             domain = OqlDomain(fullpath,
-                               field.recs._name,
+                               field.root.name,
                                [(fullpath, "!=", False)])
-            return RecordSets([RecordSet(field.recs, domain)])
+            return RecordSets([RecordSet(field.model, domain)])
 
     def model(self, *args):
         return '.'.join(args)
