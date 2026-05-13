@@ -3,7 +3,7 @@
 # @Author       : Chris
 # @Description  :
 import os.path
-from typing import List, Dict, Optional
+from typing import Optional
 
 import lark
 from odoo import models, _
@@ -23,7 +23,7 @@ class OqlMeta:
         self.env = env
         self.acl = OqlAcl(env)
         self._term_fields = self._load_term_fields()
-        self._term2domains: Dict[Term, List[TermDomain]] = KeyPassingDefaultDict(self._load_domains)  # Lazy loading.
+        self._term2domains: Dict[Term, List[OqlDomain]] = KeyPassingDefaultDict(self._load_domains)  # Lazy loading.
         self._model2rule: Dict[str, AliasRule] = KeyPassingDefaultDict(self._load_rule)  # Lazy loading.
         self._model2alias2path: Dict[str, Dict[str, str]] = KeyPassingDefaultDict(self._load_alias)  # Lazy loading.
         self._all_terms_loaded = False
@@ -44,7 +44,7 @@ class OqlMeta:
         alias2path = self._model2alias2path[model]
         return alias2path.get(alias)
 
-    def get_term2domains(self) -> Dict[Term, List[TermDomain]]:
+    def get_term2domains(self) -> Dict[Term, List[OqlDomain]]:
         if not self._all_terms_loaded:
             term2domains = self._load_terms([])
             self._term2domains.update(term2domains)
@@ -64,19 +64,19 @@ class OqlMeta:
         ])
         return fields
 
-    def _load_domains(self, term: str) -> List[TermDomain]:
+    def _load_domains(self, term: str) -> List[OqlDomain]:
         if self._all_terms_loaded:
             return []  # No need to query anymore.
         term2domains = self._load_terms([term])
         return next(iter(term2domains.values())) if term2domains else []
 
-    def _load_terms(self, terms: List[str]) -> Dict[Term, List[TermDomain]]:
+    def _load_terms(self, terms: List[str]) -> Dict[Term, List[OqlDomain]]:
         """
         Load a term or all terms.
         :param terms: Name of the terms to be loaded. Input empty list to load all terms.
         :return: {term1: [term_domain1, ...], ...}
         """
-        term2domains: Dict[Term, List[TermDomain]] = defaultdict(list)
+        term2domains: Dict[Term, List[OqlDomain]] = defaultdict(list)
         env = self.env
         # 1 Search all Many2One and Many2Many fields that refer to 'oql.term'
         fields = self._term_fields
@@ -122,7 +122,7 @@ class OqlMeta:
             for model, name2domains in model2name2domains.items():
                 for name, domains in name2domains.items():
                     merged = [y for x in domains for y in x]  # Merge domains with '&' logic.
-                    d_domains.append(TermDomain(d_term, name, model, merged))
+                    d_domains.append(OqlDomain.normalize(name, model, merged, d_term))
             term2domains[d_term] = d_domains
         return term2domains
 
@@ -142,17 +142,23 @@ class OqlMeta:
 
 class FieldAccess:
 
+    model: models.Model
+    """Accessing target model."""
+
     x2m: bool
     """Whether there is any X2Many field on the access path."""
 
-    def __init__(self, recs, names: Iterable[str], meta: OqlMeta, domain=TermDomain.MISSING):
+    pre_domain: OqlDomain
+    """Pre-selector domain, select some records for further filtering."""
+
+    def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None):
         self.meta = meta
-        env = recs.env
+        env = model.env
         acl = meta.acl
         # Parse
         names = list(names)
         plain_names = []
-        p_recs = recs
+        p_recs = model
         next_ = []
         b_x2m = False
         i = 0
@@ -182,14 +188,13 @@ class FieldAccess:
             if domains:
                 remains = names[i+1:]
                 for child_domain in domains:
-                    child_recs = env[child_domain.model].search(child_domain.domain)
-                    next_.append(FieldAccess(child_recs, remains, meta, child_domain))
+                    next_.append(FieldAccess(env[child_domain.model], remains, meta, child_domain))
                 break
-            prefix = ".".join([tn(recs), *plain_names])
+            prefix = ".".join([tn(model), *plain_names])
             raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term.") % (prefix, name))
-        self.recs = recs
+        self.recs = model
         self.names = plain_names
-        self.domain: TermDomain = domain
+        self.pre_domain = pre_domain
         self.x2m = b_x2m
         self.next: List[FieldAccess] = next_
 
@@ -250,24 +255,30 @@ class FieldAccess:
                 for rec_set in rec_sets:
                     path = meta.get_path(recs._name, ".", rec_set)
                     fullpath = ".".join([*self.names, path])
-                    res = recs.search([(fullpath, "in", rec_set.ids)], order="id")
-                    list_rec_set_y.append(RecordSet(res, rec_set.domain))
+                    domain = OqlDomain(f"{fullpath} in {rec_set.domain}",
+                                       recs._name,
+                                       [(fullpath, "in", rec_set.get_recs().ids)])
+                    list_rec_set_y.append(RecordSet(recs, domain))
             return RecordSets(list_rec_set_y)
         elif una:
             if opr == "bool":
-                return RecordSets([RecordSet(self.recs, self.domain)])
+                return RecordSets([RecordSet(recs, self.pre_domain)])
             else:
                 raise NotImplementedError(f"Unary operator `{opr}({tn(self.recs)})` not implemented.")
         else:
-            value_domain = TermDomain.MISSING
+            value_domain = None  # Only RecordSet value has domain info.
             if isinstance(value, RecordSet):
                 value_domain = value.domain
-                value = value.data
-            res = recs.__oql_bin__(self.domain.info, opr, value, value_domain.info)
+                value = value.get_recs()
+            if self.pre_domain:
+                recs = self.recs.search(self.pre_domain.domain)  # Apply on pre-selected subset.
+            res = recs.__oql_bin__(self.pre_domain, opr, value, value_domain)
             if res is None:
                 raise NotImplementedError(f"Operation `{tn(recs)} {opr} {value}` not implemented yet. "
                                           f"Please implement it in `{tn(recs)}.__oql_bin__`.")
-            return RecordSets([RecordSet(res, self.domain)])
+            if not isinstance(res, models.Model):
+                raise Exception(f"`{recs._name}.__oql_bin__` returns `{type(res)}` data, expect records.")
+            return RecordSets([RecordSet(res.browse(), OqlDomain("__oql_bin__", res._name, [("id", "in", res.ids)]))])
 
 
 @lark.v_args(inline=True)
@@ -284,7 +295,7 @@ class OqlTransformer(lark.Transformer):
         self.recs = None
         self._meta = OqlMeta(env)
 
-    def query(self, from_, select: List[FieldAccess], where):
+    def query(self, from_, select: List[FieldAccess], where: RecordSets, limit, offset):
         # 1 Categorize field access into plain and dot fields.
         dot_fas: List[FieldAccess] = []
         plain_fields: List[str] = []
@@ -294,7 +305,8 @@ class OqlTransformer(lark.Transformer):
             else:
                 dot_fas.append(fa)
         # 2 Read data.
-        recs = where[0].data
+        rec_set = where[0]
+        recs = rec_set.model.search(rec_set.domain.domain, offset, limit)
         # 2.1 Read plain fields.
         if not plain_fields:
             plain_fields.append("id")
@@ -318,12 +330,11 @@ class OqlTransformer(lark.Transformer):
     def where_clause(self, expr):
         return expr
 
-    def root(self, value):
-        assert isinstance(value, RecordSets), "System Error, invalid root result."
-        result = value.flat()
-        if result is None:
-            return self.recs  # Empty set.
-        return result
+    def offset_clause(self, num: int):
+        return num
+
+    def limit_clause(self, num: int):
+        return num
 
     def or_expr(self, left, right):
         if isinstance(left, RecordSets) or isinstance(right, RecordSets):
@@ -341,16 +352,20 @@ class OqlTransformer(lark.Transformer):
             return left.eval_bin(opr, right)
         else:
             fullpath = ".".join(left.names)
-            result = left.recs.search([(fullpath, opr, right)])
-            return RecordSets([RecordSet(result, TermDomain.MISSING)])
+            domain = OqlDomain(f"{left} {opr} {right}",
+                               left.recs._name,
+                               [(fullpath, opr, right)])
+            return RecordSets([RecordSet(left.recs, domain)])
 
     def dot_expr(self, field: FieldAccess):
         if field.next:  # Contains term.
             return field.eval_una("bool")
         else:
             fullpath = ".".join(field.names)
-            result = field.recs.search([(fullpath, "!=", False)])
-            return RecordSets([RecordSet(result, TermDomain.MISSING)])
+            domain = OqlDomain(fullpath,
+                               field.recs._name,
+                               [(fullpath, "!=", False)])
+            return RecordSets([RecordSet(field.recs, domain)])
 
     def model(self, *args):
         return '.'.join(args)

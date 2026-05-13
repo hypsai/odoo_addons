@@ -103,7 +103,7 @@ class OqlModelAcl:
             rf_meta: fields.Field = f_meta.related_field
             if f_meta.name in ok_fields or not rf_meta:
                 continue
-            if rf_meta.name in acl[rf_meta.model_name]._mode2fields:
+            if rf_meta.name in acl[rf_meta.model_name]._mode2fields[mode]:
                 ok_fields.add(f_meta.name)
         return ok_fields
 

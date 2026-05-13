@@ -1,10 +1,10 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 from odoo import models, api
 from odoo.exceptions import UserError
 
-from ..oql import reader, OqlTransformer, TermChipInfo
+from ..oql import reader, OqlTransformer, OqlDomain
 
 _logger = logging.getLogger(__name__)
 
@@ -67,9 +67,18 @@ class OqlBase(models.AbstractModel):
             return True
         return super()._valid_field_parameter(field, name)
 
-    def __oql_bin__(self, term: TermChipInfo, opr: str, value, value_term: TermChipInfo):
+    def __oql_bin__(self,
+                    domain: Optional[OqlDomain],
+                    opr: str,
+                    value,
+                    value_domain: Optional[OqlDomain]):
         """
         Implement this method in subclasses.
+        :param self: Records pre-selected with `domain`. It will be emtpy records when `domain` is None.
+        :param domain: Domain for left operand `self`.
+        :param opr: Odoo operator.
+        :param value: Right operand, could be scalar or list or RecordSet or RecordSets.
+        :param value_domain: Domain of the right operand, available only when right operand is RecordSet.
         :return: `None` means `opr` not implemented.
         """
         pass

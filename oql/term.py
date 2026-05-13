@@ -2,8 +2,9 @@
 # @Time         : 11:26 2025/10/17
 # @Author       : Chris
 # @Description  :
-from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, List, Iterable
+
+from odoo.osv.expression import normalize_domain, AND, OR
 
 
 class Term(str):
@@ -18,38 +19,50 @@ class Term(str):
 Term.MISSING = Term("<MISSING>")
 
 
-@dataclass(frozen=True)
-class TermDomain:
+class OqlDomain:
+    """An object class that carries both model name and domain expression."""
 
-    MISSING: ClassVar["TermDomain"]
-
-    term: Term
-    name: str
-    model: str
-    domain: list
-
-    @property
-    def info(self):
-        return TermChipInfo(self.term.name, self.name)
-
-    @property
-    def fullname(self):
-        return f"{self.name}@{self.term.name}"
+    def __init__(self, name: str, model: str, domain: list, term: Term = Term.MISSING):
+        """
+        Attention: Must ensure `domain` is normalized.
+            If you are not sure about format of the domain. Use `normalize` to instantiate.
+        """
+        self.term = term
+        self.name = name
+        self.model = model
+        self.domain = domain
 
     @classmethod
-    def and_(cls, *term_domains: "TermDomain"):
-        """Create a domain that `and` several domains together."""
-        terms = set()
+    def normalize(cls, name: str, model: str, domain: list, term: Term):
+        return cls(name, model, normalize_domain(domain), term)
+
+    @classmethod
+    def and_(cls, term_domains: Iterable["OqlDomain"]):
+        """Create a new domain that `and` several domains together."""
+        return cls._logic(term_domains, AND)
+
+    @classmethod
+    def or_(cls, term_domains: Iterable["OqlDomain"]):
+        """Create a new domain that `or` several domains together."""
+        return cls._logic(term_domains, OR)
+
+    @classmethod
+    def _logic(cls, term_domains: Iterable["OqlDomain"], opr: callable):
         models = set()
-        domain = []
+        names: List[str] = []
+        domains: List[list] = []
         for td in term_domains:
-            terms.add(td.term)
+            names.append(td.name)
             models.add(td.model)
-            domain.extend(td.domain)  # Gather domain in `&` logic.
-        term = next(iter(terms)) if len(terms) == 1 else Term.MISSING
-        model = next(iter(models)) if len(models) == 1 else ""
-        domain = domain if model else []
-        return TermDomain(term, "<AND>", model, domain)
+            domains.append(td.domain)  # Gather domain in `&` logic.
+        # Check.
+        if len(models) == 0:
+            raise Exception(f"Can't `{opr.__name__}` empty term domains.")
+        elif len(models) > 1:
+            raise Exception(f"Can't `{opr.__name__}` domains for different models: {models}")
+        # Create new instance.
+        model = next(iter(models))
+        return OqlDomain(f"{opr.__name__}({', '.join(names)})", model, opr(domains))
 
     def __hash__(self):
         # Ignore domain when compute hash.
@@ -60,19 +73,4 @@ class TermDomain:
         ))
 
     def __str__(self):
-        return f"{self.model}[{self.fullname}]"
-
-
-TermDomain.MISSING = TermDomain(Term.MISSING, "<MISSING>", "", [])
-
-
-@dataclass(frozen=True)
-class TermChipInfo:
-    name: str
-    """Name of the term."""
-
-    domain: str
-    """Name of the term domain."""
-
-    def __str__(self):
-        return f"{self.domain}@{self.name}"
+        return f"{self.model}[{self.name}]"
