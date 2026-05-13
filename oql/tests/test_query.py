@@ -4,7 +4,7 @@ from ..oql import reader, OqlTransformer
 from .test_model_defs import ensure_model_meta
 
 
-@tagged("oql", '-at_install', 'post_install')
+@tagged("oql_query", '-at_install', 'post_install')
 class TestOql(TransactionCase):
 
     def setUp(self):
@@ -35,9 +35,9 @@ class TestOql(TransactionCase):
                         "product_id": prod.id,
                         "attribute_id": attr.id})
         # 2.4 Tag
-        tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "product_id": prod_cold.tmpl_id.id})
-        tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "product_id": prod_cold.tmpl_id.id})
-        tag_hot = env["test.oql.tag"].create({"name": "Weather:Hot", "product_id": prod_hot.tmpl_id.id})
+        tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "tmpl_id": prod_cold.tmpl_id.id})
+        tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "tmpl_id": prod_cold.tmpl_id.id})
+        tag_hot = env["test.oql.tag"].create({"name": "Weather:Hot", "tmpl_id": prod_hot.tmpl_id.id})
 
         # 3 Terms
         # 3.1 Attr

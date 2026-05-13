@@ -42,7 +42,7 @@ class OqlAclField(models.Model):
             LEFT JOIN oql_acl_field e ON (b.id = e.mac_id AND d.id = e.field_id)
         WHERE a.uid = %s AND c.model = %s
         GROUP BY d.id
-        HAVING BOOL_OR(COALESCE(e.perm_{mode}, b.perm_oql_fac_default_{mode}, FALSE))
+        HAVING BOOL_OR(b.perm_{mode} AND COALESCE(e.perm_{mode}, b.perm_oql_fac_default_{mode}, FALSE))
         """
         self._cr.execute(sql, (self._uid, model))
         field_names = [row[0] for row in self._cr.fetchall()]
