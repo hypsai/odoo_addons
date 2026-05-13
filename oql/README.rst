@@ -107,9 +107,15 @@ Navigate to **Settings > Technical > OQL > Terms** and create your first term (e
 
 **3. Query**
 
-Use ``searcho()`` instead of ``search()``::
+Use ``searcho()`` instead of ``search()``, or ``oql()`` for full queries::
 
+    # Simple search (WHERE clause only)
     products = env['product.product'].searcho("Waterproof and Size = '40'")
+
+    # Full query with SELECT, LIMIT, OFFSET
+    results = env['product.product'].oql(
+        "from product.product select name, default_code where Waterproof limit 10 offset 20"
+    )
 
 That's it! Start writing business-focused queries immediately.
 
@@ -299,6 +305,40 @@ Query Syntax
 ------------
 
 OQL supports familiar SQL-like syntax for building complex queries.
+
+Basic Structure
+~~~~~~~~~~~~~~~
+
+An OQL query follows this structure::
+
+    FROM <model> SELECT <fields> WHERE <conditions> [LIMIT n] [OFFSET n]
+
+Example::
+
+    results = env['product.product'].oql(
+        "from product.product select name, list_price where active = true limit 10"
+    )
+
+Key Differences from SQL
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
++------------------+---------------------+------------------------------------------+
+| Feature          | SQL                 | OQL                                      |
++==================+=====================+==========================================+
+| Clause Order     | SELECT FROM WHERE   | FROM SELECT WHERE                        |
++------------------+---------------------+------------------------------------------+
+| Operators        | LIKE, ILIKE         | like, ilike, =like, =ilike (Odoo style)  |
++------------------+---------------------+------------------------------------------+
+| Field Access     | partner_id          | dot notation: partner_id.name               |
++------------------+---------------------+------------------------------------------+
+| Business Terms   | Not available       | Use terms directly: Waterproof           |
++------------------+---------------------+------------------------------------------+
+| Aliases          | Not available       | Configured via UI, auto-resolved         |
++------------------+---------------------+------------------------------------------+
+
+.. note::
+   - ``searcho()`` accepts only WHERE clause for quick searches
+   - ``oql()`` accepts full query syntax with FROM, SELECT, WHERE, LIMIT, OFFSET
 
 Comparison Operators
 ~~~~~~~~~~~~~~~~~~~~
