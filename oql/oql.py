@@ -296,6 +296,8 @@ class OqlTransformer(lark.Transformer):
         # 2 Read data.
         recs = where[0].data
         # 2.1 Read plain fields.
+        if not plain_fields:
+            plain_fields.append("id")
         rows = recs.read(plain_fields)
         # 2.2 Read dot-style fields.
         for fa in dot_fas:

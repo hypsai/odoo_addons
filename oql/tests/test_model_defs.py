@@ -53,7 +53,8 @@ class TestOqlProduct(models.Model):
     _inherits = {"test.oql.template": "tmpl_id"}
 
     name = fields.Char("Name")
-    tmpl_id = fields.Many2one("test.oql.template", "Template", delegate=True)
+    tmpl_id = fields.Many2one("test.oql.template", "Template",
+                              delegate=True, required=True, ondelete="cascade")
     attribute_value_ids = fields.One2many("test.oql.attribute.value", "product_id")
     active = fields.Boolean("Active", default=True)
 

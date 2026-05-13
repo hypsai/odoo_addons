@@ -89,6 +89,10 @@ class OqlModelAcl:
             return [OqlFieldAcl(x, self) for x in field_name]
         return OqlFieldAcl(field_name, self)
 
+    def check(self, mode: Literal["read", "write"]):
+        """Check access right of current model."""
+        return self.env["ir.model.access"].check(self.model_name, mode, False)
+
     def perm_fields(self, mode: Literal["read", "write"]) -> Set["str"]:
         """Return fields that have the specified `mode` access."""
         ok_fields = self._mode2fields[mode]
@@ -99,7 +103,7 @@ class OqlModelAcl:
             rf_meta: fields.Field = f_meta.related_field
             if f_meta.name in ok_fields or not rf_meta:
                 continue
-            if acl[rf_meta.model_name][rf_meta.name].check(mode):
+            if rf_meta.name in acl[rf_meta.model_name]._mode2fields:
                 ok_fields.add(f_meta.name)
         return ok_fields
 
