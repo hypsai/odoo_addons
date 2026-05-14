@@ -15,6 +15,9 @@ class Term(str):
     def name(self) -> str:
         return str(self)
 
+    def __bool__(self):
+        return self is not self.MISSING
+
 
 Term.MISSING = Term("<MISSING>")
 

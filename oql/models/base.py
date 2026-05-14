@@ -40,7 +40,8 @@ class OqlBase(models.AbstractModel):
         """
         prefix = f"FROM {self._name} SELECT id WHERE "
         oql = f"{prefix}{partial_oql_where}"
-        return self.oql_hint(oql, len(prefix)+cursor, limit)
+        cursor = None if cursor is None else len(prefix)+cursor
+        return self.oql_hint(oql, cursor, limit)
 
     @api.model
     def oql(self, oql: str) -> List[dict]:

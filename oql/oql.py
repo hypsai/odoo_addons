@@ -6,6 +6,7 @@ import os.path
 from typing import Optional
 
 import lark
+from lark.exceptions import VisitError
 from odoo import models, _
 from odoo.fields import _RelationalMulti
 from odoo.tools.safe_eval import safe_eval
@@ -163,17 +164,21 @@ class FieldAccess:
         pp_recs = None  # The recs right before p_recs in path.
         next_ = []
         b_x2m = False
+        non_searchable_fields = []
         i = 0
         while i < len(names):
             name = names[i]
             # Model Field
             if hasattr(p_recs, name):
                 acl.check_field(p_recs, name, "read")
+                f_meta = p_recs._fields[name]
                 # Check X2Many
                 if not b_x2m:
-                    f_meta = p_recs._fields[name]
                     if isinstance(f_meta, _RelationalMulti):
                         b_x2m = True
+                # Check availability in search criteria.
+                if not f_meta._description_searchable:
+                    non_searchable_fields.append(name)
                 pp_recs = p_recs
                 p_recs = p_recs[name]
                 plain_names.append(name)
@@ -210,6 +215,7 @@ class FieldAccess:
         self.pre_domain = pre_domain
         self.x2m = b_x2m
         self.next: List[FieldAccess] = next_
+        self._non_searchable_fields = non_searchable_fields
 
     @property
     def as_(self):
@@ -218,6 +224,17 @@ class FieldAccess:
     @property
     def path(self):
         return '.'.join(self.names)
+
+    @property
+    def expr(self) -> str:
+        chips = []
+        if self.pre_domain and self.pre_domain.term:
+            chips.append(self.pre_domain.term.name)
+        if self.path:
+            chips.append(self.path)
+        if self.next:
+            chips.append(self.next[0].expr)
+        return '.'.join(chips)
 
     def eval_bin(self, opr: str, value):
         return self._eval(False, opr, value)
@@ -247,6 +264,13 @@ class FieldAccess:
         :param value: Could be None in unary model
         :return: Evaluation result
         """
+        # Check
+        if self._non_searchable_fields:
+            raise Exception(_("Can't search with expression `%s %s %s`, "
+                              "some fields in expression are not searchable: %s. "
+                              "Please contact administrator for help or use a difference field.") %
+                            (self.expr, opr, value, self._non_searchable_fields))
+        # Eval
         root = self.root
         model = self.model
         names = self.names
@@ -429,7 +453,11 @@ class OqlReader:
 
     def query(self, s: str, transformer: lark.Transformer):
         tree = self.parser.parse(s)
-        result = transformer.transform(tree)
+        try:
+            result = transformer.transform(tree)
+        except VisitError as ve:
+            # Re-raise the original exception with its original traceback
+            raise ve.orig_exc.with_traceback(ve.orig_exc.__traceback__)
         return result
 
 

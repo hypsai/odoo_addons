@@ -2,7 +2,7 @@
 # @Time         : 11:10 2026/4/28
 # @Author       : Chris
 # @Description  : Test model definitions for OQL testing
-from odoo import models, fields
+from odoo import models, fields, api
 
 
 def ensure_model_meta(env):
@@ -35,6 +35,7 @@ class TestOqlTemplate(models.Model):
     _name = "test.oql.template"
     _description = "Test OQL Product Template"
 
+    name = fields.Char("Name")
     tag_ids = fields.One2many("test.oql.tag", "tmpl_id")
 
 
@@ -52,11 +53,17 @@ class TestOqlProduct(models.Model):
     _description = 'Test OQL Product'
     _inherits = {"test.oql.template": "tmpl_id"}
 
-    name = fields.Char("Name")
+    name = fields.Char("Name", compute="_compute_name")
+    spu_name = fields.Char(related="tmpl_id.name", string="Template Name", readonly=False)
     tmpl_id = fields.Many2one("test.oql.template", "Template",
                               delegate=True, required=True, ondelete="cascade")
     attribute_value_ids = fields.One2many("test.oql.attribute.value", "product_id")
     active = fields.Boolean("Active", default=True)
+
+    @api.depends("tmpl_id.name", "attribute_value_ids.name")
+    def _compute_name(self):
+        for rec in self:
+            rec.name = f"{rec.tmpl_id.name}({', '.join(rec.attribute_value_ids.mapped('name'))})"
 
 
 class TestOqlAttribute(models.Model):

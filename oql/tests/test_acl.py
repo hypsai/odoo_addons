@@ -24,8 +24,8 @@ class TestOqlAcl(TransactionCase):
         metaTag = env["ir.model"].search([("model", "=", "test.oql.tag")], limit=1)
 
         # 2. Create test records (as admin for setup)
-        prod_cold = env["test.oql.product"].create({"name": "Cold Boot"})
-        prod_hot = env["test.oql.product"].create({"name": "Hot Boot"})
+        prod_cold = env["test.oql.product"].create({"spu_name": "Cold Boot"})
+        prod_hot = env["test.oql.product"].create({"spu_name": "Hot Boot"})
         
         attr_size = env["test.oql.attribute"].create({"name": "Size"})
         attr_width = env["test.oql.attribute"].create({"name": "Width"})

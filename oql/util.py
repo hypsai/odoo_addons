@@ -135,6 +135,22 @@ def groupby(iterable, key, convert_item=None, returns_dict=False):
     return res_dict if returns_dict else res_dict.items()
 
 
+def check_path_searchable(model: models.Model, path: str):
+    """Tell whether a dot-style `path` for `model` is searchable.
+    * Note: This is an API function that might be used by other addons.
+    """
+    chips = path.split('.')
+    p_model = model
+    for chip in chips:
+        chip = chip.strip()
+        f_meta: fields.Field = p_model._fields.get(chip)
+        if f_meta is None:
+            return False
+        if not f_meta._description_searchable:
+            return False
+    return True
+
+
 class KeyPassingDefaultDict(defaultdict):
     def __init__(self, factory: Callable[[Any], Any]):
         super().__init__(factory)

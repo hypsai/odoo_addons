@@ -19,9 +19,9 @@ class TestOql(TransactionCase):
 
         # 2 Create test records.
         # 2.1 Product
-        prod_cold = env["test.oql.product"].create({"name": "Cold Boot"})
-        prod_hot = env["test.oql.product"].create({"name": "Hot Boot"})
-        prod_inactive = env["test.oql.product"].create({"name": "Inactive Boot", "active": False})
+        prod_cold = env["test.oql.product"].create({"spu_name": "Cold Boot"})
+        prod_hot = env["test.oql.product"].create({"spu_name": "Hot Boot"})
+        prod_inactive = env["test.oql.product"].create({"spu_name": "Inactive Boot", "active": False})
         # 2.2 Attribute
         attr_size = env["test.oql.attribute"].create({"name": "Size"})
         attr_width = env["test.oql.attribute"].create({"name": "Width"})
@@ -85,173 +85,173 @@ class TestOql(TransactionCase):
         parsed = reader.query("from test.oql.product "
                               "select name, tag_ids.name "
                               "where tag_ids.name in ('Waterproof:GTX', 'Weather:Temperate') "
-                              "  and name ilike 'co' "
+                              "  and spu_name ilike 'co' "
                               "  and Waterproof", self._get_transformer())
         self.assertIsNotNone(parsed)
 
     def test_simple_search(self):
         """Test search with field path navigation."""
-        res = self.env["test.oql.product"].searcho("name = 'Hot Boot'")
+        res = self.env["test.oql.product"].searcho("spu_name = 'Hot Boot'")
         # Should return both products
-        self.assertEqual({"Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Hot Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho(self):
         """Test direct simple searcho."""
-        # Search products with name
-        res = self.env["test.oql.product"].searcho("name='Cold Boot'")
-        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        # Search products with spu_name
+        res = self.env["test.oql.product"].searcho("spu_name='Cold Boot'")
+        self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
         # Search products with Waterproof tag
         res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX'")
-        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho_term(self):
         """Test searcho with term-based queries."""
         # Attribute.
         res = self.env["test.oql.product"].searcho("Size='5'")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
         # Tag
         res = self.env["test.oql.product"].searcho("Waterproof")
-        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
         res = self.env["test.oql.product"].searcho("WeatherAware")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho_alias(self):
         res = self.env["test.oql.product"].searcho("tags='Waterproof:GTX'")
-        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho_logic(self):
         """Test logical operators in OQL queries."""
         # # Test AND logic - not applicable for tag model in current setup
         # # Instead test product queries with multiple conditions
         # res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and tag_ids.name='Weather:Cold'")
-        # self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        # self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
         # Test OR logic
         res = self.env["test.oql.product"].searcho("tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot'")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho_una_expr(self):
         """Test unary expressions (boolean field checks)."""
         # Test that products with tags are found
         res = self.env["test.oql.product"].searcho("tag_ids")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
         # Test products with attribute values
         res = self.env["test.oql.product"].searcho("attribute_value_ids")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho_has_term(self):
         """Test querying by term existence."""
         # Products with Size term (through attributes)
         res = self.env["test.oql.product"].searcho("Size")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
         # Products with Waterproof term (through tags)
         res = self.env["test.oql.product"].searcho("Waterproof")
-        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho_term_in(self):
         """Test term queries with IN operator."""
         res = self.env["test.oql.product"].searcho("Size in ('5', '6')")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
         res = self.env["test.oql.product"].searcho("Width in ('D', 'EE')")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
     def test_searcho_parenthesis(self):
         """Test parenthesis for grouping expressions."""
         # Group weather-related tags
         res = self.env["test.oql.product"].searcho("(tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot')")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res.mapped("spu_name")))
 
         # Combine waterproof with weather
         res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and (tag_ids.name='Weather:Cold')")
-        self.assertEqual({"Cold Boot"}, set(res.mapped("name")))
+        self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
     @tagged("oql.const")
     def test_constants_true_false_null(self):
         """Test TRUE, FALSE, NULL constants in OQL queries."""
         # Test TRUE constant - should return all products with active=True
         res_true = self.env["test.oql.product"].searcho("active = true")
-        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res_true.mapped("name")))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, set(res_true.mapped("spu_name")))
 
         # Test FALSE constant - should return all products with active=False
         res_false = self.env["test.oql.product"].searcho("active = false")
-        self.assertEqual({"Inactive Boot"}, set(res_false.mapped("name")))
+        self.assertEqual({"Inactive Boot"}, set(res_false.mapped("spu_name")))
 
     @tagged("oql.limit")
     def test_limit_clause(self):
         """Test LIMIT clause to restrict number of returned records."""
         # Test LIMIT 1 - should return only one product
-        res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids limit 1")
+        res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids limit 1")
         self.assertEqual(len(res), 1)
-        self.assertIn(res[0]['name'], ["Cold Boot", "Hot Boot"])
+        self.assertIn(res[0]['spu_name'], ["Cold Boot", "Hot Boot"])
 
         # Test LIMIT 2 - should return at most 2 products
-        res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids limit 2")
+        res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids limit 2")
         self.assertLessEqual(len(res), 2)
-        names = {row['name'] for row in res}
+        names = {row['spu_name'] for row in res}
         self.assertTrue(names.issubset({"Cold Boot", "Hot Boot"}))
 
         # Test LIMIT with term query
-        res = self.env["test.oql.product"].oql("from test.oql.product select name where Size='5' limit 1")
+        res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where Size='5' limit 1")
         self.assertEqual(len(res), 1)
 
     @tagged("oql.offset")
     def test_offset_clause(self):
         """Test OFFSET clause to skip records."""
         # Get all products first to count total
-        all_res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids")
+        all_res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids")
         total_count = len(all_res)
 
         # Test OFFSET 1 - should return fewer records than without offset
-        res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids offset 1")
+        res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids offset 1")
         self.assertEqual(len(res), total_count - 1)
 
         # Test OFFSET equals total count - should return empty
-        res = self.env["test.oql.product"].oql(f"from test.oql.product select name where tag_ids offset {total_count}")
+        res = self.env["test.oql.product"].oql(f"from test.oql.product select spu_name where tag_ids offset {total_count}")
         self.assertEqual(len(res), 0)
 
     @tagged("oql.pagination")
     def test_limit_offset_combined(self):
         """Test combined LIMIT and OFFSET for pagination."""
         # Get all products first
-        all_res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids")
+        all_res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids")
         total_count = len(all_res)
-        all_names = {row['name'] for row in all_res}
+        all_names = {row['spu_name'] for row in all_res}
 
         # Test LIMIT 1 OFFSET 0 - should return 1 record
-        res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids limit 1 offset 0")
+        res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids limit 1 offset 0")
         self.assertEqual(len(res), 1)
-        self.assertIn(res[0]['name'], all_names)
+        self.assertIn(res[0]['spu_name'], all_names)
 
         # Test LIMIT 1 OFFSET 1 - should return 1 record (if total > 1)
         if total_count > 1:
-            res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids limit 1 offset 1")
+            res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids limit 1 offset 1")
             self.assertEqual(len(res), 1)
-            self.assertIn(res[0]['name'], all_names)
+            self.assertIn(res[0]['spu_name'], all_names)
 
         # Test LIMIT 2 OFFSET 1 - skip 1, take up to 2
         if total_count > 1:
-            res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids limit 2 offset 1")
+            res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids limit 2 offset 1")
             self.assertLessEqual(len(res), 2)
             for row in res:
-                self.assertIn(row['name'], all_names)
+                self.assertIn(row['spu_name'], all_names)
 
     @tagged("oql.pagination")
     def test_offset_exceeds_results(self):
         """Test OFFSET that exceeds total number of results."""
         # OFFSET larger than result set should return empty list
-        res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids offset 100")
+        res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids offset 100")
         self.assertEqual(len(res), 0)
 
     @tagged("oql.pagination")
     def test_limit_zero(self):
         """Test LIMIT 0 should have no effect"""
-        res = self.env["test.oql.product"].oql("from test.oql.product select name where tag_ids limit 0")
+        res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids limit 0")
         self.assertEqual(len(res), 2)
 
     @tagged("oql.pagination")
@@ -259,19 +259,51 @@ class TestOql(TransactionCase):
         """Test LIMIT and OFFSET with complex WHERE conditions."""
         # Combine with OR logic
         res = self.env["test.oql.product"].oql(
-            "from test.oql.product select name where (tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot') limit 1"
+            "from test.oql.product select spu_name where (tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot') limit 1"
         )
         self.assertLessEqual(len(res), 1)
 
         # Combine with term query
         res = self.env["test.oql.product"].oql(
-            "from test.oql.product select name where Waterproof limit 1 offset 0"
+            "from test.oql.product select spu_name where Waterproof limit 1 offset 0"
         )
         self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['name'], "Cold Boot")
+        self.assertEqual(res[0]['spu_name'], "Cold Boot")
 
     def assertHints(self, expected, actual):
         self.assertEqual(expected, {x["value"] for x in actual})
+
+    @tagged("oql.non_searchable")
+    def test_non_searchable_field_error(self):
+        """Test that searching with non-searchable fields raises an exception.
+        
+        The 'name' field on test.oql.product is a compute field (not searchable).
+        This test verifies that OQL properly rejects queries using non-searchable fields
+        in WHERE clause, while allowing them in SELECT clause.
+        """
+        # SELECT clause can use non-searchable fields (just reading)
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select name where spu_name = 'Cold Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertIn('name', res[0])
+        
+        # WHERE clause cannot use non-searchable fields - should raise Exception
+        with self.assertRaises(Exception) as context:
+            self.env["test.oql.product"].oql(
+                "from test.oql.product select spu_name where name = 'Cold Boot'"
+            )
+        
+        # Verify error message is informative
+        error_msg = str(context.exception)
+        self.assertIn("name", error_msg)
+        self.assertIn("not searchable", error_msg.lower())
+        
+        # Test in complex WHERE conditions
+        with self.assertRaises(Exception):
+            self.env["test.oql.product"].oql(
+                "from test.oql.product select spu_name where name = 'Cold Boot' and Waterproof"
+            )
 
     def _get_transformer(self):
         return OqlTransformer(self.env)
