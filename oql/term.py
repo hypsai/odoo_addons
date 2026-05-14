@@ -35,6 +35,12 @@ class OqlDomain:
         self.model = model
         self.domain = domain
 
+    @property
+    def fullname(self):
+        if self.term:
+            return f"{self.term.name}@{self.name}"
+        return self.name
+
     @classmethod
     def all(cls, model: str):
         return OqlDomain("ALL", model, [])
@@ -80,4 +86,4 @@ class OqlDomain:
         ))
 
     def __str__(self):
-        return f"{self.model}[{self.name}]"
+        return f"{self.model}[{self.fullname}]"

@@ -66,7 +66,7 @@ class RecordSet:
         return self._model.search_count(self.domain.domain)
 
     def __str__(self):
-        return f"RecordSet({self.name}[{len(self)}], {self.domain.name})"
+        return f"RecordSet({self.name}[{len(self)}], {self.domain.fullname})"
 
 
 class RecordSets(Tuple[RecordSet]):

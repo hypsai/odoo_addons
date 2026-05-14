@@ -18,7 +18,7 @@ class OqlMcpBase(models.AbstractModel):
         OQL is a PostgreSQL-like query language for Odoo. It supports dot paths (e.g., `company.name`) and virtual fields (Terms/Aliases).
         Differences from SQL:
             1. FROM clause is placed at start of a query string.
-            2. It uses Odoo domain operators such as 'like', '=like', etc.
+            2. It uses Odoo domain operators such as 'like', '=like', etc. Be careful about this!!!
             3. `id` field will be added to result automatically.
         OQL Example:
             FROM product.product

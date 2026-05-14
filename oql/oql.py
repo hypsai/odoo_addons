@@ -402,6 +402,7 @@ class OqlTransformer(lark.Transformer):
         return left and right
 
     def bin_expr(self, left: FieldAccess, opr: str, right):
+        opr = opr.lower()
         return left.eval_bin(opr, right)
 
     def dot_expr(self, field: FieldAccess):
