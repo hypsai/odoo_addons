@@ -153,12 +153,14 @@ class FieldAccess:
 
     def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None):
         self.meta = meta
+        model = model.browse()  # Make model data-inconscient.
         env = model.env
         acl = meta.acl
         # Parse
         names = list(names)
         plain_names = []
         p_recs = model
+        pp_recs = None  # The recs right before p_recs in path.
         next_ = []
         b_x2m = False
         i = 0
@@ -172,6 +174,7 @@ class FieldAccess:
                     f_meta = p_recs._fields[name]
                     if isinstance(f_meta, _RelationalMulti):
                         b_x2m = True
+                pp_recs = p_recs
                 p_recs = p_recs[name]
                 plain_names.append(name)
                 i += 1
@@ -192,8 +195,17 @@ class FieldAccess:
                 break
             prefix = ".".join([tn(model), *plain_names])
             raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term.") % (prefix, name))
+        # Validate (.) term statement.
+        rear = p_recs
+        if next_ and not isinstance(rear, Model):
+            rear_field_name = plain_names[-1]
+            rear_field: fields.Field = pp_recs._fields[rear_field_name]
+            raise Exception(_(f"Invalid field path `{model._name}` -> `{'.'.join(names[:i])}` (.) `{names[i]}`. "
+                              f"Expect relational field before (.), got `{rear_field.type}`."))
+        # Initialize instance.
         self.root = RecordSet(model, pre_domain or OqlDomain.all(model._name))
         self.model = model
+        self._rear_model: Optional[Model] = rear if isinstance(rear, Model) else None
         self.names = plain_names
         self.pre_domain = pre_domain
         self.x2m = b_x2m
@@ -231,17 +243,19 @@ class FieldAccess:
         :param value: Could be None in unary model
         :return: Evaluation result
         """
+        root = self.root
         recs = self.model
         if self.next:  # Branch node
             meta = self.meta
+            rear_model = self._rear_model
             list_rec_set_y = []
             for child in self.next:
                 rec_sets = child._eval(una, opr, value)
                 for rec_set in rec_sets:
-                    path = meta.get_path(recs._name, ".", rec_set)
+                    path = meta.get_path(rear_model._name, ".", rec_set)
                     fullpath = ".".join([*self.names, path])
                     domain = OqlDomain(f"{fullpath} in {rec_set.domain}",
-                                       recs._name,
+                                       root.name,
                                        [(fullpath, "in", rec_set.get_recs().ids)])
                     list_rec_set_y.append(RecordSet(recs, domain))
             return RecordSets(list_rec_set_y)

@@ -40,7 +40,7 @@ class OqlAclField(models.Model):
             JOIN ir_model c ON b.model_id = c.id
             JOIN ir_model_fields d ON b.model_id = d.model_id
             LEFT JOIN oql_acl_field e ON (b.id = e.mac_id AND d.id = e.field_id)
-        WHERE a.uid = %s AND c.model = %s
+        WHERE b.active AND a.uid = %s AND c.model = %s
         GROUP BY d.id
         HAVING BOOL_OR(b.perm_{mode} AND COALESCE(e.perm_{mode}, b.perm_oql_fac_default_{mode}, FALSE))
         """
