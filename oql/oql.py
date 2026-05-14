@@ -215,6 +215,10 @@ class FieldAccess:
     def as_(self):
         return '.'.join(self.names)
 
+    @property
+    def path(self):
+        return '.'.join(self.names)
+
     def eval_bin(self, opr: str, value):
         return self._eval(False, opr, value)
 
@@ -244,7 +248,9 @@ class FieldAccess:
         :return: Evaluation result
         """
         root = self.root
-        recs = self.model
+        model = self.model
+        names = self.names
+        pre_domain = self.pre_domain
         if self.next:  # Branch node
             meta = self.meta
             rear_model = self._rear_model
@@ -257,11 +263,22 @@ class FieldAccess:
                     domain = OqlDomain(f"{fullpath} in {rec_set.domain}",
                                        root.name,
                                        [(fullpath, "in", rec_set.get_recs().ids)])
-                    list_rec_set_y.append(RecordSet(recs, domain))
+                    list_rec_set_y.append(RecordSet(model, domain))
             return RecordSets(list_rec_set_y)
         elif una:
             if opr == "bool":
-                return RecordSets([RecordSet(recs, self.pre_domain)])
+                if names:
+                    # e.g. WHERE product_id.active
+                    fullpath = ".".join(names)
+                    domain = OqlDomain(f"{opr}({fullpath})",
+                                       root.name,
+                                       [(fullpath, "!=", False)])
+                    if pre_domain:
+                        domain = OqlDomain.and_(pre_domain, domain)
+                    return RecordSets([RecordSet(model, domain)])
+                else:
+                    # e.g. WHERE Waterproof.
+                    return RecordSets([RecordSet(model, pre_domain)])
             else:
                 raise NotImplementedError(f"Unary operator `{opr}({tn(self.model)})` not implemented.")
         else:
@@ -269,15 +286,30 @@ class FieldAccess:
             if isinstance(value, RecordSet):
                 value_domain = value.domain
                 value = value.get_recs()
-            if self.pre_domain:
-                recs = self.model.search(self.pre_domain.domain)  # Apply on pre-selected subset.
-            res = recs.__oql_bin__(self.pre_domain, opr, value, value_domain)
-            if res is None:
-                raise NotImplementedError(f"Operation `{tn(recs)} {opr} {value}` not implemented yet. "
-                                          f"Please implement it in `{tn(recs)}.__oql_bin__`.")
-            if not isinstance(res, models.Model):
-                raise Exception(f"`{recs._name}.__oql_bin__` returns `{type(res)}` data, expect records.")
-            return RecordSets([RecordSet(res.browse(), OqlDomain("__oql_bin__", res._name, [("id", "in", res.ids)]))])
+            if names:
+                # Traditional Odoo domain field path.
+                fullpath = ".".join(names)
+                domain = OqlDomain(f"{fullpath} {opr} {value}",
+                                   root.name,
+                                   [(fullpath, opr, value)])
+                if pre_domain:
+                    domain = OqlDomain.and_(pre_domain, domain)
+                return RecordSets([RecordSet(root.model, domain)])
+            else:
+                # Term expression: models.Model (opr) value
+                if pre_domain:
+                    model = self.model.search(self.pre_domain.domain)  # Apply on pre-selected subset.
+                res = model.__oql_bin__(self.pre_domain, opr, value, value_domain)
+                if res is None:
+                    raise NotImplementedError(f"Operation `{tn(model)} {opr} {value}` not implemented yet. "
+                                              f"Please implement it in `{tn(model)}.__oql_bin__`.")
+                if not isinstance(res, models.Model):
+                    raise Exception(f"`{model._name}.__oql_bin__` returns `{type(res)}` data, expect records.")
+                return RecordSets(
+                    [RecordSet(res.browse(), OqlDomain("__oql_bin__", res._name, [("id", "in", res.ids)]))])
+
+    def __str__(self):
+        return f"{type(self).__name__}({self.path}, next[{len(self.next)}])"
 
 
 @lark.v_args(inline=True)
@@ -346,25 +378,10 @@ class OqlTransformer(lark.Transformer):
         return left and right
 
     def bin_expr(self, left: FieldAccess, opr: str, right):
-        opr = opr.lower()
-        if left.next:  # Contains term.
-            return left.eval_bin(opr, right)
-        else:
-            fullpath = ".".join(left.names)
-            domain = OqlDomain(f"{left} {opr} {right}",
-                               left.root.name,
-                               [(fullpath, opr, right)])
-            return RecordSets([RecordSet(left.model, domain)])
+        return left.eval_bin(opr, right)
 
     def dot_expr(self, field: FieldAccess):
-        if field.next:  # Contains term.
-            return field.eval_una("bool")
-        else:
-            fullpath = ".".join(field.names)
-            domain = OqlDomain(fullpath,
-                               field.root.name,
-                               [(fullpath, "!=", False)])
-            return RecordSets([RecordSet(field.model, domain)])
+        return field.eval_una("bool")
 
     def model(self, *args):
         return '.'.join(args)

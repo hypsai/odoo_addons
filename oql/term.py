@@ -41,12 +41,12 @@ class OqlDomain:
         return cls(name, model, normalize_domain(domain), term)
 
     @classmethod
-    def and_(cls, term_domains: Iterable["OqlDomain"]):
+    def and_(cls, *term_domains: "OqlDomain"):
         """Create a new domain that `and` several domains together."""
         return cls._logic(term_domains, AND)
 
     @classmethod
-    def or_(cls, term_domains: Iterable["OqlDomain"]):
+    def or_(cls, *term_domains: "OqlDomain"):
         """Create a new domain that `or` several domains together."""
         return cls._logic(term_domains, OR)
 

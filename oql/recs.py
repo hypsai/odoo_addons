@@ -80,7 +80,7 @@ class RecordSets(Tuple[RecordSet]):
                                  f"but got an unexpected `{type(recs).__name__}` object.")
             model2domains[recs.name].append(recs.domain)
             env = recs.env
-        instance = super().__new__(cls, (RecordSet(env[model], OqlDomain.or_(domains))
+        instance = super().__new__(cls, (RecordSet(env[model], OqlDomain.or_(*domains))
                                          for model, domains in model2domains.items()))
         return instance
 
@@ -100,7 +100,7 @@ class RecordSets(Tuple[RecordSet]):
                 for rec_set in rec_sets:
                     model2domains[rec_set.name].append(rec_set.domain)
                     env = rec_set.env
-            return RecordSets(RecordSet(env[model], OqlDomain.and_(domains))
+            return RecordSets(RecordSet(env[model], OqlDomain.and_(*domains))
                               for model, domains in model2domains.items())
         return bool(self) and other
 
