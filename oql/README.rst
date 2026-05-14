@@ -258,18 +258,19 @@ Add the ``__oql_bin__`` method to your model:
     class ProductAttribute(models.Model):
         _inherit = 'product.attribute'
         
-        def __oql_bin__(self, term, opr, value, value_term):
+        def __oql_bin__(self, domain, opr, value, value_domain):
             """Custom logic for term-based binary operations.
             e.g. term           opr     value
                  EuShoeSize     =       '40'
             
             Args:
-                term: Term info of `self` recordset.
-                opr: Operator (=, !=, in, etc.)
-                value: The value being compared
-                value_term: Value term if applicable
+                self: Records pre-selected with `domain`. It will be empty records when `domain` is None.
+                domain: Domain for left operand `self`.
+                opr: Odoo operator (=, !=, in, etc.)
+                value: Right operand, could be scalar or list or RecordSet or RecordSets.
+                value_domain: Domain of the right operand, available only when right operand is RecordSet.
             """
-            if term.domain == 'self.term_ids':
+            if domain.name == 'self.term_ids':
                 # Search attribute values matching the criteria
                 return self.value_ids.search([
                     ('id', 'in', self.value_ids.ids),
@@ -300,6 +301,68 @@ Example Use Cases
 
 As shown above, resolve from attributes to their values for size/colour queries.
 
+
+4. Access Control - Field-Level Security
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+OQL provides **field-level access control (ACL)** that restricts which fields can be accessed through OQL queries. This integrates with Odoo's security system to provide granular control over OQL field access.
+
+.. important::
+   OQL ACL only affects OQL query execution (``searcho()`` and ``oql()`` methods). It does NOT affect standard Odoo ORM operations like ``read()``, ``search()``, etc.
+
+Configuration
+*************
+
+Navigate to **Settings > Technical > Security > Access Rights**:
+
+1. **Set default permissions**: Configure ``Default Read Access`` and ``Default Write Access`` for all fields
+2. **Configure field-specific permissions**: Add individual field rules in the "OQL Field Access" section
+
+.. image:: static/description/oql_settings.png
+   :alt: OQL Field Access Control configuration
+   :align: center
+   :width: 800px
+
+Example
+*******
+
+Restrict sales users to query product names but not internal codes via OQL:
+
+1. Create access rule for ``product.product``
+2. Set ``Default Read Access = False``
+3. Grant read access to ``name`` and ``list_price`` fields only
+
+Now OQL queries automatically enforce these restrictions in both WHERE and SELECT clauses:
+
+.. code-block:: python
+
+    # WHERE clause - uses 'name' field which is accessible
+    products = env['product.product'].searcho("Waterproof")  # ✓ Works
+    
+    # SELECT clause - tries to access 'default_code' which is blocked
+    results = env['product.product'].oql(
+        "from product.product select default_code where Waterproof"
+    )  # ✗ AccessError!
+    
+    # Note: Standard Odoo read() is NOT affected by OQL ACL
+    products.read(['default_code'])  # Still works if user has model-level access
+
+Path Validation
+***************
+
+OQL validates permissions for dot-notation paths in both WHERE and SELECT clauses:
+
+.. code-block:: python
+
+    # Checks permissions in WHERE clause
+    products = env['product.product'].searcho("partner_id.country_id.name = 'US'")
+    
+    # Checks permissions in SELECT clause
+    results = env['product.product'].oql(
+        "from product.product select partner_id.country_id.name"
+    )
+
+If any field in the path lacks OQL read permission, the query is blocked.
 
 Query Syntax
 ------------
