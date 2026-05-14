@@ -86,7 +86,8 @@ class TestOql(TransactionCase):
                               "select name, tag_ids.name "
                               "where tag_ids.name in ('Waterproof:GTX', 'Weather:Temperate') "
                               "  and spu_name ilike 'co' "
-                              "  and Waterproof", self._get_transformer())
+                              "  and Waterproof "
+                              "order by name asc", self._get_transformer())
         self.assertIsNotNone(parsed)
 
     def test_simple_search(self):
@@ -270,13 +271,95 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['spu_name'], "Cold Boot")
 
+    @tagged("oql.orderby")
+    def test_orderby_single_field_asc(self):
+        """Test ORDER BY with single field in ascending order (default)."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id, spu_name where tag_ids order by id"
+        )
+        self.assertEqual(len(res), 2)
+        ids = [row['id'] for row in res]
+        self.assertEqual(ids, sorted(ids))
+
+    @tagged("oql.orderby")
+    def test_orderby_single_field_desc(self):
+        """Test ORDER BY with single field in descending order."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id, spu_name where tag_ids order by id desc"
+        )
+        self.assertEqual(len(res), 2)
+        ids = [row['id'] for row in res]
+        self.assertEqual(ids, sorted(ids, reverse=True))
+
+    @tagged("oql.orderby")
+    def test_orderby_explicit_asc(self):
+        """Test ORDER BY with explicit ASC keyword."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id, spu_name where tag_ids order by id asc"
+        )
+        self.assertEqual(len(res), 2)
+        ids = [row['id'] for row in res]
+        self.assertEqual(ids, sorted(ids))
+
+    @tagged("oql.orderby")
+    def test_orderby_with_pagination(self):
+        """Test ORDER BY combined with LIMIT and OFFSET."""
+        # Get all products first to know the order
+        all_res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id, spu_name where tag_ids order by id desc"
+        )
+        self.assertEqual(len(all_res), 2)
+        
+        # Order by id descending, get first result
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id, spu_name where tag_ids order by id desc limit 1"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['id'], all_res[0]['id'])
+
+        # Order by id descending, skip first, get second
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id, spu_name where tag_ids order by id desc limit 1 offset 1"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['id'], all_res[1]['id'])
+
+    @tagged("oql.orderby")
+    def test_orderby_with_term_query(self):
+        """Test ORDER BY with term-based WHERE clause."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id, spu_name where Size='5' order by id asc"
+        )
+        self.assertEqual(len(res), 2)
+        ids = [row['id'] for row in res]
+        self.assertEqual(ids, sorted(ids))
+
+    @tagged("oql.orderby")
+    def test_orderby_case_insensitive(self):
+        """Test that ORDER BY keywords are case-insensitive."""
+        res1 = self.env["test.oql.product"].oql(
+            "from test.oql.product select id where tag_ids ORDER BY id DESC"
+        )
+        res2 = self.env["test.oql.product"].oql(
+            "from test.oql.product select id where tag_ids order by id desc"
+        )
+        res3 = self.env["test.oql.product"].oql(
+            "from test.oql.product select id where tag_ids Order By id Desc"
+        )
+        
+        ids1 = [row['id'] for row in res1]
+        ids2 = [row['id'] for row in res2]
+        ids3 = [row['id'] for row in res3]
+        self.assertEqual(ids1, ids2)
+        self.assertEqual(ids2, ids3)
+
     def assertHints(self, expected, actual):
         self.assertEqual(expected, {x["value"] for x in actual})
 
     @tagged("oql.non_searchable")
     def test_non_searchable_field_error(self):
         """Test that searching with non-searchable fields raises an exception.
-        
+
         The 'name' field on test.oql.product is a compute field (not searchable).
         This test verifies that OQL properly rejects queries using non-searchable fields
         in WHERE clause, while allowing them in SELECT clause.
@@ -287,18 +370,18 @@ class TestOql(TransactionCase):
         )
         self.assertEqual(len(res), 1)
         self.assertIn('name', res[0])
-        
+
         # WHERE clause cannot use non-searchable fields - should raise Exception
         with self.assertRaises(Exception) as context:
             self.env["test.oql.product"].oql(
                 "from test.oql.product select spu_name where name = 'Cold Boot'"
             )
-        
+
         # Verify error message is informative
         error_msg = str(context.exception)
         self.assertIn("name", error_msg)
         self.assertIn("not searchable", error_msg.lower())
-        
+
         # Test in complex WHERE conditions
         with self.assertRaises(Exception):
             self.env["test.oql.product"].oql(

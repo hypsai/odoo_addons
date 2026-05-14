@@ -1,12 +1,13 @@
 ?start: query
 
-query: from_clause select_clause where_clause [limit_clause] [offset_clause]
+query: from_clause select_clause where_clause [orderby_clause] [limit_clause] [offset_clause]
 
 select_clause: "select"i ("*" | fields)
 from_clause: "from"i model
 where_clause: "where"i expr
 limit_clause: "limit"i INT
 offset_clause: "offset"i INT
+orderby_clause: "order"i "by"i orderby_fields
 
 ?expr: or_expr
 
@@ -28,9 +29,11 @@ nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
 fields: field ("," field)*  // Field list
+orderby_fields: orderby_field ("," orderby_field)*  // Order by field list
 
 model: CNAME ("." CNAME)*  // Dot-style model name
 field: CNAME ("." CNAME)*  // Dot-style field access
+orderby_field: CNAME [ASC | DESC]  // Plain field with order direction
 
 _value: string
      | INT
@@ -81,6 +84,8 @@ FLOAT: /[-+]?\d+\.\d+/
 TRUE: "true"i
 FALSE: "false"i
 NULL: "null"i
+ASC: "asc"i
+DESC: "desc"i
 
 // Imports
 %import common.LETTER

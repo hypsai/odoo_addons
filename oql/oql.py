@@ -350,7 +350,7 @@ class OqlTransformer(lark.Transformer):
         self.recs = None
         self._meta = OqlMeta(env)
 
-    def query(self, from_, select: List[FieldAccess], where: RecordSets, limit, offset):
+    def query(self, from_, select: List[FieldAccess], where: RecordSets, orderby, limit, offset):
         # 1 Categorize field access into plain and dot fields.
         dot_fas: List[FieldAccess] = []
         plain_fields: List[str] = []
@@ -361,7 +361,7 @@ class OqlTransformer(lark.Transformer):
                 dot_fas.append(fa)
         # 2 Read data.
         rec_set = where[0]
-        recs = rec_set.model.search(rec_set.domain.domain, offset, limit)
+        recs = rec_set.model.search(rec_set.domain.domain, offset, limit, orderby)
         # 2.1 Read plain fields.
         if not plain_fields:
             plain_fields.append("id")
@@ -384,6 +384,9 @@ class OqlTransformer(lark.Transformer):
 
     def where_clause(self, expr):
         return expr
+
+    def orderby_clause(self, fields):
+        return ','.join(f"{t[0]} {t[1]}" for t in fields)
 
     def offset_clause(self, num: int):
         return num
@@ -408,14 +411,20 @@ class OqlTransformer(lark.Transformer):
     def dot_expr(self, field: FieldAccess):
         return field.eval_una("bool")
 
+    def fields(self, *fields):
+        return fields
+
+    def orderby_fields(self, *fields):
+        return fields
+
     def model(self, *args):
         return '.'.join(args)
 
     def field(self, *args: str):
         return FieldAccess(self.recs, args, self._meta)
 
-    def fields(self, *fields):
-        return fields
+    def orderby_field(self, name: str, dir_: str):
+        return name, dir_ or "asc"
 
     def string(self, value):
         return value[1:-1]

@@ -374,7 +374,7 @@ Basic Structure
 
 An OQL query follows this structure::
 
-    FROM <model> SELECT <fields> WHERE <conditions> [LIMIT n] [OFFSET n]
+    FROM <model> SELECT <fields> WHERE <conditions> [ORDER BY <field> [ASC|DESC], ...] [LIMIT n] [OFFSET n]
 
 Example::
 
@@ -401,7 +401,7 @@ Key Differences from SQL
 
 .. note::
    - ``searcho()`` accepts only WHERE clause for quick searches
-   - ``oql()`` accepts full query syntax with FROM, SELECT, WHERE, LIMIT, OFFSET
+   - ``oql()`` accepts full query syntax with FROM, SELECT, WHERE, ORDER BY, LIMIT, OFFSET
 
 Comparison Operators
 ~~~~~~~~~~~~~~~~~~~~
