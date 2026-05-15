@@ -87,15 +87,19 @@ class OqlModelAcl:
         self.model_name = model_name
         self._mode2fields: Dict[str, set] = KeyPassingDefaultDict(self._perm_fields)
 
+    @property
+    def perm_read(self):
+        return self.check("read")
+
     def __getitem__(self, field_name: Union[str, List[str]]) -> Union["OqlFieldAcl", List["OqlFieldAcl"]]:
         """Get field or fields ACL."""
         if isinstance(field_name, list):
             return [OqlFieldAcl(x, self) for x in field_name]
         return OqlFieldAcl(field_name, self)
 
-    def check(self, mode: Literal["read", "write"]):
+    def check(self, mode: Literal["read", "write"], raises: bool = False):
         """Check access right of current model."""
-        return self.env["ir.model.access"].check(self.model_name, mode, False)
+        return self.env["ir.model.access"].check(self.model_name, mode, raises)
 
     def perm_fields(self, mode: Literal["read", "write"]) -> Set["str"]:
         """Return fields that have the specified `mode` access."""

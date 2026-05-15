@@ -16,6 +16,7 @@ class OqlMcpBase(models.AbstractModel):
         Attention: You must use LIMIT clause for any query. Use offset together with limit if you need paginated result.
 
         OQL is a PostgreSQL-like query language for Odoo. It supports dot paths (e.g., `company.name`) and virtual fields (Terms/Aliases).
+        OQL Structure: FROM <model> SELECT <fields> WHERE <conditions> [ORDER BY <field> [ASC|DESC], ...] [LIMIT n] [OFFSET n]
         Differences from SQL:
             1. FROM clause is placed at start of a query string.
             2. It uses Odoo domain operators such as 'like', '=like', etc. Be careful about this!!!
@@ -51,7 +52,7 @@ class OqlMcpBase(models.AbstractModel):
             3. partial_oql="from res.partner select id where name = ma", result example: ['Mary', 'Ema', ...]
 
         :param partial_oql: The unfinished text typed so far. NEVER a complete statement.
-        :param cursor: Typing position (zero-based). None means end of string.
+        :param cursor: Typing position (zero-based). `None` means end of string. You should always use `None` if your want to hint at end of `partial_oql`.
         :param limit: Max candidates to return (default: 30).
         :param verbose: Verbosity level of hints.
             - 0: list of candidate strings. e.g. ['name', ...]

@@ -8,6 +8,17 @@ from odoo import fields, models, api
 
 
 class OqlAclField(models.Model):
+    """
+    OQL field ACL follows different rules from Odoo's ACL.
+    1. Related field.
+    Example field: `name = fields.Char(related="tmpl_id.name")`
+    1.1 From up to down, related field's access right is defined by itself, it can penetrate Odoo ACL.
+        e.g. If `name` is configured readable for a user, the user will be able to read `name`
+             no matter he has or has not access right to `tmpl_id` or the relational model or the relational model's `name` field.
+    2.2 From down to up, Related field can inherit access from its target field.
+        e.g. If related `tmpl_id.name` is readable, then `name` field itself is readable.
+    """
+
     _name = "oql.acl.field"
     _description = "OQL Field Level Access Control"
     _rec_name = "field_id"

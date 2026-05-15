@@ -364,6 +364,23 @@ OQL validates permissions for dot-notation paths in both WHERE and SELECT clause
 
 If any field in the path lacks OQL read permission, the query is blocked.
 
+Related Field Rules
+*******************
+
+OQL ACL handles related fields with two simple rules:
+
+**1. Self-defined access**: A related field can have its own permission, independent of the target field.
+
+.. code-block:: python
+
+    tmpl_name = fields.Char(related='product_tmpl_id.name')
+
+If ``tmpl_name`` is granted read access, users can read it even without access to ``product_tmpl_id`` or ``product.template``.
+
+**2. Inherited access**: A related field automatically inherits permission if the complete target path is accessible.
+
+If both ``product_tmpl_id`` and ``product.template.name`` are readable, then ``tmpl_name`` becomes readable automatically.
+
 Query Syntax
 ------------
 

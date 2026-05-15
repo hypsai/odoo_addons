@@ -255,7 +255,7 @@ class FieldAccess:
             raise Exception(f"Expect `{self.root.name}` records, got `{recs._name}`.")
         # Read
         path = '.'.join(self.names)
-        recs.mapped(path)  # Prefetch
+        recs.mapped(path)  # Prefetch.
         res = [x.mapped(path) for x in recs]
         if not self.x2m:
             res = [x[0] if x else None for x in res]
@@ -377,9 +377,11 @@ class OqlTransformer(lark.Transformer):
                 row[fa.as_] = val
         return rows
 
-    def from_clause(self, model):
+    def from_clause(self, model: str):
+        acl = self._meta.acl
+        acl[model].check("read", True)
         self.model_name = model
-        self.recs = self.env[model]
+        self.recs = self.env[model].sudo()  # OQL ACL is fully controlled by OQL, so use sudo() here to pass Odoo ACL.
 
     def select_clause(self, fields="*"):
         if fields == "*":
