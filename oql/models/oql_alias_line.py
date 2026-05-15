@@ -1,7 +1,8 @@
-from odoo import fields, models, api
-from odoo.exceptions import UserError
+from odoo import fields, models, api, _
+from odoo.exceptions import UserError, ValidationError
 
 from ..util import get_field_def, get_field_type
+from ..alias import AliasNode
 
 
 class OqlAliasLine(models.Model):
@@ -10,14 +11,30 @@ class OqlAliasLine(models.Model):
     _rec_name = "alias"
 
     rule_id = fields.Many2one("oql.alias", "Rule", required=True, ondelete="cascade")
+    model_id = fields.Many2one(related="rule_id.model_id", store=True, index=True)
     alias = fields.Char("Alias", required=True, help="An alias name for the path.")
-    path = fields.Char("Field Path", required=True,
-                       help="The field path this alias refers to, in dot style. e.g. `product_id.name`")
+    path = fields.Text("Field Path", required=True,
+                       help="The field path this alias refers to, Simple path in dot style. e.g. `product_id.name`, or "
+                            "complex path in JSON format.")
     enable_shorthand = fields.Boolean("Enable Shorthand",
                                       help="If enabled, user can omit `alias` in OQL statement."
                                            "Every value type should have at most one shorthand.")
+    help = fields.Text("Help Text")
+    is_complex = fields.Boolean("Is Complex Alias", compute="_compute_is_complex", store=True)
 
     _sql_constraints = [("rule_id_alias_unique", "unique(rule_id, alias)", "Alias in each field path set must be unique.")]
+
+    @api.constrains("path")
+    def _constrains_path(self):
+        """Check path format."""
+        for rec in self:
+            if not rec.path:
+                continue
+            try:
+                root = AliasNode.parse(rec.path, rec.alias)
+                __ = root.read(self.env[self.model_id.model].sudo(), _check=True)  # Check field existence.
+            except Exception as e:
+                raise UserError(str(e))
 
     @api.constrains("enable_shorthand")
     def _constrains_enable_shorthand(self):
@@ -29,6 +46,8 @@ class OqlAliasLine(models.Model):
         for rec in self:
             if not rec.enable_shorthand:
                 continue
+            if rec.is_complex:
+                raise ValidationError(_("Complex alias `%s` can't be used as shorthand.") % (rec.path,))
 
             model = rec.rule_id.model_id.model
             model_recs = env[model]
@@ -46,3 +65,11 @@ class OqlAliasLine(models.Model):
                         f"because it has the same field type '{rec_field_type}' as other shorthand-enabled alias: {line.alias}. "
                         f"Each value type can have at most one shorthand alias per rule."
                     )
+
+    @api.depends("path")
+    def _compute_is_complex(self):
+        for rec in self:
+            root = AliasNode.parse(rec.path, rec.alias)
+            rec.is_complex = root.is_complex
+            if root.is_complex:
+                rec.enable_shorthand = False  # Turn off automatically.

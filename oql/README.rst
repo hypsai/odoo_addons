@@ -190,57 +190,63 @@ The term automatically resolves to the underlying records based on your configur
 2. Aliases - Path Simplification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Aliases shorten long field paths into concise, memorable names. They eliminate the need to remember complex relational chains.
+Aliases shorten long field paths into concise, memorable names.
 
 Configuring Aliases via UI
 **************************
 
-Set up aliases through the OQL interface:
-
-1. Navigate to **Settings > Technical -> OQL > Aliases** menu
-2. Select the target model (e.g., ``product.product``)
-3. Add alias rules mapping short names to field paths
+Navigate to **Settings > Technical > OQL > Aliases** and add alias rules for your models.
 
 .. image:: static/description/alias_config.png
    :alt: Alias configuration interface
    :align: center
    :width: 800px
 
-**Name Simplification**
+**Path Format:** Three base formats, optionally prefixed with relational field expansion (``field_path =>``)
 
-Map verbose paths to short aliases:
+1. **Dot path**: Simple field navigation
+   
+   ``partner_id.name`` → use as ``partner_name``
 
-- ``product_tmpl_id.default_code`` → ``spu``
-- ``categ_id.complete_name`` → "category"
-- ``partner_id.country_id.name`` → ``country``
+2. **String template**: Compose formatted strings
+   
+   ``"Name is {partner_id.name}"`` → use as ``partner_info``
+
+3. **JSON object**: Complex nested structures with recursive mapping
+   
+   .. code-block:: json
+   
+       {
+           "name": "partner_id.name",
+           "addresses @ address_ids": {
+               "city": "city_id.name",
+               "country": "country_id.name"
+           }
+       }
+
+   The ``@`` syntax in keys maps parent alias to child field path for nested data.
+
+**Expansion Prefix Examples:**
+
+Add ``field_path =>`` before any base format to expand a relational field as the data source:
+
+- ``address_ids => country_id.name`` (expand + dot path)
+- ``address_ids => "Address: {city}"`` (expand + string template)
+- ``address_ids => {...}`` (expand + JSON object)
 
 **Shorthand Notation**
 
-Enable intelligent type-based resolution by checking the "Enable Shorthand" option. When enabled, OQL automatically matches value types to find the correct field path.
-
-For example, if you enable shorthand for ``tags`` for `tag_ids` on the product model, you can write:
-
-.. code-block:: python
-
-    # Instead of:
-    products = env['product.product'].searcho("tags.Waterproof'")
-
-    # Simply use the term directly (OQL resolves the path automatically):
-    products = env['product.product'].searcho("Waterproof")
-
-Each model can have only one shorthand-enabled path per value type, ensuring unambiguous resolution.
+Enable "Enable Shorthand" to let OQL auto-resolve field paths by value type. Each model can have one shorthand path per type.
 
 Using Aliases in Queries
 ************************
 
-Once configured, use aliases to simplify your queries:
-
 .. code-block:: python
 
-    # Without alias:
+    # Without alias
     products = env['product.product'].searcho("product_tmpl_id.default_code = 'BOOT-001'")
 
-    # With alias 'spu':
+    # With alias 'spu'
     products = env['product.product'].searcho("spu = 'BOOT-001'")
 
 3. Operator Overloading - Custom Query Logic

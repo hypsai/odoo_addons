@@ -12,9 +12,9 @@ from odoo.fields import _RelationalMulti
 from odoo.tools.safe_eval import safe_eval
 
 from .acl import OqlAcl
-from .alias import AliasRule
+from .alias import AliasRule, AliasNode
 from .recs import *
-from .util import KeyPassingDefaultDict, tn
+from .util import KeyPassingDefaultDict, tn, read_object
 
 _logger = logging.getLogger(__name__)
 
@@ -26,7 +26,8 @@ class OqlMeta:
         self._term_fields = self._load_term_fields()
         self._term2domains: Dict[Term, List[OqlDomain]] = KeyPassingDefaultDict(self._load_domains)  # Lazy loading.
         self._model2rule: Dict[str, AliasRule] = KeyPassingDefaultDict(self._load_rule)  # Lazy loading.
-        self._model2alias2path: Dict[str, Dict[str, str]] = KeyPassingDefaultDict(self._load_alias)  # Lazy loading.
+        self._model2alias2node: Dict[str, Dict[str, AliasNode]] = KeyPassingDefaultDict(self._load_alias2node)  # Lazy loading.
+        self._model2alias2path: Dict[str, Dict[str, str]] = KeyPassingDefaultDict(self._load_alias2path)  # Lazy loading.
         self._all_terms_loaded = False
 
     def get_domains(self, term: str):
@@ -45,6 +46,9 @@ class OqlMeta:
         alias2path = self._model2alias2path[model]
         return alias2path.get(alias)
 
+    def get_alias(self, model: str, alias: str) -> Optional[AliasNode]:
+        return self._model2alias2node[model].get(alias)
+
     def get_term2domains(self) -> Dict[Term, List[OqlDomain]]:
         if not self._all_terms_loaded:
             term2domains = self._load_terms([])
@@ -59,6 +63,7 @@ class OqlMeta:
         """Load fields that have a relation to `oql.term`."""
         env = self.env
         perm_models = self.acl.perm_models("read")
+        perm_models.discard("oql.term.domain")
         fields = env['ir.model.fields'].sudo().search([
             '|', ('ttype', '=', 'many2one'), ('ttype', '=', 'many2many'),
             ('relation', '=', "oql.term"),
@@ -138,12 +143,15 @@ class OqlMeta:
             return None
         return AliasRule.from_orm(recs)[0]
 
-    def _load_alias(self, model: str) -> Dict[str, str]:
+    def _load_alias2path(self, model: str) -> Dict[str, str]:
+        alias2node = self._model2alias2node[model]
+        return {k: v.path for k, v in alias2node.items() if not v.is_complex}
+
+    def _load_alias2node(self, model: str) -> Dict[str, AliasNode]:
         recs = self.env["oql.alias.line"].sudo().search([("rule_id.model_id.model", "=", model)])
-        alias2path = {x.alias: x.path for x in recs}
-        ok_paths = self.acl.perm_paths(model, alias2path.values(), "read")
-        alias2path = {k: v for k, v in alias2path.items() if v in ok_paths}
-        return alias2path
+        perm_aliases = self.acl[model].perm_aliases("read")
+        alias2node = {x.alias: AliasNode.parse(x.path, x.alias) for x in recs if x.alias in perm_aliases}
+        return alias2node
 
 
 class FieldAccess:
@@ -170,6 +178,7 @@ class FieldAccess:
         next_ = []
         b_x2m = False
         non_searchable_fields = []
+        tail_alias = None
         i = 0
         while i < len(names):
             name = names[i]
@@ -190,12 +199,19 @@ class FieldAccess:
                 i += 1
                 continue
             # Alias
-            aliased = meta.get_path_by_alias(p_recs._name, name)
-            if aliased:
-                chips = aliased.split('.')
-                i += 1
-                names[i:i] = chips
-                continue
+            alias = meta.get_alias(p_recs._name, name)
+            if alias:
+                if alias.is_complex:
+                    if i != len(names) - 1:
+                        raise Exception(f"Complex alias `{name}` can only be tail of field path. Path: `{'.'.join(names)}`")
+                    tail_alias = alias
+                    b_x2m = True  # Treat complex alais as X2Many field.
+                    break
+                else:
+                    chips = alias.path.split('.')
+                    i += 1
+                    names[i:i] = chips
+                    continue
             # Term
             domains = meta.get_domains(name)
             if domains:
@@ -207,7 +223,7 @@ class FieldAccess:
             raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term.") % (prefix, name))
         # Validate (.) term statement.
         rear = p_recs
-        if next_ and not isinstance(rear, Model):
+        if (next_ or tail_alias) and not isinstance(rear, Model):
             rear_field_name = plain_names[-1]
             rear_field: fields.Field = pp_recs._fields[rear_field_name]
             raise Exception(_(f"Invalid field path `{model._name}` -> `{'.'.join(names[:i])}` (.) `{names[i]}`. "
@@ -221,14 +237,18 @@ class FieldAccess:
         self.x2m = b_x2m
         self.next: List[FieldAccess] = next_
         self._non_searchable_fields = non_searchable_fields
+        self._tail_alias: Optional[AliasNode] = tail_alias  # Complex alias at tail.
 
     @property
     def as_(self):
-        return '.'.join(self.names)
+        return self.path
 
     @property
     def path(self):
-        return '.'.join(self.names)
+        names = self.names
+        if self._tail_alias:
+            names = names + [self._tail_alias.alias]
+        return '.'.join(names)
 
     @property
     def expr(self) -> str:
@@ -256,7 +276,11 @@ class FieldAccess:
         # Read
         path = '.'.join(self.names)
         recs.mapped(path)  # Prefetch.
-        res = [x.mapped(path) for x in recs]
+        tail_alias = self._tail_alias
+        if tail_alias:
+            res = [tail_alias.read(read_object(x, path)) for x in recs]
+        else:
+            res = [x.mapped(path) for x in recs]
         if not self.x2m:
             res = [x[0] if x else None for x in res]
         return res
@@ -271,10 +295,14 @@ class FieldAccess:
         """
         # Check
         if self._non_searchable_fields:
-            raise Exception(_("Can't search with expression `%s %s %s`, "
-                              "some fields in expression are not searchable: %s. "
+            raise Exception(_("Can't search with expression `%s %s %s`. "
+                              "Some fields in expression are not searchable: %s. "
                               "Please contact administrator for help or use a difference field.") %
                             (self.expr, opr, value, self._non_searchable_fields))
+        if self._tail_alias:
+            raise Exception(_("Can't search with expression `%s %s %s`. "
+                              "Complex alias can't be used to search. Complex alias: %s") %
+                            (self.expr, opr, value, self._tail_alias.alias))
         # Eval
         root = self.root
         model = self.model
@@ -392,7 +420,7 @@ class OqlTransformer(lark.Transformer):
     def where_clause(self, expr):
         return expr
 
-    def orderby_clause(self, fields):
+    def orderby_clause(self, __, fields):
         return ','.join(f"{t[0]} {t[1]}" for t in fields)
 
     def offset_clause(self, num: int):

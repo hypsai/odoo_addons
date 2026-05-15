@@ -13,6 +13,7 @@ class OqlIrModelAccess(models.Model):
     perm_oql_fac_default_read = fields.Boolean("OQL Field Default Read Access", default=True)
     perm_oql_fac_default_write = fields.Boolean("OQL Field Default Write Access", default=True)
     oql_fac_ids = fields.One2many("oql.acl.field", "mac_id", "OQL Field ACL")
+    oql_aac_ids = fields.One2many("oql.acl.alias", "mac_id", "OQL Alias ACL")
 
     def perm_models(self, mode: Literal["read", "write"]) -> Set[str]:
         """Return model names that have the specified `mode` access."""

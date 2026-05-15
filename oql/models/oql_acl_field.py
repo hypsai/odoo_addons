@@ -40,7 +40,7 @@ class OqlAclField(models.Model):
         """Check field access rights of the given model, and return all the fields that have given `mode` access right."""
         if self.env.su:
             # User root have all accesses
-            return list(self.env[model]._fields)
+            return set(self.env[model]._fields)
 
         self.env["ir.model.access"].flush()
         self.flush(self._fields)

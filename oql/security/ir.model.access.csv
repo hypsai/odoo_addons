@@ -9,3 +9,5 @@ access_oql_alias_line_admin,oql.alias.line,model_oql_alias_line,base.group_syste
 access_oql_alias_line_user,oql.alias.line,model_oql_alias_line,base.group_user,1,0,0,0
 access_oql_acl_field_admin,oql.acl.field,model_oql_acl_field,base.group_system,1,1,1,1
 access_oql_acl_field_user,oql.acl.field,model_oql_acl_field,base.group_user,1,0,0,0
+access_oql_acl_alias_admin,oql.acl.alias,model_oql_acl_alias,base.group_system,1,1,1,1
+access_oql_acl_alias_user,oql.acl.alias,model_oql_acl_alias,base.group_user,1,0,0,0

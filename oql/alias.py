@@ -2,14 +2,217 @@
 # @Time         : 10:46 2025/10/17
 # @Author       : Chris
 # @Description  :
+import json
+import re
+from abc import abstractmethod, ABC
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict, Iterable
 
+from odoo import models, fields
 from odoo.models import BaseModel
 
-from .models.oql_alias_line import OqlAliasLine
 from .recs import RecordSet
-from .util import get_field_def, field_type2python_type
+from .util import get_field_def, field_type2python_type, read_object, PathAwareFormatter
+
+
+class AliasNode(ABC):
+    _REGEX_FIELD = re.compile(r"^\w+(\.\w+)*$")
+    _REGEX_DOTPATH = re.compile(r"^\s*(\w+(?:\.\w+)*)\s*$")  # Looser restriction.
+    _REGEX_EXPAND = re.compile(r"^\s*(?:(\w+(?:\.\w+)*)\s*=>\s*)?(.*)$", re.DOTALL)
+
+    def __init__(self, path: str, alias: str):
+        self.path = self._validate_path(path, "field path")
+        self.alias = self._validate_path(alias, "alias")  # Alias of current node.
+
+    @property
+    def is_complex(self):
+        return True
+
+    @classmethod
+    def parse(cls, text: str, alias: str) -> "AliasNode":
+        """
+        Parse alias text into AliasNode. Supports three base formats, optionally prefixed with relational field expansion:
+
+        Base formats:
+        1. Dot path: `partner_id.company_id.name`
+        2. String template: `"Partner: {partner_id.name}"`
+        3. JSON mapping object (keys as aliases, values as paths):
+           {
+               "name": "partner_id.name",
+               "addresses @ address_ids": {
+                   "city": "city",
+                   "country": "country_id.name"
+               }
+           }
+
+        Optional expansion prefix (`field_path =>`):
+        - Expands a relational field as data source for the base format
+        - Examples:
+          * `address_ids => country_id.name` (expand + dot path)
+          * `address_ids => "Address: {city}"` (expand + string template)
+          * `address_ids => {...}` (expand + JSON object)
+        """
+        return cls._r_parse("", text, alias)
+
+    def read(self, rec, _check=False):
+        """
+        Read data from a record.
+        :param rec: Empty or single recordset.
+        :param _check: Internal use only, use to check complex lias field existence.
+        :return: Scalar or object.
+        """
+        return self._read(rec, _check)
+
+    @abstractmethod
+    def _read(self, rec, _check: bool):
+        pass
+
+    @classmethod
+    def _r_parse(cls, path: str, obj, alias: str) -> "AliasNode":
+        if isinstance(obj, str):
+            # Format: xx.yy.zz
+            match = cls._REGEX_DOTPATH.fullmatch(obj)
+            if match:
+                return AliasFieldPath(match.group(1), alias)
+            # Format: [xx.yy.zz] => ...
+            match = cls._REGEX_EXPAND.fullmatch(obj)
+            path_ex, body = match.groups()
+            if path_ex:
+                path = f"{path}.{path_ex}" if path else path_ex
+            # Format [xx.yy.zz] => aa.bb
+            match = cls._REGEX_DOTPATH.fullmatch(body)
+            if match:
+                return AliasFieldPath(match.group(1), alias)
+            # Format [xx.yy.zz] => JSON
+            try:
+                obj = json.loads(body)
+            except Exception as e:
+                if not AliasString.is_valid_tmpl(body):
+                    raise Exception(f"Invalid field path `{body}`. Expect: dot path, string template, JSON dict") from e
+                obj = None
+            if obj is not None:
+                return cls._r_parse(path, obj, alias)
+            # Format: [xx.yy.zz] => StringTemplate
+            return AliasString(body, path, alias)
+        elif isinstance(obj, dict):
+            node = AliasDict(path, alias)
+            alias2child = node.alias2child
+            for key, value in obj.items():
+                chips = key.split("@")
+                if len(chips) == 1:
+                    if not isinstance(value, str):
+                        raise Exception(f"Value of simple alias mapping `{value}` must be `str`, got `{value}`.")
+                    child_alias, child_path = chips[0].strip(), value.strip()
+                    alias2child[child_alias] = cls._r_parse(child_path, value, child_alias)
+                elif len(chips) == 2:
+                    child_alias, child_path = chips[0].strip(), chips[1].strip()
+                    alias2child[child_alias] = cls._r_parse(child_path, value, child_alias)
+                else:
+                    raise Exception(f"Invalid complex alias key `{key}`. Format: `alias @ path`")
+            return node
+        else:
+            raise Exception(f"Invalid complex mapping node `{obj}`, expect `dict` or `str`. Path: `{path}`")
+
+    @classmethod
+    def _validate_path(cls, path: str, kind: str) -> str:
+        if not path:  # Emtpy path means `self`
+            return path
+        if not cls._REGEX_FIELD.fullmatch(path):
+            raise Exception(f"Invalid {kind} `{path}`. Expect format: `xxx.yyy.zzz`")
+        return path
+        
+        
+class AliasFieldPath(AliasNode):
+    def __init__(self, path: str, alias: str):
+        super().__init__(path, alias)
+
+    @property
+    def is_complex(self):
+        return False
+
+    def _read(self, rec, _check: bool):
+        if len(rec) > 1:
+            raise Exception(f"{self}: Expect single record, got `{rec}`")
+        return read_object(rec, self.path)
+    
+    
+class AliasSummary(AliasNode, ABC):
+    def __init__(self, path: str, alias: str):
+        super().__init__(path, alias)
+        self.path: str = self._validate_path(path, "field path")
+
+    @abstractmethod
+    def get_children(self) -> Iterable["AliasNode"]:
+        pass
+
+    def _read(self, rec, _check: bool):
+        path = self.path
+        b_x2m = False
+        if path:
+            res = read_object(rec, path)
+            if not isinstance(res, models.Model):
+                raise Exception(f"{self}: Result of complex alias must be records. Got `{type(res)}`")
+            # Check whether path is x2m
+            chips = path.split(".")
+            p_rec = rec
+            for chip in chips:
+                f_meta: fields.Field = p_rec._fields[chip]
+                if isinstance(f_meta, fields._RelationalMulti):
+                    b_x2m = True
+                    break
+                p_rec = p_rec[chip]
+        else:
+            res = rec
+        if b_x2m:
+            if _check:
+                return [self._format(res.browse(), _check)]
+            return [self._format(x, _check) for x in res]
+        if _check:
+            return self._format(res.browse(), _check)
+        return self._format(res, _check)
+
+    @abstractmethod
+    def _format(self, rec, _check: bool):
+        pass
+
+
+class AliasDict(AliasSummary):
+    def __init__(self, path: str, alias: str):
+        super().__init__(path, alias)
+        self.alias2child: Dict[str, AliasNode] = {}
+
+    def get_children(self) -> Iterable["AliasNode"]:
+        return self.alias2child.values()
+
+    def _format(self, rec, _check: bool):
+        return {k: v.read(rec) for k, v in self.alias2child.items()}
+
+        
+class AliasString(AliasSummary):
+    """String template, format: 'Partner name is {partner_id.name}.'"""
+    def __init__(self, tmpl: str, path: str, alias: str):
+        super().__init__(path, alias)
+        self.tmpl = tmpl
+        self.path = path
+        self._name2var: Dict[str, AliasNode] = {
+            path: AliasFieldPath(path, path) for _, path, _, _ in PathAwareFormatter().parse(tmpl) if path
+        }
+
+    def get_children(self) -> Iterable["AliasNode"]:
+        return self._name2var.values()
+
+    def _format(self, rec, _check: bool):
+        kwargs = {k: v._read(rec, _check) for k, v in self._name2var.items()}
+        string = PathAwareFormatter().vformat(self.tmpl, [], kwargs)
+        return string
+
+    @classmethod
+    def is_valid_tmpl(cls, tmpl: str):
+        try:
+            PathAwareFormatter().parse(tmpl)
+            return True
+        except:
+            return False
 
 
 @dataclass(frozen=True)
@@ -25,7 +228,6 @@ class AliasRule:
             lines = []
             model = rec.model_id.model
             for rec_line in rec.line_ids:
-                rec_line: OqlAliasLine
                 if not rec_line.enable_shorthand:
                     continue
                 path = rec_line.path

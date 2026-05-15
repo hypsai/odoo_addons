@@ -3,6 +3,7 @@
 # @Author       : Chris
 # @Description  :
 from collections import defaultdict
+from string import Formatter
 from typing import List, Callable, Any, Union
 
 from odoo import models, fields
@@ -111,6 +112,8 @@ def read_object(obj, path: str):
     """
     Read object field with dot style path.
     """
+    if not path:  # Empty path means obj itself.
+        return obj
     chips = path.split('.')
     p = obj
     for chip in chips:
@@ -166,3 +169,19 @@ class KeyPassingDefaultDict(defaultdict):
 
         self[key] = value  # Store the newly created value
         return value
+
+
+class PathAwareFormatter(Formatter):
+    """
+    Custom formatter that treats the entire placeholder (e.g., 'partner_id.name')
+    as a single variable key instead of attribute access.
+    """
+    def get_field(self, field_name, args, kwargs):
+        # Treat the entire field_name as a single key, don't split it
+        obj = self.get_value(field_name, args, kwargs)
+        return obj, field_name
+    
+    def get_value(self, key, args, kwargs):
+        if key in kwargs:
+            return kwargs[key]
+        raise KeyError(key)

@@ -9,7 +9,8 @@ from typing import Dict, Union, List, Set, Literal, Iterable, Tuple
 from odoo import models, _, fields
 from odoo.exceptions import AccessError
 
-from .util import KeyPassingDefaultDict
+from .util import KeyPassingDefaultDict, read_object
+from .alias import AliasNode, AliasSummary
 
 _logger = logging.getLogger(__file__)
 
@@ -86,6 +87,7 @@ class OqlModelAcl:
         self.env = acl.env
         self.model_name = model_name
         self._mode2fields: Dict[str, set] = KeyPassingDefaultDict(self._perm_fields)
+        self._mode2aliases: Dict[str, set] = KeyPassingDefaultDict(self._perm_aliases)
 
     @property
     def perm_read(self):
@@ -101,6 +103,9 @@ class OqlModelAcl:
         """Check access right of current model."""
         return self.env["ir.model.access"].check(self.model_name, mode, raises)
 
+    def check_path(self, path: str, mode: Literal["read", "write"]) -> bool:
+        return path in self.perm_paths([path], mode)
+
     def perm_fields(self, mode: Literal["read", "write"]) -> Set["str"]:
         """Return fields that have the specified `mode` access."""
         ok_fields = self._mode2fields[mode]
@@ -115,8 +120,52 @@ class OqlModelAcl:
                 ok_fields.add(f_meta.name)
         return ok_fields
 
+    def perm_aliases(self, mode: Literal["read", "write"]) -> Set[str]:
+        """Return aliases that have the specified `mode` access."""
+        acl = self.acl
+        Model = self.env[self.model_name]
+
+        # Check direct access rights configured for aliases on current model.
+        ok_aliases = self._mode2aliases[mode]
+
+        # Check access rights for referencing fields to determine alias access right.
+
+        def r_check(node: AliasNode, model: models.Model):
+            # Check model access.
+            mac = acl[model._name]
+            if not mac.check(mode):
+                return False
+            # Check child node access.
+            if isinstance(node, AliasSummary):
+                for child in node.get_children():
+                    if child.path:
+                        # Field path.
+                        if not mac.check_path(child.path, mode):
+                            return False
+                        # Drill
+                        child_model = read_object(model, child.path)
+                    else:  # Emtpy path means model itself.
+                        child_model = model
+                    if not r_check(child, child_model):
+                        return False
+            return True
+
+        alias_recs = self.env["oql.alias.line"].sudo().search(
+            [("model_id.name", "=", self.model_name), ("alias", "not in", list(ok_aliases))])
+        for alias_rec in alias_recs:
+            if r_check(AliasNode.parse(alias_rec.path, alias_recs.alias), Model):
+                ok_aliases.add(alias_rec.alias)
+
+        return ok_aliases
+
+    def perm_paths(self, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
+        return self.acl.perm_paths(self.model_name, paths, mode)
+
     def _perm_fields(self, mode: str) -> Set[str]:
         return self.env["oql.acl.field"].perm_fields(self.model_name, mode)
+
+    def _perm_aliases(self, mode: str) -> Set[str]:
+        return self.env["oql.acl.alias"].perm_aliases(self.model_name, mode)
 
 
 class OqlFieldAcl:
