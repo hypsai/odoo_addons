@@ -10,7 +10,7 @@ from odoo import models, _, fields
 from odoo.exceptions import AccessError
 
 from .util import KeyPassingDefaultDict, read_object
-from .alias import AliasNode, AliasSummary
+from .alias import AliasNode, AliasSummary, AliasFieldPath
 
 _logger = logging.getLogger(__file__)
 
@@ -135,18 +135,19 @@ class OqlModelAcl:
             mac = acl[model._name]
             if not mac.check(mode):
                 return False
+            # Check path access and expand data source.
+            if node.path:
+                if not mac.check_path(node.path, mode):
+                    return
+                model = read_object(mode, node.path)
+                mac = acl[model._name]
             # Check child node access.
-            if isinstance(node, AliasSummary):
+            if isinstance(node, AliasFieldPath):
+                if not mac.check_path(node.field, mode):
+                    return False
+            elif isinstance(node, AliasSummary):
                 for child in node.get_children():
-                    if child.path:
-                        # Field path.
-                        if not mac.check_path(child.path, mode):
-                            return False
-                        # Drill
-                        child_model = read_object(model, child.path)
-                    else:  # Emtpy path means model itself.
-                        child_model = model
-                    if not r_check(child, child_model):
+                    if not r_check(child, model):
                         return False
             return True
 

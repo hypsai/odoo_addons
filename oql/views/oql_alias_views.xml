@@ -29,6 +29,7 @@
                             <strong>Examples with expansion:</strong><br/>
                             • <code>address_ids =&gt; country_id.name</code> (expand + dot path)<br/>
                             • <code>address_ids =&gt; "Address: {city}"</code> (expand + string template)
+                            • <code>address_ids =&gt; "{...}"</code> (expand + JSON object)
                         </div>
                         <field name="line_ids">
                             <tree editable="bottom">

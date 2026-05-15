@@ -61,10 +61,33 @@ class AliasNode(ABC):
         :param _check: Internal use only, use to check complex lias field existence.
         :return: Scalar or object.
         """
-        return self._read(rec, _check)
+        path = self.path
+        b_x2m = False
+        if path:
+            res = read_object(rec, path)
+            if self.is_complex and not isinstance(res, models.Model):
+                raise Exception(f"{self}: Result of complex alias must be records. Got `{type(res)}`")
+            # Check whether path is x2m
+            chips = path.split(".")
+            p_rec = rec
+            for chip in chips:
+                f_meta: fields.Field = p_rec._fields[chip]
+                if isinstance(f_meta, fields._RelationalMulti):
+                    b_x2m = True
+                    break
+                p_rec = p_rec[chip]
+        else:
+            res = rec
+        if b_x2m:
+            if _check:
+                return [self._format(res, _check)]
+            return [self._format(x, _check) for x in res]
+        if _check:
+            return self._format(res, _check)
+        return self._format(res, _check)
 
     @abstractmethod
-    def _read(self, rec, _check: bool):
+    def _format(self, rec, _check: bool):
         pass
 
     @classmethod
@@ -73,7 +96,7 @@ class AliasNode(ABC):
             # Format: xx.yy.zz
             match = cls._REGEX_DOTPATH.fullmatch(obj)
             if match:
-                return AliasFieldPath(match.group(1), alias)
+                return AliasFieldPath("", alias, match.group(1))
             # Format: [xx.yy.zz] => ...
             match = cls._REGEX_EXPAND.fullmatch(obj)
             path_ex, body = match.groups()
@@ -82,7 +105,7 @@ class AliasNode(ABC):
             # Format [xx.yy.zz] => aa.bb
             match = cls._REGEX_DOTPATH.fullmatch(body)
             if match:
-                return AliasFieldPath(match.group(1), alias)
+                return AliasFieldPath(match.group(1), alias, match.group(2))
             # Format [xx.yy.zz] => JSON
             try:
                 obj = json.loads(body)
@@ -116,24 +139,26 @@ class AliasNode(ABC):
     @classmethod
     def _validate_path(cls, path: str, kind: str) -> str:
         if not path:  # Emtpy path means `self`
-            return path
+            return ""
         if not cls._REGEX_FIELD.fullmatch(path):
             raise Exception(f"Invalid {kind} `{path}`. Expect format: `xxx.yyy.zzz`")
         return path
+
+    def __str__(self):
+        return f"{type(self).__name__}({self.alias or ''}@{self.path or ''})"
         
         
 class AliasFieldPath(AliasNode):
-    def __init__(self, path: str, alias: str):
+    def __init__(self, path: str, alias: str, field: str):
         super().__init__(path, alias)
+        self.field = field
 
     @property
     def is_complex(self):
-        return False
+        return bool(self.path)
 
-    def _read(self, rec, _check: bool):
-        if len(rec) > 1:
-            raise Exception(f"{self}: Expect single record, got `{rec}`")
-        return read_object(rec, self.path)
+    def _format(self, rec, _check: bool):
+        return read_object(rec, self.field)
     
     
 class AliasSummary(AliasNode, ABC):
@@ -143,36 +168,6 @@ class AliasSummary(AliasNode, ABC):
 
     @abstractmethod
     def get_children(self) -> Iterable["AliasNode"]:
-        pass
-
-    def _read(self, rec, _check: bool):
-        path = self.path
-        b_x2m = False
-        if path:
-            res = read_object(rec, path)
-            if not isinstance(res, models.Model):
-                raise Exception(f"{self}: Result of complex alias must be records. Got `{type(res)}`")
-            # Check whether path is x2m
-            chips = path.split(".")
-            p_rec = rec
-            for chip in chips:
-                f_meta: fields.Field = p_rec._fields[chip]
-                if isinstance(f_meta, fields._RelationalMulti):
-                    b_x2m = True
-                    break
-                p_rec = p_rec[chip]
-        else:
-            res = rec
-        if b_x2m:
-            if _check:
-                return [self._format(res.browse(), _check)]
-            return [self._format(x, _check) for x in res]
-        if _check:
-            return self._format(res.browse(), _check)
-        return self._format(res, _check)
-
-    @abstractmethod
-    def _format(self, rec, _check: bool):
         pass
 
 
@@ -195,14 +190,14 @@ class AliasString(AliasSummary):
         self.tmpl = tmpl
         self.path = path
         self._name2var: Dict[str, AliasNode] = {
-            path: AliasFieldPath(path, path) for _, path, _, _ in PathAwareFormatter().parse(tmpl) if path
+            p: AliasFieldPath("", p, p) for _, p, _, _ in PathAwareFormatter().parse(tmpl) if p
         }
 
     def get_children(self) -> Iterable["AliasNode"]:
         return self._name2var.values()
 
     def _format(self, rec, _check: bool):
-        kwargs = {k: v._read(rec, _check) for k, v in self._name2var.items()}
+        kwargs = {k: v.read(rec, _check) for k, v in self._name2var.items()}
         string = PathAwareFormatter().vformat(self.tmpl, [], kwargs)
         return string
 

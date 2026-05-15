@@ -24,6 +24,9 @@
                 <group name="oql" string="OQL Access">
                     <notebook>
                         <page string="Fields">
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Warning:</strong> OQL field-level ACL can bypass Odoo's standard access control. Configure permissions carefully.
+                            </div>
                             <group col="4">
                                 <field name="perm_oql_fac_default_read" string="Default Read Access"/>
                                 <field name="perm_oql_fac_default_write" string="Default Write Access"/>
@@ -39,6 +42,9 @@
                             </group>
                         </page>
                         <page string="Aliases">
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Warning:</strong> OQL alias ACL can bypass Odoo's standard access control. Configure permissions carefully.
+                            </div>
                             <group col="4">
                                 <field name="oql_aac_ids" nolabel="1" colspan="99">
                                     <tree editable="bottom">

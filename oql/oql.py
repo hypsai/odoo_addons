@@ -12,7 +12,7 @@ from odoo.fields import _RelationalMulti
 from odoo.tools.safe_eval import safe_eval
 
 from .acl import OqlAcl
-from .alias import AliasRule, AliasNode
+from .alias import AliasRule, AliasNode, AliasFieldPath
 from .recs import *
 from .util import KeyPassingDefaultDict, tn, read_object
 
@@ -208,7 +208,9 @@ class FieldAccess:
                     b_x2m = True  # Treat complex alais as X2Many field.
                     break
                 else:
-                    chips = alias.path.split('.')
+                    assert isinstance(alias, AliasFieldPath), \
+                        f"Only `{AliasFieldPath.__name__}` could be non-complex alias. Not `{type(alias).__name__}`."
+                    chips = alias.field.split('.')
                     i += 1
                     names[i:i] = chips
                     continue
