@@ -20,6 +20,7 @@ class OqlAcl:
     def __init__(self, env):
         self.env = env
         self._model2acl: Dict[str, OqlModelAcl] = KeyPassingDefaultDict(self._load_model)
+        self._mode2models: Dict[str, Set[str]] = KeyPassingDefaultDict(env["ir.model.access"].perm_models)
 
     def __getitem__(self, model_name: str) -> "OqlModelAcl":
         return self._model2acl[model_name]
@@ -30,6 +31,9 @@ class OqlAcl:
             document_kind = self.env['ir.model']._get(model).name or model
             raise AccessError(_("You are not allowed to %s field '%s' of '%s' (%s) records.",
                                 mode, field, document_kind, model))
+
+    def perm_models(self, mode: Literal["read", "write"]) -> Set[str]:
+        return self._mode2models[mode]
 
     def perm_paths(self, model: str, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
         """Find out dot-style paths on `model` that current user has access to."""
@@ -81,7 +85,7 @@ class OqlModelAcl:
         self.acl = acl
         self.env = acl.env
         self.model_name = model_name
-        self._mode2fields: Dict[str, set] = KeyPassingDefaultDict(self._check_fields)
+        self._mode2fields: Dict[str, set] = KeyPassingDefaultDict(self._perm_fields)
 
     def __getitem__(self, field_name: Union[str, List[str]]) -> Union["OqlFieldAcl", List["OqlFieldAcl"]]:
         """Get field or fields ACL."""
@@ -107,8 +111,8 @@ class OqlModelAcl:
                 ok_fields.add(f_meta.name)
         return ok_fields
 
-    def _check_fields(self, mode: str):
-        return set(self.env["oql.acl.field"].check_fields(self.model_name, mode))
+    def _perm_fields(self, mode: str) -> Set[str]:
+        return self.env["oql.acl.field"].perm_fields(self.model_name, mode)
 
 
 class OqlFieldAcl:

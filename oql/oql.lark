@@ -7,7 +7,7 @@ from_clause: "from"i model
 where_clause: "where"i expr
 limit_clause: "limit"i INT
 offset_clause: "offset"i INT
-orderby_clause: "order"i "by"i orderby_fields
+orderby_clause: ORDER_BY orderby_fields
 
 ?expr: or_expr
 
@@ -84,6 +84,7 @@ FLOAT: /[-+]?\d+\.\d+/
 TRUE: "true"i
 FALSE: "false"i
 NULL: "null"i
+ORDER_BY: /order\s+by/i
 ASC: "asc"i
 DESC: "desc"i
 

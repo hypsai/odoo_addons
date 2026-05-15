@@ -2,7 +2,7 @@
 # @Time         : 20:33 2026/5/9
 # @Author       : Chris
 # @Description  :
-from typing import Literal, List
+from typing import Literal, Set
 
 from odoo import fields, models, api
 
@@ -25,12 +25,13 @@ class OqlAclField(models.Model):
                          "Field must be unique in a model's field access collection.")]
 
     @api.model
-    def check_fields(self, model: str, mode: Literal["read", "write"]) -> List[str]:
+    def perm_fields(self, model: str, mode: Literal["read", "write"]) -> Set[str]:
         """Check field access rights of the given model, and return all the fields that have given `mode` access right."""
         if self.env.su:
             # User root have all accesses
             return list(self.env[model]._fields)
 
+        self.env["ir.model.access"].flush()
         self.flush(self._fields)
 
         sql = f"""
@@ -45,9 +46,9 @@ class OqlAclField(models.Model):
         HAVING BOOL_OR(b.perm_{mode} AND COALESCE(e.perm_{mode}, b.perm_oql_fac_default_{mode}, FALSE))
         """
         self._cr.execute(sql, (self._uid, model))
-        field_names = [row[0] for row in self._cr.fetchall()]
+        field_names = {row[0] for row in self._cr.fetchall()}
 
         if mode == "read" and "id" not in field_names:
-            field_names.append("id")  # ID is always readable.
+            field_names.add("id")  # ID is always readable.
 
         return field_names

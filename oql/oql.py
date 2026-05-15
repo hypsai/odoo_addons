@@ -58,10 +58,11 @@ class OqlMeta:
     def _load_term_fields(self):
         """Load fields that have a relation to `oql.term`."""
         env = self.env
+        perm_models = self.acl.perm_models("read")
         fields = env['ir.model.fields'].sudo().search([
             '|', ('ttype', '=', 'many2one'), ('ttype', '=', 'many2many'),
             ('relation', '=', "oql.term"),
-            ('model', '!=', 'oql.term.domain'),
+            ('model', 'in', list(perm_models)),
         ])
         return fields
 
@@ -79,6 +80,8 @@ class OqlMeta:
         """
         term2domains: Dict[Term, List[OqlDomain]] = defaultdict(list)
         env = self.env
+        acl = self.acl
+        perm_models = acl.perm_models("read")
         # 1 Search all Many2One and Many2Many fields that refer to 'oql.term'
         fields = self._term_fields
         # 2 Load terms.
@@ -107,7 +110,9 @@ class OqlMeta:
         for term_rec in term_recs:
             term = term_rec.name
             for domain_rec in term_rec.domain_ids:
-                model = domain_rec.model_id.model
+                model: str = domain_rec.model_id.model
+                if model not in perm_models:
+                    continue  # Omit domain that has no read access to bound model.
                 domain_name = domain_rec.name
                 str_domain = domain_rec.domain
                 try:
