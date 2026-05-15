@@ -19,11 +19,14 @@ class OqlMcpBase(models.AbstractModel):
         Differences from SQL:
             1. FROM clause is placed at start of a query string.
             2. It uses Odoo domain operators such as 'like', '=like', etc. Be careful about this!!!
+                Don't add `%` in comparison string when use operator `like`, `ilike`. If you need to use `%`,
+                use `=like`, `=ilike` operator instead.
             3. `id` field will be added to result automatically.
         OQL Example:
             FROM product.product
             SELECT name, default_code, tag_ids.name
             WHERE Brand = 'Danner' and Waterproof and list_price > 1000
+            ORDER BY name ASC
             LIMIT 80
             OFFSET 160
         Use `oql_mcp_hint` to find out valid model and field you have access to, or valid candidate values for a field.
