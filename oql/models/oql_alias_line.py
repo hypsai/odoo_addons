@@ -69,7 +69,10 @@ class OqlAliasLine(models.Model):
     @api.depends("path")
     def _compute_is_complex(self):
         for rec in self:
-            root = AliasNode.parse(rec.path, rec.alias)
-            rec.is_complex = root.is_complex
-            if root.is_complex:
-                rec.enable_shorthand = False  # Turn off automatically.
+            if rec.path:
+                root = AliasNode.parse(rec.path, rec.alias or "")
+                rec.is_complex = root.is_complex
+                if root.is_complex:
+                    rec.enable_shorthand = False  # Turn off automatically.
+            else:
+                rec.is_complex = False

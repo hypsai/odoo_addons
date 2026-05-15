@@ -220,7 +220,9 @@ class FieldAccess:
                     next_.append(FieldAccess(env[child_domain.model], remains, meta, child_domain))
                 break
             prefix = ".".join([tn(model), *plain_names])
-            raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term.") % (prefix, name))
+            raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term. "
+                                 f"Or you don't have access right to it.")
+                               % (prefix, name))
         # Validate (.) term statement.
         rear = p_recs
         if (next_ or tail_alias) and not isinstance(rear, Model):
