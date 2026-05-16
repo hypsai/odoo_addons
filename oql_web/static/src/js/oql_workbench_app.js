@@ -24,7 +24,10 @@
                     params: params || {},
                     id: Math.floor(Math.random() * 1000000)
                 }),
-                dataType: 'json'
+                dataType: 'json',
+                xhrFields: {
+                    withCredentials: true  // Ensure cookies are sent
+                }
             }).then(function(response) {
                 if (response.error) {
                     throw new Error(response.error.data.message || response.error.message);
@@ -118,6 +121,12 @@
             return this.editorInstance.start().then(function() {
                 self.editor = self.editorInstance.editor;
                 
+                // Verify editor was created successfully
+                if (!self.editor || typeof self.editor.refresh !== 'function') {
+                    console.error('[OQL] Editor initialization failed - editor object is invalid');
+                    throw new Error('Editor initialization failed');
+                }
+                
                 // Set value first (if exists)
                 if (self.query) {
                     self.editor.setValue(self.query);
@@ -125,8 +134,14 @@
                 
                 // Force refresh to ensure proper rendering
                 setTimeout(function() {
-                    self.editor.refresh();
-                    self.editor.focus();
+                    if (self.editor && typeof self.editor.refresh === 'function') {
+                        try {
+                            self.editor.refresh();
+                            self.editor.focus();
+                        } catch (e) {
+                            console.error('[OQL] Error during editor refresh:', e);
+                        }
+                    }
                 }, 100);
                 
                 // Listen for changes
@@ -232,16 +247,56 @@
             this.renderLayout();
             this.bindEvents();
             this.loadUserInfo();
+            this.initAutoSave();  // Initialize auto-save
             
             return this.loadModels().then(function() {
-                // Try to load saved state first
-                self.loadState();
+                // Check if localStorage has data
+                var localStateStr = localStorage.getItem('oql_workbench_state');
+                var hasLocalData = false;
+                
+                if (localStateStr) {
+                    try {
+                        var localState = JSON.parse(localStateStr);
+                        hasLocalData = localState.tabs && localState.tabs.length > 0;
+                    } catch (e) {
+                        console.warn('[OQL] Failed to parse local state:', e);
+                    }
+                }
+                
+                if (hasLocalData) {
+                    // Use localStorage as primary source (avoid overwriting with stale cloud data)
+                    console.log('[OQL] Loading from localStorage');
+                    self.restoreFromLocalStorage();
+                } else {
+                    // No local data, try to load from cloud (new device / first time)
+                    console.log('[OQL] No local data, trying cloud sync');
+                    self.syncFromCloud();
+                }
                 
                 // If no tabs were loaded, create a default one
                 if (self.tabs.length === 0) {
                     self.addTab();
                 }
             });
+        },
+        
+        /**
+         * Check if user has valid Odoo session
+         */
+        checkSession: function() {
+            var self = this;
+            return JsonRpcClient.call('/oql/user', {})
+                .then(function(response) {
+                    if (response.success && response.user) {
+                        console.log('[OQL] Session valid, user:', response.user.name);
+                        return true;
+                    }
+                    return false;
+                })
+                .catch(function(error) {
+                    console.warn('[OQL] Session check failed:', error.message);
+                    return false;
+                });
         },
 
         loadModels: function() {
@@ -290,6 +345,12 @@
                     '<div>OQL Workspace v1.0</div>' +
                 '</div>'
             );
+            
+            // Bind tab add button immediately after rendering
+            var self = this;
+            $('#tab-add').on('click', function() {
+                self.addTab();
+            });
         },
 
         renderModelList: function(filter) {
@@ -375,11 +436,15 @@
                 tab.$content.addClass('active');
                 this.activeTabId = tabId;
                 
-                if (tab.editor) {
-                    // Refresh editor to fix rendering issues after tab switch
+                // Check if editor exists and is initialized
+                if (tab.editor && typeof tab.editor.refresh === 'function') {
                     setTimeout(function() {
-                        tab.editor.refresh();
-                        tab.editor.focus();
+                        try {
+                            tab.editor.refresh();
+                            tab.editor.focus();
+                        } catch (e) {
+                            console.error('[OQL] Error refreshing editor:', e);
+                        }
                     }, 100);
                 }
             }
@@ -435,21 +500,200 @@
         },
 
         saveState: function() {
+            var self = this;
             var state = {
                 tabs: this.tabs.map(function(tab) {
                     return {
                         name: tab.name,
-                        query: tab.query,
-                        result: tab.result
+                        query: tab.query
+                        // Note: result is NOT saved to reduce storage size
+                    };
+                }),
+                activeTabId: this.activeTabId,
+                lastModified: Date.now()  // Add timestamp for conflict resolution
+            };
+            
+            // Save to localStorage immediately (fast, synchronous) - HIGH FREQUENCY
+            localStorage.setItem('oql_workbench_state', JSON.stringify(state));
+            
+            // Trigger async sync to cloud - LOW FREQUENCY (debounced)
+            this.triggerCloudSync(state);
+        },
+        
+        /**
+         * Initialize auto-save mechanism
+         */
+        initAutoSave: function() {
+            var self = this;
+            
+            // Debounce timer for cloud sync
+            this.cloudSyncTimer = null;
+            this.cloudSyncDelay = 10000; // 10 seconds debounce for cloud sync (LOW FREQUENCY)
+            this.lastCloudSyncTime = 0;
+            this.minCloudSyncInterval = 30000; // Minimum 30 seconds between cloud syncs
+            
+            // Listen for page unload to sync to cloud immediately
+            $(window).on('beforeunload', function() {
+                self.syncToCloudImmediately();
+            });
+        },
+        
+        /**
+         * Trigger cloud sync with debounce (LOW FREQUENCY)
+         */
+        triggerCloudSync: function(state) {
+            var self = this;
+            var now = Date.now();
+            
+            // Clear existing timer
+            if (this.cloudSyncTimer) {
+                clearTimeout(this.cloudSyncTimer);
+            }
+            
+            // Check minimum interval
+            var timeSinceLastSync = now - this.lastCloudSyncTime;
+            if (timeSinceLastSync < this.minCloudSyncInterval) {
+                // Wait until minimum interval passes
+                var remainingWait = this.minCloudSyncInterval - timeSinceLastSync;
+                this.cloudSyncTimer = setTimeout(function() {
+                    self.syncToCloud(state);
+                }, Math.max(remainingWait, this.cloudSyncDelay));
+            } else {
+                // Use normal debounce delay
+                this.cloudSyncTimer = setTimeout(function() {
+                    self.syncToCloud(state);
+                }, this.cloudSyncDelay);
+            }
+        },
+        
+        /**
+         * Sync state to cloud (async, non-blocking, LOW FREQUENCY)
+         */
+        syncToCloud: function(state) {
+            var self = this;
+            
+            console.log('[OQL] Saving state to cloud...', state);
+            
+            JsonRpcClient.call('/oql/state/save', { state: state })
+                .then(function(response) {
+                    console.log('[OQL] State saved successfully:', response);
+                    self.lastSaveTime = Date.now();
+                })
+                .catch(function(error) {
+                    console.error('[OQL] Auto-save to cloud failed:', error);
+                    // Don't show error to user - auto-save is best-effort
+                });
+        },
+        
+        /**
+         * Sync to cloud immediately (for page unload)
+         */
+        syncToCloudImmediately: function() {
+            var state = {
+                tabs: this.tabs.map(function(tab) {
+                    return {
+                        name: tab.name,
+                        query: tab.query
+                        // Note: result is NOT saved to reduce storage size
                     };
                 }),
                 activeTabId: this.activeTabId
             };
             
+            // Synchronous save to localStorage first
             localStorage.setItem('oql_workbench_state', JSON.stringify(state));
+            
+            // Then try synchronous cloud sync
+            try {
+                $.ajax({
+                    url: '/oql/state/save',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'call',
+                        params: { state: state },
+                        id: Math.floor(Math.random() * 1000000)
+                    }),
+                    async: false, // Synchronous for beforeunload
+                    dataType: 'json',
+                    xhrFields: {
+                        withCredentials: true
+                    }
+                });
+                console.log('[OQL] State synced to cloud before unload');
+            } catch (e) {
+                console.warn('[OQL] Cloud sync failed, but localStorage saved:', e.message);
+            }
         },
 
-        loadState: function() {
+        /**
+         * Load state from cloud ONLY - NO FALLBACK
+         */
+        loadStateFromCloud: function() {
+            var self = this;
+            
+            return JsonRpcClient.call('/oql/state/load', {})
+                .then(function(response) {
+                    if (!response.success) {
+                        throw new Error('[OQL] Failed to load state from cloud: ' + (response.error || 'Unknown error'));
+                    }
+                    
+                    if (response.state && response.state.tabs && response.state.tabs.length > 0) {
+                        console.log('[OQL] Loaded state from cloud');
+                        self.restoreFromCloud(response.state);
+                    } else {
+                        console.log('[OQL] No saved state in cloud');
+                    }
+                })
+                .catch(function(error) {
+                    console.error('[OQL] Load state from cloud failed:', error);
+                    throw error;  // NO FALLBACK - propagate error
+                });
+        },
+        
+        restoreFromCloud: function(state) {
+            var self = this;
+            
+            if (state.tabs && state.tabs.length > 0) {
+                // Create all tabs and collect their initialization promises
+                var initPromises = [];
+                
+                state.tabs.forEach(function(tabData) {
+                    var promise = new Promise(function(resolve) {
+                        var tab = new QueryTab(self, ++self.tabCounter, tabData);
+                        var rendered = tab.render();
+                        
+                        self.tabs.push(tab);
+                        $('#tab-add').before(rendered.$tab);
+                        $('#tabs-content').append(rendered.$content);
+                        
+                        // Wait for editor to initialize
+                        tab.initEditor().then(function() {
+                            resolve(tab.id);
+                        }).catch(function() {
+                            resolve(tab.id); // Still resolve even if editor fails
+                        });
+                    });
+                    
+                    initPromises.push(promise);
+                });
+                
+                // After all tabs are initialized, activate the active tab
+                Promise.all(initPromises).then(function() {
+                    if (state.activeTabId) {
+                        setTimeout(function() {
+                            self.switchTab(state.activeTabId);
+                        }, 100);
+                    } else if (self.tabs.length > 0) {
+                        // If no activeTabId, activate the first tab
+                        self.switchTab(self.tabs[0].id);
+                    }
+                });
+            }
+        },
+        
+        restoreFromLocalStorage: function() {
             var self = this;
             var saved = localStorage.getItem('oql_workbench_state');
             
@@ -469,10 +713,41 @@
                         }
                     }
                 } catch (e) {
-                    console.error('Failed to load workspace state:', e);
+                    console.error('[OQL] Failed to load workspace state from localStorage:', e);
                 }
             }
-        }
+        },
+        
+        /**
+         * Sync state from cloud (async, optional enhancement - LOW FREQUENCY)
+         */
+        syncFromCloud: function() {
+            var self = this;
+            
+            JsonRpcClient.call('/oql/state/load', {})
+                .then(function(response) {
+                    if (response.success && response.state && response.state.tabs && response.state.tabs.length > 0) {
+                        console.log('[OQL] Synced state from cloud');
+                        // Cloud state overrides localStorage state
+                        // Clear existing tabs first
+                        while (self.tabs.length > 0) {
+                            var tab = self.tabs[0];
+                            tab.destroy();
+                            tab.$element.remove();
+                            tab.$content.remove();
+                            self.tabs.splice(0, 1);
+                        }
+                        self.activeTabId = null;
+                        
+                        // Restore from cloud
+                        self.restoreFromCloud(response.state);
+                    }
+                })
+                .catch(function(error) {
+                    // Silent fail - localStorage is primary storage
+                    console.warn('[OQL] Cloud sync skipped:', error.message);
+                });
+        },
     };
 
     // ==========================================
@@ -483,31 +758,6 @@
         workbench.start();
         
         window.oqlWorkbench = workbench;
-        
-        // Add OQL Workbench button to navbar (only in backend, not in workbench page)
-        if (!document.body.classList.contains('o_oql_workbench')) {
-            addNavbarButton();
-        }
     });
-    
-    /**
-     * Add OQL Workbench button to Odoo's top navigation bar
-     */
-    function addNavbarButton() {
-        setTimeout(function() {
-            var $systray = $('.o_menu_systray');
-            
-            if ($systray.length > 0 && $('#oql_workbench_btn').length === 0) {
-                var $button = $('<li class="nav-item">' +
-                    '<a id="oql_workbench_btn" href="/oql" class="nav-link oql-workbench-btn" title="OQL Workbench" target="_blank">' +
-                        '<i class="fa fa-database"></i>' +
-                        '<span>OQL</span>' +
-                    '</a>' +
-                '</li>');
-                
-                $systray.prepend($button);
-            }
-        }, 1000);
-    }
 
 })();

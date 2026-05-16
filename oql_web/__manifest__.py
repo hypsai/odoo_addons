@@ -10,6 +10,8 @@
     "images": ["static/description/banner.png"],
 
     "data": [
+        "security/ir.model.access.csv",
+        "security/oql_workbench_security.xml",
         "views/oql_workbench.xml",
     ],
 
@@ -17,10 +19,13 @@
         "web.assets_backend": [
             "oql_web/static/lib/codemirror/lib/*",
             "oql_web/static/lib/codemirror/addon/**/*",
-            "oql_web/static/lib/codemirror/mode/oql/oql.js",
             "oql_web/static/src/xml/*",
-            "oql_web/static/src/css/*",
-            "oql_web/static/src/js/*",
+            "oql_web/static/src/css/oql_search.css",
+            "oql_web/static/src/css/oql_navbar_button.css",  # Navbar button styles (global)
+            "oql_web/static/src/js/oql_editor_core.js",
+            "oql_web/static/src/js/oql_highlight.js",
+            "oql_web/static/src/js/oql_search_bar.js",
+            "oql_web/static/src/js/oql_navbar_button.js",
         ],
     },
 

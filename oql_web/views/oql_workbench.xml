@@ -24,12 +24,12 @@
             
             <!-- OQL Editor Core (Standalone) - includes syntax highlighting -->
             <script src="/oql_web/static/src/js/oql_editor_standalone.js"></script>
+            
+            <!-- OQL Workbench App (ONLY loaded on workbench page) -->
+            <script src="/oql_web/static/src/js/oql_workbench_app.js"></script>
         </head>
         <body class="o_oql_workbench">
             <div id="app"></div>
-            
-            <!-- Main Application -->
-            <script src="/oql_web/static/src/js/oql_workbench_app.js"></script>
         </body>
         </html>
     </template>

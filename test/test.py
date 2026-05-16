@@ -27,7 +27,7 @@ sys.argv.append(f"--database=odoo_addons_v{ver}")
 sys.argv.append(f"--test-enable")
 sys.argv.append(f"--stop-after-init")
 sys.argv.append("--log-level=test")
-# sys.argv.append(f"--test-tags=/{target}")
+sys.argv.append(f"--test-tags=/{target}")
 
 if __name__ == "__main__":
     odoo.cli.command.main()

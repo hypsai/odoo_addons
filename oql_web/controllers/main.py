@@ -77,3 +77,77 @@ class OQLWebController(http.Controller):
         """
         # Return empty preferences - actual storage will be in localStorage
         return {'success': True, 'preferences': {}}
+    
+    @http.route('/oql/state/save', type='json', auth='user')
+    def oql_save_state(self, state):
+        """
+        Save workbench state for current user (auto-save).
+        
+        :param state: Complete workbench state object
+        :return: Success status
+        """
+        try:
+            request.env['oql.workbench.state'].sudo().create_or_update_state(state)
+            return {'success': True}
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    @http.route('/oql/state/load', type='json', auth='user')
+    def oql_load_state(self):
+        """
+        Load workbench state for current user.
+        
+        :return: Workbench state or empty object
+        """
+        try:
+            state = request.env['oql.workbench.state'].sudo().get_user_state()
+            return {
+                'success': True,
+                'state': state
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'state': {}
+            }
+    
+    @http.route('/oql/state/save', type='json', auth='user')
+    def oql_save_state(self, state):
+        """
+        Save workbench state for current user (auto-save).
+        
+        :param state: Complete workbench state object
+        :return: Success status
+        """
+        try:
+            request.env['oql.workbench.state'].sudo().create_or_update_state(state)
+            return {'success': True}
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    @http.route('/oql/state/load', type='json', auth='user')
+    def oql_load_state(self):
+        """
+        Load workbench state for current user.
+        
+        :return: Workbench state or empty object
+        """
+        try:
+            state = request.env['oql.workbench.state'].sudo().get_user_state()
+            return {
+                'success': True,
+                'state': state
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'state': {}
+            }
