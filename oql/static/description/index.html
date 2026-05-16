@@ -24,6 +24,17 @@
             <div style="background-color: #e8f5e9; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);">
                 <h3 style="color: #2e7d32; margin-bottom: 20px; text-align: center;"><i class="fa fa-magic mr-2"></i>From Complex to Simple</h3>
                 
+                <!-- The Problem -->
+                <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #ff9800;">
+                    <h5 style="color: #e65100; font-weight: 700; margin-bottom: 10px;"><i class="fa fa-question-circle mr-2"></i>The Problem</h5>
+                    <p style="margin: 0; color: #555; font-size: 1.1rem; line-height: 1.6;">
+                        <strong>How do I find Danner waterproof military boots in EU size 40 or 40.5?</strong>
+                    </p>
+                    <p style="margin: 10px 0 0 0; color: #888; font-size: 0.95rem;">
+                        This seemingly simple question requires navigating multiple related models, understanding complex domain syntax, and writing verbose code...
+                    </p>
+                </div>
+                
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <h5 style="color: #c62828; font-weight: 700;"><i class="fa fa-times-circle mr-2"></i>Traditional Domain (30+ lines)</h5>
@@ -101,8 +112,8 @@ products = env['product.product'].search([
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-cogs mr-2"></i>No Code Setup</h5>
-                <p class="text-muted small">Configure everything in Odoo's interface. No programming skills required.</p>
+                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-desktop mr-2"></i>Rich Web UI</h5>
+                <p class="text-muted small">Interactive query builder with syntax highlighting and autocomplete. Install free addon "oql_web" for enhanced experience.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
@@ -147,12 +158,12 @@ products = env['product.product'].search([
                                     <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
                                         <i class="fa fa-filter mr-2" style="color: #4caf50;"></i>
                                         <strong>Domain-Based</strong><br>
-                                        <span style="font-size: 0.9em; color: #888;">Create term → Add domain rules via UI</span>
+                                        <span style="font-size: 0.9em; color: #888;">Create term &rarr; Add domain rules via UI</span>
                                     </li>
                                     <li style="padding: 8px 0;">
                                         <i class="fa fa-link mr-2" style="color: #4caf50;"></i>
                                         <strong>Relationship Field</strong><br>
-                                        <span style="font-size: 0.9em; color: #888;">Add Many2many field → Tag records through interface</span>
+                                        <span style="font-size: 0.9em; color: #888;">Add Many2many field &rarr; Tag records through interface</span>
                                     </li>
                                 </ul>
                             </div>
@@ -172,7 +183,7 @@ env['product.product'].searcho("Waterproof")</pre>
                         <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #ffc107;">
                             <p style="margin: 0; font-size: 0.9rem; color: #856404;">
                                 <i class="fa fa-info-circle mr-1"></i>
-                                <strong>Navigate to:</strong> Settings > Technical > OQL > Terms to configure
+                                <strong>Navigate to:</strong> Settings &gt; Technical &gt; OQL &gt; Terms to configure
                             </p>
                         </div>
                     </div>
@@ -194,13 +205,13 @@ env['product.product'].searcho("Waterproof")</pre>
                                 <h6 style="font-weight: 700; color: #4caf50;"><i class="fa fa-exchange mr-2"></i>Common Mappings</h6>
                                 <ul style="list-style: none; padding: 0; color: #666; font-size: 0.9em;">
                                     <li style="padding: 6px 0; border-bottom: 1px dashed #e0e0e0;">
-                                        <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">product_tmpl_id.default_code</code> → <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 3px; color: #2e7d32; font-weight: 600;">spu</code>
+                                        <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">product_tmpl_id.default_code</code> &rarr; <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 3px; color: #2e7d32; font-weight: 600;">spu</code>
                                     </li>
                                     <li style="padding: 6px 0; border-bottom: 1px dashed #e0e0e0;">
-                                        <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">categ_id.complete_name</code> → <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 3px; color: #2e7d32; font-weight: 600;">category</code>
+                                        <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">categ_id.complete_name</code> &rarr; <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 3px; color: #2e7d32; font-weight: 600;">category</code>
                                     </li>
                                     <li style="padding: 6px 0;">
-                                        <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">partner_id.country_id.name</code> → <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 3px; color: #2e7d32; font-weight: 600;">country</code>
+                                        <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">partner_id.country_id.name</code> &rarr; <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 3px; color: #2e7d32; font-weight: 600;">country</code>
                                     </li>
                                 </ul>
                             </div>
@@ -219,7 +230,7 @@ env['product.product'].searcho("Waterproof")
                         <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #ffc107;">
                             <p style="margin: 0; font-size: 0.9rem; color: #856404;">
                                 <i class="fa fa-info-circle mr-1"></i>
-                                <strong>Navigate to:</strong> Settings > Technical > OQL > Aliases to configure
+                                <strong>Navigate to:</strong> Settings &gt; Technical &gt; OQL &gt; Aliases to configure
                             </p>
                         </div>
                     </div>
@@ -404,7 +415,7 @@ searcho("Waterproof")</pre>
                                 <i class="fa fa-cogs mr-2" style="color: #4caf50;"></i>
                                 <strong>Install via Odoo Interface</strong><br>
                                 <span style="font-size: 0.9em; color: #888;">
-                                    Enable Developer Mode → <strong>Apps</strong> → Click <strong>Update Apps List</strong> → Search "<strong>oql</strong>" → Click <strong>Install</strong>
+                                    Enable Developer Mode &rarr; <strong>Apps</strong> &rarr; Click <strong>Update Apps List</strong> &rarr; Search "<strong>oql</strong>" &rarr; Click <strong>Install</strong>
                                 </span>
                             </li>
                         </ul>
