@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+    <!-- OQL Workbench Page Template -->
     <template id="oql_workbench_template" name="OQL Workbench">
         <html lang="en">
         <head>

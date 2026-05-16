@@ -12,7 +12,7 @@ _logger = logging.getLogger(__name__)
 
 class McpController(http.Controller):
 
-    @http.route('/oql_query', type='json', auth='user', csrf=False)
+    @http.route('/oql/query', type='json', auth='user', csrf=False)
     def oql_query(self, query):
         """Execute OQL query and return result as list of dict."""
         _logger.debug(f"OQL query from user {request.env.user.name} (ID {request.env.uid}): {query}")

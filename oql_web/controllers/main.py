@@ -13,6 +13,13 @@ class OQLWebController(http.Controller):
         """
         return request.render('oql_web.oql_workbench_template')
     
+    @http.route('/oql/workbench', type='http', auth='user', website=True, methods=['GET'], csrf=False)
+    def oql_workbench_redirect(self, **kwargs):
+        """
+        Redirect /oql/workbench to /oql (same page, just an alias).
+        """
+        return request.render('oql_web.oql_workbench_template')
+    
     @http.route('/oql/models', type='json', auth='user')
     def oql_get_models(self):
         """

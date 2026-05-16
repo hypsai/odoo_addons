@@ -6,6 +6,29 @@
     box-sizing: border-box;
 }
 
+/* Navbar Button Styles */
+.oql-workbench-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 46px !important;
+    padding: 0 12px;
+    color: #ffffff !important;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-radius: 0;
+}
+
+.oql-workbench-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+.oql-workbench-btn i {
+    font-size: 16px;
+}
+
 .o_oql_workbench {
     height: 100vh;
     display: flex;
