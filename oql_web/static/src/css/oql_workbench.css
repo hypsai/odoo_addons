@@ -368,6 +368,20 @@
     transform: translate(1px, 1px);
 }
 
+/* Loading state for stop button */
+.oql-btn-loading .oql-btn-icon {
+    animation: oql-spin 1s linear infinite;
+}
+
+@keyframes oql-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .oql-editor-container {
     flex: 0 0 auto;
     height: 200px;

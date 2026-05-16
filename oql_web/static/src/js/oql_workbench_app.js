@@ -113,6 +113,11 @@
             this.$content.find('.oql-btn-execute').on('click', function() {
                 self.execute();
             });
+            
+            // Bind stop button
+            this.$content.find('.oql-btn-stop').on('click', function() {
+                self.stopExecution();
+            });
 
             return {
                 $tab: this.$element,
@@ -181,17 +186,100 @@
                 this.showResult(null, 'Please enter a query');
                 return Promise.resolve();
             }
-
-            return JsonRpcClient.call('/oql/query', { query: query })
-                .then(function(result) {
-                    self.result = result;
-                    self.showResult(result, null);
-                    self.workspace.saveState();
-                })
-                .catch(function(error) {
-                    console.error('[OQL] Query execution failed:', error);
-                    self.showResult(null, error.message || 'Query execution failed');
-                });
+            
+            // Show loading state
+            this.setLoading(true);
+            
+            // Use setTimeout to ensure UI updates before RPC call
+            return new Promise(function(resolve) {
+                setTimeout(function() {
+                    // Create the AJAX request and store it
+                    var xhr = $.ajax({
+                        url: '/oql/query',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'call',
+                            params: { query: query },
+                            id: Math.floor(Math.random() * 1000000)
+                        }),
+                        dataType: 'json',
+                        xhrFields: {
+                            withCredentials: true
+                        }
+                    });
+                    
+                    // Store the xhr object for aborting
+                    self.currentXhr = xhr;
+                    
+                    xhr.then(function(response) {
+                        if (response.error) {
+                            throw new Error(response.error.data.message || response.error.message);
+                        }
+                        var result = response.result;
+                        console.log('[OQL] Query executed successfully, rows:', result ? result.length : 0);
+                        self.result = result;
+                        self.showResult(result, null);
+                        self.workspace.saveState();
+                        // Hide loading state on success
+                        self.setLoading(false);
+                        self.currentXhr = null; // Clear xhr reference
+                        resolve(result);
+                    })
+                    .catch(function(error) {
+                        console.error('[OQL] Query execution failed:', error);
+                        // Don't show error if request was aborted
+                        if (error.statusText !== 'abort' && error.readyState !== 0) {
+                            self.showResult(null, error.message || 'Query execution failed');
+                        }
+                        // Hide loading state on error
+                        self.setLoading(false);
+                        self.currentXhr = null; // Clear xhr reference
+                        resolve(null);
+                    });
+                }, 0);
+            });
+        },
+        
+        /**
+         * Set loading state for execute button
+         */
+        setLoading: function(isLoading) {
+            var $executeBtn = this.$content.find('.oql-btn-execute');
+            var $stopBtn = this.$content.find('.oql-btn-stop');
+            var $stopIcon = $stopBtn.find('.oql-btn-icon');
+            
+            if (isLoading) {
+                $executeBtn.hide();
+                $stopBtn.css('display', 'flex').addClass('oql-btn-loading');
+                $stopIcon.html('&#x21bb;'); // Unicode circular arrow for loading
+            } else {
+                $executeBtn.show();
+                $stopBtn.hide().removeClass('oql-btn-loading');
+                $stopIcon.html('⏹'); // Stop icon
+            }
+        },
+        
+        /**
+         * Stop current query execution
+         */
+        stopExecution: function() {
+            console.log('[OQL] Stop button clicked');
+            
+            if (this.currentXhr && typeof this.currentXhr.abort === 'function') {
+                console.log('[OQL] Aborting current request');
+                this.currentXhr.abort();
+                this.currentXhr = null;
+                
+                // Hide loading state immediately
+                this.setLoading(false);
+                
+                // Show message
+                this.showResult(null, 'Query cancelled by user');
+            } else {
+                console.log('[OQL] No active request to abort');
+            }
         },
 
         showResult: function(data, error) {
@@ -589,7 +677,10 @@
                 }
             }
             
-            this.saveState();
+            // Save state asynchronously to avoid blocking UI
+            setTimeout(function() {
+                this.saveState();
+            }.bind(this), 0);
         },
 
         getActiveTab: function() {
@@ -614,7 +705,7 @@
         },
 
         openNewTabWithModel: function(model) {
-            var query = 'from ' + model + ' select *';
+            var query = 'from ' + model + '\nselect id\nwhere id > 0\nlimit 20';
             this.addTab({ name: model, query: query });
         },
 
