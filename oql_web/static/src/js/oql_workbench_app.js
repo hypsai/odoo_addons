@@ -72,9 +72,26 @@
             });
 
             this.$content = $('<div class="oql-tab-content">' +
+                '<div class="oql-editor-toolbar">' +
+                    '<div class="oql-toolbar-left">' +
+                        '<button class="oql-btn-execute" title="Execute (Ctrl+Enter)">' +
+                            '<span class="oql-btn-icon">▶</span>' +
+                            '<span class="oql-btn-text">Run</span>' +
+                        '</button>' +
+                        '<button class="oql-btn-stop" title="Stop" style="display:none;">' +
+                            '<span class="oql-btn-icon">⏹</span>' +
+                            '<span class="oql-btn-text">Stop</span>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
                 '<div class="oql-editor-container"></div>' +
                 '<div class="oql-result-container"></div>' +
             '</div>');
+            
+            // Bind execute button
+            this.$content.find('.oql-btn-execute').on('click', function() {
+                self.execute();
+            });
 
             return {
                 $tab: this.$element,
@@ -125,14 +142,7 @@
 
         execute: function() {
             var self = this;
-            
-            console.log('[OQL Workbench] Execute called');
-            console.log('[OQL Workbench] Editor exists:', !!this.editor);
-            console.log('[OQL Workbench] EditorInstance exists:', !!this.editorInstance);
-            
             var query = this.editor ? this.editor.getValue() : '';
-            
-            console.log('[OQL Workbench] Query:', query.substring(0, 50));
             
             if (!query.trim()) {
                 this.showResult(null, 'Please enter a query');
@@ -141,13 +151,12 @@
 
             return JsonRpcClient.call('/oql_query', { query: query })
                 .then(function(result) {
-                    console.log('[OQL Workbench] Query executed successfully, rows:', result ? result.length : 0);
                     self.result = result;
                     self.showResult(result, null);
                     self.workspace.saveState();
                 })
                 .catch(function(error) {
-                    console.error('Query error:', error);
+                    console.error('[OQL] Query execution failed:', error);
                     self.showResult(null, error.message || 'Query execution failed');
                 });
         },
@@ -222,6 +231,7 @@
             
             this.renderLayout();
             this.bindEvents();
+            this.loadUserInfo();
             
             return this.loadModels().then(function() {
                 // Try to load saved state first
@@ -252,16 +262,10 @@
         renderLayout: function() {
             $('#app').html(
                 '<div class="oql-workbench-header">' +
-                    '<button class="oql-toolbar-btn btn-primary" id="btn-execute">' +
-                        '<i class="fa fa-play"></i> Execute' +
-                    '</button>' +
-                    '<div class="oql-toolbar-separator"></div>' +
-                    '<button class="oql-toolbar-btn" id="btn-new-tab">' +
-                        '<i class="fa fa-plus"></i> New Tab' +
-                    '</button>' +
-                    '<button class="oql-toolbar-btn" id="btn-clear">' +
-                        '<i class="fa fa-trash"></i> Clear' +
-                    '</button>' +
+                    '<div class="oql-workbench-title">OQL Workbench</div>' +
+                    '<div class="oql-user-info" id="user-info">' +
+                        '<i class="fa fa-user"></i> <span>Loading...</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="oql-workbench-content">' +
                     '<div class="oql-sidebar">' +
@@ -312,25 +316,7 @@
         bindEvents: function() {
             var self = this;
 
-            $('#btn-execute').on('click', function() {
-                self.executeCurrentTab();
-            });
-
-            $('#btn-new-tab, #tab-add').on('click', function() {
-                self.addTab();
-            });
-
-            $('#btn-clear').on('click', function() {
-                var tab = self.getActiveTab();
-                if (tab && tab.editor) {
-                    tab.editor.setValue('');
-                }
-            });
-
-            $('#model-search').on('input', function() {
-                self.renderModelList($(this).val());
-            });
-
+            // Keyboard shortcuts
             $(document).on('keydown', function(e) {
                 if (e.ctrlKey && e.key === 'Enter') {
                     e.preventDefault();
@@ -341,6 +327,23 @@
                     self.addTab();
                 }
             });
+
+            $('#model-search').on('input', function() {
+                self.renderModelList($(this).val());
+            });
+        },
+        
+        loadUserInfo: function() {
+            var self = this;
+            JsonRpcClient.call('/oql/user', {})
+                .then(function(response) {
+                    if (response.success && response.user) {
+                        $('#user-info span').text(response.user.name);
+                    }
+                })
+                .catch(function() {
+                    $('#user-info span').text('Unknown');
+                });
         },
 
         addTab: function(options) {

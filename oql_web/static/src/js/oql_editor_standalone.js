@@ -161,13 +161,11 @@
 
             // Ctrl-Space for manual hint trigger (standard)
             keys["Ctrl-Space"] = function(cm) {
-                console.log('[OQL Standalone] Ctrl-Space pressed');
                 self._showHint(cm, false);
             };
             
             // Also support just pressing Ctrl (for convenience)
             keys["Ctrl"] = function(cm) {
-                console.log('[OQL Standalone] Ctrl pressed');
                 self._showHint(cm, false);
             };
 
@@ -249,20 +247,12 @@
          * @private
          */
         _showHint: function(cm, strict) {
-            if (this.readonly) {
-                console.log('[OQL Standalone] Editor is readonly, skip hint');
-                return;
-            }
+            if (this.readonly) return;
             strict = strict || false;
-            
-            console.log('[OQL Standalone] _showHint called, strict:', strict);
             
             var self = this;
             CodeMirror.showHint(cm, function(cm, callback) {
-                console.log('[OQL Standalone] CodeMirror.showHint callback invoked');
-                // Use Promise to handle async operation
                 self._getHints(cm, strict).then(function(hints) {
-                    console.log('[OQL Standalone] Hints resolved, calling callback');
                     callback(hints);
                 }).catch(function(error) {
                     console.error('[OQL] Error getting hints:', error);
@@ -270,7 +260,7 @@
                 });
             }, {
                 'completeSingle': false,
-                'async': true  // Enable async mode
+                'async': true
             });
         },
 
@@ -281,14 +271,12 @@
          * @private
          */
         _getHints: async function(cm, strict) {
-            console.log('[OQL Standalone] _getHints called');
             var self = this;
             var cursor = cm.getCursor();
             var doc = cm.getDoc();
             var content = doc.getValue();
             var cursorIndex = doc.indexFromPos(cursor);
             var token = self._getCurrentToken(cm);
-            console.log('[OQL Standalone] Token:', token, 'Content length:', content.length);
             
             var prefix = content.substring(0, cursorIndex - token.length);
             var context = prefix.trim();
@@ -316,15 +304,12 @@
                 }
             }
             
-            console.log('[OQL Standalone] Cache hit:', !!hints);
-            
             if (strict && hints && hints.length >= limit) {
                 hints = null;
             }
             
             // Fetch hints from server when cache missing
             if (!hints) {
-                console.log('[OQL Standalone] Fetching hints from server...');
                 try {
                     var response = await $.ajax({
                         url: '/web/dataset/call_kw',
@@ -335,7 +320,7 @@
                             method: 'call',
                             params: {
                                 model: self.model,
-                                method: 'oql_hint',  // Use oql_hint for workbench
+                                method: 'oql_hint',
                                 args: [content, cursorIndex, limit],
                                 kwargs: {}
                             },
@@ -343,8 +328,6 @@
                         }),
                         dataType: 'json'
                     });
-                    
-                    console.log('[OQL Standalone] Server response:', response);
                     
                     if (response.error) {
                         console.error('[OQL] Failed to fetch hints:', response.error);
@@ -363,13 +346,9 @@
                     return b[0].length - a[0].length;
                 });
             }
-
-            console.log('[OQL Standalone] Hints count before filter:', hints.length);
             
             // Filter and sort hints
             hints = self._filterAndSortHints(hints, token);
-            
-            console.log('[OQL Standalone] Hints count after filter:', hints.length);
 
             // Generate hint list
             var hintList = hints.map(function(item) {
@@ -382,8 +361,6 @@
                     }
                 };
             });
-
-            console.log('[OQL Standalone] Returning hints:', hintList.length);
             
             return {
                 list: hintList,

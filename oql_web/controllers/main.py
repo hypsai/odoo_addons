@@ -32,6 +32,23 @@ class OQLWebController(http.Controller):
                 'error': str(e)
             }
     
+    @http.route('/oql/user', type='json', auth='user')
+    def oql_get_user(self):
+        """
+        Get current user information.
+        
+        :return: User name and ID
+        """
+        user = request.env.user
+        return {
+            'success': True,
+            'user': {
+                'name': user.name,
+                'id': user.id,
+                'login': user.login
+            }
+        }
+    
     @http.route('/oql/preferences/save', type='json', auth='user')
     def oql_save_preferences(self, preferences):
         """
