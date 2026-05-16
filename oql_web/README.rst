@@ -55,6 +55,30 @@ See OQL Web in action! The following demo shows the search interface with syntax
    :align: center
    :width: 100%
 
+OQL Query Workbench
+===================
+
+For advanced query development, access the **OQL Workbench** by clicking the OQL button in the top navigation bar:
+
+.. image:: static/description/workbench_entry.png
+   :alt: OQL Workbench Entry Button
+   :align: center
+   :width: 100%
+
+This opens a full-screen IDE at ``/oql``:
+
+.. image:: static/description/workbench.png
+   :alt: OQL Workbench Interface
+   :align: center
+   :width: 100%
+
+**Key Features:**
+
+* Multi-tab interface for multiple queries
+* Model browser for quick query creation
+* Auto-save workspace state
+* Cloud sync + localStorage backup
+
 Key Features
 ============
 

@@ -8,7 +8,7 @@ class OQLWebController(http.Controller):
     @http.route('/oql', type='http', auth='user', website=True, methods=['GET'], csrf=False)
     def oql_workbench(self, **kwargs):
         """
-        OQL Query Workbench - A Navicat-like interface for executing OQL queries.
+        OQL Workbench - A Navicat-like interface for executing OQL queries.
         GET method displays the workbench UI.
         """
         return request.render('oql_web.oql_workbench_template')
