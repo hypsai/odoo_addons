@@ -102,7 +102,11 @@
                         '<button class="oql-btn-stop" title="Stop" style="display:none;">' +
                             '<span class="oql-btn-icon">⏹</span>' +
                             '<span class="oql-btn-text">Stop</span>' +
+                            '<span class="oql-loading-spinner"></span>' +
                         '</button>' +
+                    '</div>' +
+                    '<div class="oql-toolbar-right">' +
+                        '<span class="oql-result-info"></span>' +
                     '</div>' +
                 '</div>' +
                 '<div class="oql-editor-container"></div>' +
@@ -218,9 +222,9 @@
                             throw new Error(response.error.data.message || response.error.message);
                         }
                         var result = response.result;
-                        console.log('[OQL] Query executed successfully, rows:', result ? result.length : 0);
                         self.result = result;
                         self.showResult(result, null);
+                        self.updateResultInfo(result);
                         self.workspace.saveState();
                         // Hide loading state on success
                         self.setLoading(false);
@@ -228,7 +232,6 @@
                         resolve(result);
                     })
                     .catch(function(error) {
-                        console.error('[OQL] Query execution failed:', error);
                         // Don't show error if request was aborted
                         if (error.statusText !== 'abort' && error.readyState !== 0) {
                             self.showResult(null, error.message || 'Query execution failed');
@@ -253,7 +256,7 @@
             if (isLoading) {
                 $executeBtn.hide();
                 $stopBtn.css('display', 'flex').addClass('oql-btn-loading');
-                $stopIcon.html('&#x21bb;'); // Unicode circular arrow for loading
+                $stopIcon.html('⏹'); // Square stop icon
             } else {
                 $executeBtn.show();
                 $stopBtn.hide().removeClass('oql-btn-loading');
@@ -265,10 +268,7 @@
          * Stop current query execution
          */
         stopExecution: function() {
-            console.log('[OQL] Stop button clicked');
-            
             if (this.currentXhr && typeof this.currentXhr.abort === 'function') {
-                console.log('[OQL] Aborting current request');
                 this.currentXhr.abort();
                 this.currentXhr = null;
                 
@@ -277,9 +277,23 @@
                 
                 // Show message
                 this.showResult(null, 'Query cancelled by user');
-            } else {
-                console.log('[OQL] No active request to abort');
             }
+        },
+        
+        /**
+         * Update result info display (rows and columns)
+         */
+        updateResultInfo: function(data) {
+            var $info = this.$content.find('.oql-result-info');
+            
+            if (!data || !data.length) {
+                $info.text('');
+                return;
+            }
+            
+            var rows = data.length;
+            var cols = Object.keys(data[0]).length;
+            $info.text(rows + ' rows × ' + cols + ' cols');
         },
 
         showResult: function(data, error) {
@@ -343,8 +357,6 @@
             var $nameSpan = this.$element.find('.oql-tab-name');
             var currentName = this.name;
             
-            console.log('[OQL] Starting to edit tab:', currentName);
-            
             // Mark as editing mode
             this.isEditing = true;
             
@@ -357,7 +369,6 @@
                 if ($input.length && document.activeElement !== $input[0]) {
                     $input.focus();
                     $input.select();
-                    console.log('[OQL] Input focused');
                 }
             };
             
@@ -372,22 +383,14 @@
             // Prevent tab switching while editing by stopping all events on input
             $input.on('mousedown click dblclick', function(e) {
                 e.stopPropagation();
-                console.log('[OQL] Input event stopped:', e.type);
-            });
-            
-            // Ensure input can receive focus when clicked
-            $input.on('focus', function() {
-                console.log('[OQL] Input gained focus');
             });
             
             // Save function
             var saveEdit = function(newName) {
-                console.log('[OQL] Saving edit...');
                 newName = newName || $input.val().trim();
                 if (newName && newName !== currentName) {
                     self.name = newName;
                     self.workspace.saveState();
-                    console.log('[OQL] Tab renamed to:', newName);
                 }
                 
                 // Restore span
@@ -403,19 +406,16 @@
                 
                 // Clear editing flag
                 self.isEditing = false;
-                console.log('[OQL] Editing finished');
             };
             
             $input.on('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('[OQL] Enter pressed, saving');
                     saveEdit();
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('[OQL] Escape pressed, canceling');
                     saveEdit(currentName); // Cancel edit
                 }
             });
@@ -424,7 +424,6 @@
             var outsideClickHandler = function(e) {
                 // Check if click is outside the input
                 if (!$(e.target).closest('.oql-tab-name-input').length) {
-                    console.log('[OQL] Outside click detected');
                     $(document).off('click', outsideClickHandler);
                     saveEdit();
                 }
