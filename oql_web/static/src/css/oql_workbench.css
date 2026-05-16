@@ -1,0 +1,341 @@
+/* OQL Workbench - Main Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.o_oql_workbench {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+}
+
+/* Header Toolbar */
+.oql-workbench-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.oql-toolbar-btn {
+    padding: 6px 16px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.oql-toolbar-btn:hover {
+    border-color: #4caf50;
+    color: #4caf50;
+}
+
+.oql-toolbar-btn.btn-primary {
+    background: #4caf50;
+    color: white;
+    border-color: #4caf50;
+}
+
+.oql-toolbar-btn.btn-primary:hover {
+    background: #45a049;
+}
+
+.oql-toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: #e0e0e0;
+    margin: 0 4px;
+}
+
+/* Main Content Area */
+.oql-workbench-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden; /* Prevent content scroll */
+    min-height: 0; /* Important for flexbox scrolling */
+}
+
+/* Left Sidebar - Model List */
+.oql-sidebar {
+    width: 260px;
+    background: white;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    height: calc(100vh - 120px); /* Match tab content height */
+}
+
+.oql-sidebar-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    background: #fafafa;
+}
+
+.oql-model-search {
+    padding: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.oql-model-search input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    font-size: 13px;
+    outline: none;
+}
+
+.oql-model-search input:focus {
+    border-color: #4caf50;
+}
+
+.oql-model-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+    min-height: 0; /* Important for flexbox scrolling */
+}
+
+.oql-model-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #555;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+}
+
+.oql-model-item:hover {
+    background: #f0f9f0;
+    border-left-color: #4caf50;
+}
+
+.oql-model-item.active {
+    background: #e8f5e9;
+    border-left-color: #4caf50;
+    color: #2e7d32;
+    font-weight: 500;
+}
+
+/* Tab Bar */
+.oql-tab-bar {
+    background: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    min-height: 40px;
+}
+
+.oql-tab {
+    padding: 10px 16px;
+    border-right: 1px solid #e0e0e0;
+    cursor: pointer;
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+    position: relative;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oql-tab:hover {
+    background: #f0f0f0;
+}
+
+.oql-tab.active {
+    background: white;
+    color: #4caf50;
+    border-bottom: 2px solid #4caf50;
+    font-weight: 500;
+}
+
+.oql-tab-close {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    opacity: 0.6;
+    transition: all 0.15s;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.oql-tab-close:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.oql-tab-add {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #999;
+    transition: color 0.15s;
+}
+
+.oql-tab-add:hover {
+    color: #4caf50;
+}
+
+/* Editor and Result Area */
+.oql-main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: white;
+    min-height: 0; /* Important for flexbox scrolling */
+}
+
+.oql-editor-container {
+    flex: 0 0 auto;
+    height: 200px;
+    border-bottom: 2px solid #e0e0e0;
+    position: relative;
+}
+
+.oql-editor-container .CodeMirror {
+    height: 100%;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* Result Grid */
+.oql-result-container {
+    flex: 1 1 auto;
+    overflow: auto;
+    background: white;
+    min-height: 0;
+    max-height: calc(100vh - 320px); /* Ensure there's room for scrolling */
+    padding: 0;
+}
+
+.oql-result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    display: table;
+    min-width: 600px;
+}
+
+.oql-result-table thead {
+    background: #fafafa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.oql-result-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #e0e0e0;
+    white-space: nowrap;
+}
+
+.oql-result-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #555;
+}
+
+.oql-result-table tbody tr:hover {
+    background: #f9f9f9;
+}
+
+.oql-result-empty {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 14px;
+}
+
+.oql-result-error {
+    padding: 16px;
+    background: #fff3f3;
+    border-left: 4px solid #ff4444;
+    color: #c62828;
+    font-size: 13px;
+    margin: 16px;
+    border-radius: 4px;
+}
+
+/* Status Bar */
+.oql-status-bar {
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.oql-status-info {
+    display: flex;
+    gap: 16px;
+}
+
+/* Scrollbar Styling */
+.oql-model-list::-webkit-scrollbar,
+.oql-result-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.oql-model-list::-webkit-scrollbar-track,
+.oql-result-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.oql-model-list::-webkit-scrollbar-thumb,
+.oql-result-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.oql-model-list::-webkit-scrollbar-thumb:hover,
+.oql-result-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Tab Content */
+.oql-tab-content {
+    display: none;
+    flex-direction: column;
+    height: calc(100vh - 120px); /* Subtract header and status bar */
+    overflow: hidden;
+}
+
+.oql-tab-content.active {
+    display: flex;
+}

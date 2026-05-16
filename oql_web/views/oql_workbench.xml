@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="oql_workbench_template" name="OQL Workbench">
+        <html lang="en">
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1"/>
+            <title>OQL Query Workbench</title>
+            
+            <!-- CodeMirror -->
+            <link rel="stylesheet" href="/oql_web/static/lib/codemirror/lib/codemirror.css"/>
+            <link rel="stylesheet" href="/oql_web/static/lib/codemirror/addon/hint/show-hint.css"/>
+            
+            <!-- Custom CSS -->
+            <link rel="stylesheet" href="/oql_web/static/src/css/oql_workbench.css"/>
+            
+            <!-- jQuery -->
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            
+            <!-- CodeMirror -->
+            <script src="/oql_web/static/lib/codemirror/lib/codemirror.js"></script>
+            <script src="/oql_web/static/lib/codemirror/addon/hint/show-hint.js"></script>
+            <script src="/oql_web/static/lib/codemirror/mode/oql/oql.js"></script>
+        </head>
+        <body class="o_oql_workbench">
+            <div id="app"></div>
+            
+            <!-- Main Application -->
+            <script src="/oql_web/static/src/js/oql_workbench_app.js"></script>
+        </body>
+        </html>
+    </template>
+</odoo>
