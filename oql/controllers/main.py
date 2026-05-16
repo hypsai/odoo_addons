@@ -18,3 +18,18 @@ class McpController(http.Controller):
         _logger.debug(f"OQL query from user {request.env.user.name} (ID {request.env.uid}): {query}")
         res = request.env["base"].oql(query)
         return res
+
+    @http.route('/oql/models', type='json', auth='user')
+    def oql_models(self):
+        """Get list of all available models."""
+        try:
+            models = request.env['ir.model.access'].perm_models("read")
+            return {
+                'success': True,
+                'models': sorted(models)
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }

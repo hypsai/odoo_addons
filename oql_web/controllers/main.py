@@ -20,25 +20,6 @@ class OQLWebController(http.Controller):
         """
         return request.render('oql_web.oql_workbench_template')
     
-    @http.route('/oql/models', type='json', auth='user')
-    def oql_get_models(self):
-        """
-        Get list of all available models.
-        
-        :return: List of model names
-        """
-        try:
-            models = request.env['ir.model'].sudo().search([]).mapped('model')
-            return {
-                'success': True,
-                'models': sorted(models)
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
     @http.route('/oql/user', type='json', auth='user')
     def oql_get_user(self):
         """
