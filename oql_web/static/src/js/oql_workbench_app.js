@@ -57,15 +57,33 @@
             var self = this;
             
             this.$element = $('<div class="oql-tab" data-tab-id="' + this.id + '">' +
+                '<span class="oql-tab-edit-icon" title="Rename tab">&#9998;</span>' +  // Unicode pencil icon
                 '<span class="oql-tab-name">' + this.name + '</span>' +
                 '<span class="oql-tab-close">×</span>' +
             '</div>');
+            
+            // Debug: Check if pencil icon exists
+            console.log('[OQL] Tab rendered, checking pencil icon:', this.$element.find('.oql-tab-edit-icon').length);
 
             // Click on tab to switch
             this.$element.on('click', function(e) {
-                if (!$(e.target).hasClass('oql-tab-close')) {
+                if (!$(e.target).hasClass('oql-tab-close') && !$(e.target).hasClass('oql-tab-edit-icon')) {
                     self.workspace.switchTab(self.id);
                 }
+            });
+            
+            // Double-click on tab name to edit
+            this.$element.find('.oql-tab-name').on('dblclick', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[OQL] Tab name double-clicked');
+                self.startEditing();
+            });
+            
+            // Click on pencil icon to edit
+            this.$element.find('.oql-tab-edit-icon').on('click', function(e) {
+                e.stopPropagation();
+                self.startEditing();
             });
 
             // Click on close button to close tab
@@ -227,6 +245,107 @@
                 this.editorInstance = null;
                 this.editor = null;
             }
+        },
+        
+        /**
+         * Start editing tab name
+         */
+        startEditing: function() {
+            var self = this;
+            var $nameSpan = this.$element.find('.oql-tab-name');
+            var currentName = this.name;
+            
+            console.log('[OQL] Starting to edit tab:', currentName);
+            
+            // Mark as editing mode
+            this.isEditing = true;
+            
+            // Replace span with input
+            var $input = $('<input type="text" class="oql-tab-name-input" value="' + currentName + '" />');
+            $nameSpan.replaceWith($input);
+            
+            // Focus and select all text - retry to ensure focus
+            var focusInput = function() {
+                if ($input.length && document.activeElement !== $input[0]) {
+                    $input.focus();
+                    $input.select();
+                    console.log('[OQL] Input focused');
+                }
+            };
+            
+            // Try focusing immediately and then retry
+            focusInput();
+            setTimeout(focusInput, 50);
+            setTimeout(focusInput, 100);
+            
+            // Hide pencil icon during editing
+            this.$element.find('.oql-tab-edit-icon').hide();
+            
+            // Prevent tab switching while editing by stopping all events on input
+            $input.on('mousedown click dblclick', function(e) {
+                e.stopPropagation();
+                console.log('[OQL] Input event stopped:', e.type);
+            });
+            
+            // Ensure input can receive focus when clicked
+            $input.on('focus', function() {
+                console.log('[OQL] Input gained focus');
+            });
+            
+            // Save function
+            var saveEdit = function(newName) {
+                console.log('[OQL] Saving edit...');
+                newName = newName || $input.val().trim();
+                if (newName && newName !== currentName) {
+                    self.name = newName;
+                    self.workspace.saveState();
+                    console.log('[OQL] Tab renamed to:', newName);
+                }
+                
+                // Restore span
+                $input.replaceWith('<span class="oql-tab-name">' + (newName || currentName) + '</span>');
+                self.$element.find('.oql-tab-edit-icon').show();
+                
+                // Re-bind events to new span
+                self.$element.find('.oql-tab-name').on('dblclick', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    self.startEditing();
+                });
+                
+                // Clear editing flag
+                self.isEditing = false;
+                console.log('[OQL] Editing finished');
+            };
+            
+            $input.on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[OQL] Enter pressed, saving');
+                    saveEdit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[OQL] Escape pressed, canceling');
+                    saveEdit(currentName); // Cancel edit
+                }
+            });
+            
+            // Use document-level click to detect outside clicks
+            var outsideClickHandler = function(e) {
+                // Check if click is outside the input
+                if (!$(e.target).closest('.oql-tab-name-input').length) {
+                    console.log('[OQL] Outside click detected');
+                    $(document).off('click', outsideClickHandler);
+                    saveEdit();
+                }
+            };
+            
+            // Delay adding the handler to avoid catching the initial click
+            setTimeout(function() {
+                $(document).on('click', outsideClickHandler);
+            }, 100);
         },
     };
 

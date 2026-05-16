@@ -200,7 +200,46 @@
     transition: background 0.15s;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+}
+
+/* Pencil icon for editing */
+.oql-tab-edit-icon {
+    font-size: 13px !important;
+    color: #999 !important;
+    opacity: 0.7 !important; /* Always visible */
+    transition: opacity 0.2s;
+    cursor: pointer;
+    flex-shrink: 0; /* Prevent icon from shrinking */
+    display: inline-block !important;
+    visibility: visible !important;
+    line-height: 1;
+    margin-right: 2px;
+}
+
+.oql-tab:hover .oql-tab-edit-icon {
+    opacity: 1 !important; /* Fully visible on hover */
+}
+
+.oql-tab-edit-icon:hover {
+    color: #4a90e2 !important;
+}
+
+/* Tab name input for editing */
+.oql-tab-name-input {
+    border: 1px solid #4a90e2 !important;
+    border-radius: 3px !important;
+    padding: 2px 6px !important;
+    font-size: 13px !important;
+    outline: none !important;
+    background: white !important;
+    min-width: 80px;
+    max-width: 150px;
+    cursor: text !important;
+    caret-color: #333 !important; /* Ensure cursor is visible */
+    color: #333 !important;
+    display: inline-block !important;
+    vertical-align: middle;
 }
 
 .oql-tab:hover {
