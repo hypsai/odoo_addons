@@ -14,13 +14,15 @@
             <!-- Custom CSS -->
             <link rel="stylesheet" href="/oql_web/static/src/css/oql_workbench.css"/>
             
-            <!-- jQuery -->
+            <!-- jQuery (required by OQL Editor Core) -->
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
             
             <!-- CodeMirror -->
             <script src="/oql_web/static/lib/codemirror/lib/codemirror.js"></script>
             <script src="/oql_web/static/lib/codemirror/addon/hint/show-hint.js"></script>
-            <script src="/oql_web/static/lib/codemirror/mode/oql/oql.js"></script>
+            
+            <!-- OQL Editor Core (Standalone) - includes syntax highlighting -->
+            <script src="/oql_web/static/src/js/oql_editor_standalone.js"></script>
         </head>
         <body class="o_oql_workbench">
             <div id="app"></div>

@@ -86,53 +86,53 @@
             var self = this;
             var $container = this.$content.find('.oql-editor-container');
             
-            this.editor = CodeMirror($container[0], {
-                mode: 'text/x-oql',
-                lineNumbers: true,
-                viewportMargin: Infinity,
-                extraKeys: {
-                    'Ctrl-Space': function(cm) {
-                        // Trigger hint
-                        CodeMirror.showHint(cm, function(cm) {
-                            return self.getHints(cm);
-                        });
-                    }
-                }
-            });
-
-            this.editor.on('change', function() {
-                self.query = self.editor.getValue();
-                self.workspace.saveState();
-            });
-
-            if (this.query) {
-                this.editor.setValue(this.query);
+            // Must use OQLEditorCore - no fallback
+            if (!window.OQLEditorCore) {
+                throw new Error('[OQL Workbench] OQLEditorCore is not loaded. Check that oql_editor_standalone.js is included.');
             }
-
-            return Promise.resolve();
-        },
-
-        getHints: function(cm) {
-            // Simple keyword hints (can be enhanced with server-side hints)
-            var cursor = cm.getCursor();
-            var token = cm.getTokenAt(cursor);
-            var keywords = ['from', 'select', 'where', 'and', 'or', 'in', 'like', 
-                           'limit', 'offset', 'order', 'by', 'asc', 'desc'];
             
-            var list = keywords.filter(function(kw) {
-                return kw.indexOf(token.string.toLowerCase()) === 0;
+            this.editorInstance = new window.OQLEditorCore({
+                container: $container,
+                model: 'base',
+                lineNumbers: true,
+                readonly: false
             });
-
-            return {
-                list: list,
-                from: CodeMirror.Pos(cursor.line, token.start),
-                to: CodeMirror.Pos(cursor.line, token.end)
-            };
+            
+            return this.editorInstance.start().then(function() {
+                self.editor = self.editorInstance.editor;
+                
+                // Set value first (if exists)
+                if (self.query) {
+                    self.editor.setValue(self.query);
+                }
+                
+                // Force refresh to ensure proper rendering
+                setTimeout(function() {
+                    self.editor.refresh();
+                    self.editor.focus();
+                }, 100);
+                
+                // Listen for changes
+                self.editor.on('change', function() {
+                    self.query = self.editor.getValue();
+                    self.workspace.saveState();
+                });
+            }).catch(function(error) {
+                console.error('[OQL Workbench] Failed to initialize editor:', error);
+                throw error;
+            });
         },
 
         execute: function() {
             var self = this;
+            
+            console.log('[OQL Workbench] Execute called');
+            console.log('[OQL Workbench] Editor exists:', !!this.editor);
+            console.log('[OQL Workbench] EditorInstance exists:', !!this.editorInstance);
+            
             var query = this.editor ? this.editor.getValue() : '';
+            
+            console.log('[OQL Workbench] Query:', query.substring(0, 50));
             
             if (!query.trim()) {
                 this.showResult(null, 'Please enter a query');
@@ -141,6 +141,7 @@
 
             return JsonRpcClient.call('/oql_query', { query: query })
                 .then(function(result) {
+                    console.log('[OQL Workbench] Query executed successfully, rows:', result ? result.length : 0);
                     self.result = result;
                     self.showResult(result, null);
                     self.workspace.saveState();
@@ -197,15 +198,12 @@
         },
 
         destroy: function() {
-            if (this.editor) {
-                // CodeMirror instance created on div, use wrapper removal
-                var wrapper = this.editor.getWrapperElement();
-                if (wrapper && wrapper.parentNode) {
-                    wrapper.parentNode.removeChild(wrapper);
-                }
+            if (this.editorInstance) {
+                this.editorInstance.destroy();
+                this.editorInstance = null;
                 this.editor = null;
             }
-        }
+        },
     };
 
     // ==========================================
@@ -375,7 +373,9 @@
                 this.activeTabId = tabId;
                 
                 if (tab.editor) {
+                    // Refresh editor to fix rendering issues after tab switch
                     setTimeout(function() {
+                        tab.editor.refresh();
                         tab.editor.focus();
                     }, 100);
                 }
