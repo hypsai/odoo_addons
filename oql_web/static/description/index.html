@@ -27,6 +27,50 @@
         </div>
     </div>
 
+    <!-- Quick Example -->
+    <div class="row oe_spaced mt-4">
+        <div class="col-12">
+            <div style="background-color: #e3f2fd; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(74, 144, 226, 0.2);">
+                <h3 style="color: #1565c0; margin-bottom: 20px; text-align: center;"><i class="fa fa-magic mr-2"></i>From Complex to Simple</h3>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 style="color: #d32f2f; font-weight: 700;"><i class="fa fa-times-circle mr-2"></i>Traditional Domain (30+ lines)</h5>
+                        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #e0e0e0; font-size: 0.85rem;">
+                            <pre style="margin: 0; color: #666;"># 4 preparatory searches
+boot_catg = env['product.category'].search(...)
+danner_brand = env['product.category'].search(...)
+size_values = env['product.attribute.value'].search(...)
+waterproof_tags = env['product.template.tag'].search(...)
+
+# Complex domain
+domain = [
+    ('categ_id', 'child_of', danner_brand.ids),
+    ('product_template_attribute_value_ids...', 'in', size_values.ids),
+    ('tag_ids', 'in', waterproof_tags.ids)
+]
+products = env['product.product'].search(domain)</pre>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 style="color: #388e3c; font-weight: 700;"><i class="fa fa-check-circle mr-2"></i>OQL (1 line)</h5>
+                        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #e0e0e0; font-size: 0.85rem;">
+                            <pre style="margin: 0; color: #333;"><span style="color: #4a90e2; font-weight: bold;">products</span> = env[<span style="color: #4caf50;">'product.product'</span>].searcho(
+    <span style="color: #4caf50;">"CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"</span>
+)</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <p style="text-align: center; margin-top: 20px; color: #1565c0; font-size: 0.95rem;">
+                    <i class="fa fa-check-circle mr-1"></i> Business terms &nbsp;&nbsp;
+                    <i class="fa fa-check-circle mr-1"></i> No prep searches &nbsp;&nbsp;
+                    <i class="fa fa-check-circle mr-1"></i> Readable by anyone
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- OQL Workbench Section -->
     <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
         <div class="col-12">
@@ -74,50 +118,6 @@
                         <p style="font-size: 0.85rem; color: #666; margin: 0;">Cross-device backup</p>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Example -->
-    <div class="row oe_spaced mt-4">
-        <div class="col-12">
-            <div style="background-color: #e3f2fd; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(74, 144, 226, 0.2);">
-                <h3 style="color: #1565c0; margin-bottom: 20px; text-align: center;"><i class="fa fa-magic mr-2"></i>From Complex to Simple</h3>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5 style="color: #d32f2f; font-weight: 700;"><i class="fa fa-times-circle mr-2"></i>Traditional Domain (30+ lines)</h5>
-                        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #e0e0e0; font-size: 0.85rem;">
-                            <pre style="margin: 0; color: #666;"># 4 preparatory searches
-boot_catg = env['product.category'].search(...)
-danner_brand = env['product.category'].search(...)
-size_values = env['product.attribute.value'].search(...)
-waterproof_tags = env['product.template.tag'].search(...)
-
-# Complex domain
-domain = [
-    ('categ_id', 'child_of', danner_brand.ids),
-    ('product_template_attribute_value_ids...', 'in', size_values.ids),
-    ('tag_ids', 'in', waterproof_tags.ids)
-]
-products = env['product.product'].search(domain)</pre>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h5 style="color: #388e3c; font-weight: 700;"><i class="fa fa-check-circle mr-2"></i>OQL (1 line)</h5>
-                        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #e0e0e0; font-size: 0.85rem;">
-                            <pre style="margin: 0; color: #333;"><span style="color: #4a90e2; font-weight: bold;">products</span> = env[<span style="color: #4caf50;">'product.product'</span>].searcho(
-    <span style="color: #4caf50;">"CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"</span>
-)</pre>
-                        </div>
-                    </div>
-                </div>
-                
-                <p style="text-align: center; margin-top: 20px; color: #1565c0; font-size: 0.95rem;">
-                    <i class="fa fa-check-circle mr-1"></i> Business terms &nbsp;&nbsp;
-                    <i class="fa fa-check-circle mr-1"></i> No prep searches &nbsp;&nbsp;
-                    <i class="fa fa-check-circle mr-1"></i> Readable by anyone
-                </p>
             </div>
         </div>
     </div>
