@@ -165,13 +165,14 @@ class FieldAccess:
     pre_domain: OqlDomain
     """Pre-selector domain, select some records for further filtering."""
 
-    def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None):
+    def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None, as_: str = None):
         self.meta = meta
         model = model.browse()  # Make model data-inconscient.
         env = model.env
         acl = meta.acl
         # Parse
         names = list(names)
+        as_ = as_ or '.'.join(names)
         plain_names = []
         p_recs = model
         pp_recs = None  # The recs right before p_recs in path.
@@ -242,10 +243,11 @@ class FieldAccess:
         self.next: List[FieldAccess] = next_
         self._non_searchable_fields = non_searchable_fields
         self._tail_alias: Optional[AliasNode] = tail_alias  # Complex alias at tail.
+        self._as = as_
 
     @property
     def as_(self):
-        return self.path
+        return self._as
 
     @property
     def path(self):
@@ -390,23 +392,27 @@ class OqlTransformer(lark.Transformer):
     def query(self, from_, select: List[FieldAccess], where: RecordSets, orderby, limit, offset):
         # 1 Categorize field access into plain and dot fields.
         dot_fas: List[FieldAccess] = []
-        plain_fields: List[str] = []
+        plain_fas: List[FieldAccess] = []
         for fa in select:
             if len(fa.names) == 1:
-                plain_fields.append(fa.names[0])
+                plain_fas.append(fa)
             else:
                 dot_fas.append(fa)
         # 2 Read data.
         rec_set = where[0]
         recs = rec_set.model.search(rec_set.domain.domain, offset, limit, orderby)
         # 2.1 Read plain fields.
+        plain_fields = [x.names[0] for x in plain_fas]
         if not plain_fields:
             plain_fields.append("id")
         rows = recs.read(plain_fields)
+        rows = [{f.as_: row[f.names[0]] for f in plain_fas} for row in rows]  # Align field names with SELECT clause.
         # 2.2 Read dot-style fields.
         for fa in dot_fas:
             for row, val in zip(rows, fa.read(recs), strict=True):
                 row[fa.as_] = val
+        # 2.3 Sort field order to align with SELECT clause.
+        rows = [{f.as_: row[f.as_] for f in select} for row in rows]
         return rows
 
     def from_clause(self, model: str):
