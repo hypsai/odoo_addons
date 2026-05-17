@@ -7,7 +7,7 @@ import logging
 import re
 from typing import List, Dict, Any
 
-_logger = logging.getLogger(__file__)
+_logger = logging.getLogger(__name__)
 
 
 # Basic type mapping shared by both converters

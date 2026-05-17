@@ -12,7 +12,7 @@ from odoo.exceptions import AccessError
 from .util import KeyPassingDefaultDict, read_object
 from .alias import AliasNode, AliasSummary, AliasFieldPath
 
-_logger = logging.getLogger(__file__)
+_logger = logging.getLogger(__name__)
 
 
 class OqlAcl:
