@@ -29,7 +29,7 @@ class OqlBase(models.AbstractModel):
         return self.searcho(oql_where).ids
 
     @api.model
-    def hinto(self, partial_oql_where: str, cursor: int = None, limit=100):
+    def hinto(self, partial_oql_where: str, cursor: int = None, limit=100) -> dict:
         """
         Get OQL code completion hints.
         * Note: FROM clause is defaulted to `self._name`.
@@ -51,7 +51,7 @@ class OqlBase(models.AbstractModel):
         return reader.query(oql, OqlTransformer(self.env))
 
     @api.model
-    def oql_hint(self, partial_oql: str, cursor: int = None, limit=100) -> List[dict]:
+    def oql_hint(self, partial_oql: str, cursor: int = None, limit=100, offset=0) -> dict:
         """
         Hint an OQL query at given `cursor`.
         * Note: This method is implemented in `oql_pro`, a professional addon for oql.
@@ -59,7 +59,12 @@ class OqlBase(models.AbstractModel):
         :param partial_oql: A complete or incomplete OQL query string.
         :param cursor: The cursor position in query to generate completion hints.
         :param limit: Count limit of hints.
-        :return: [{'type': 'xxx', 'value': 'yyy', 'desc': 'zzz'}, ...]
+        :param offset: Offset of full hint list, used to paginate.
+        :return: A page of hints.
+        {
+            "hints": [{'type': 'xxx', 'value': 'yyy', 'desc': 'zzz'}, ...],  // Hints in page.
+            "total: 1099,  // Total number of full hint list.
+        }
         """
         pass
 

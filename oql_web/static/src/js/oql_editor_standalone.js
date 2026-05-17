@@ -283,7 +283,8 @@
             var tokenStart = cursorIndex - token.length;
             var from = doc.posFromIndex(tokenStart);
             var to = cursor;
-            var limit = 100;
+            var limit = 1000;
+            var offset = 0;
 
             // Load hints from cache
             var hintsGroup = self._cachedHintsGroup[context];
@@ -321,8 +322,8 @@
                             params: {
                                 model: self.model,
                                 method: 'oql_hint',
-                                args: [content, cursorIndex, limit],
-                                kwargs: {}
+                                args: [content, cursorIndex],
+                                kwargs: {limit: limit, offset: offset}
                             },
                             id: Math.floor(Math.random() * 1000000)
                         }),
@@ -333,7 +334,8 @@
                         console.error('[OQL] Failed to fetch hints:', response.error);
                         hints = [];
                     } else {
-                        hints = response.result || [];
+                        var result = response.result || {};
+                        hints = result.hints || [];
                     }
                 } catch (error) {
                     console.error('[OQL] AJAX error:', error);

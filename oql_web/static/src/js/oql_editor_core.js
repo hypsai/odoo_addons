@@ -201,7 +201,8 @@ odoo.define('oql_web.oql_editor_core', function (require) {
             var tokenStart = cursor_index - token.length;  // Use absolute position
             var from = doc.posFromIndex(tokenStart);  // Convert back to {line, ch}
             var to = cursor;
-            var limit = 100;
+            var limit = 1000;
+            var offset = 0;
 
             // Load hints from cache
             var hintsGroup = self._cachedHintsGroup[context];
@@ -231,13 +232,14 @@ odoo.define('oql_web.oql_editor_core', function (require) {
                 hints = await ajax.jsonRpc('/web/dataset/call_kw', 'call', {
                     model: self.model,
                     method: 'hinto',
-                    args: [content, cursor_index, limit],
-                    kwargs: {}
+                    args: [content, cursor_index],
+                    kwargs: {limit: limit, offset: offset}
                 }).catch(function (error) {
                     console.error('[OQL Core] Failed to fetch hints:', error);
                     return [];
                 });
-                hints = hints || [];
+                var result = hints || {};
+                hints = result.hints || [];
                 
                 // Update cache
                 hintsGroup.push([token, hints]);
