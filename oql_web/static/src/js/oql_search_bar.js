@@ -7,7 +7,6 @@ odoo.define('oql_web.oql_search_bar', function (require) {
     var SearchBar = require('web.SearchBar');
     var ajax = require('web.ajax');
     var patch = require('web.utils').patch;
-    var OQLEditorCore = require('oql_web.oql_editor_core');
     var session = require('web.session');
     
     // Storage keys
@@ -174,7 +173,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             }
             
             // Wrap container for combobox layout
-            var $wrapper = $('<div class="oql_combobox_wrapper" style="position: relative; display: flex; align-items: flex-start; width: 100%;"></div>');
+            var $wrapper = $('<div class="oql_combobox_wrapper o_oql_search_container" style="position: relative; display: flex; align-items: flex-start; width: 100%;"></div>');
             $container.append($wrapper);
             
             // Create editor container inside wrapper
@@ -182,13 +181,15 @@ odoo.define('oql_web.oql_search_bar', function (require) {
             $wrapper.append($editorContainer);
             
             // Create OQL Editor Core instance
-            this.oqlEditor = new OQLEditorCore({
+            this.oqlEditor = new window.OQLEditorCore({
                 container: $editorContainer,
                 model: model,
                 res_id: null,  // Search bar mode doesn't have a record ID
                 fieldName: null,  // Search bar mode doesn't have a field name
                 readonly: false,
                 lineNumbers: false,
+                hintMethod: 'hinto',  // Use hinto for WHERE clause hints
+                enterMode: 'search',  // Enter triggers search, Shift+Enter creates new line
                 history: this.oqlHistory,  // Pass history to core
                 onSearch: function (query) {
                     self._doOQLSearch(query);

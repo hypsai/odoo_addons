@@ -109,6 +109,8 @@
         this.lineNumbers = options.lineNumbers || false;
         this.onSearch = options.onSearch || null;
         this.onChange = options.onChange || null;
+        this.hintMethod = options.hintMethod || 'oql_hint';  // Default to oql_hint, can be 'hinto' for WHERE clause
+        this.enterMode = options.enterMode || 'newline';  // 'search' for Enter triggers search, 'newline' for Enter creates new line
         
         this.editor = null;
         this.$textarea = null;
@@ -158,6 +160,22 @@
         _getExtraKeys: function() {
             var self = this;
             var keys = {};
+
+            // Enter key behavior based on mode
+            if (this.onSearch && this.enterMode === 'search') {
+                // Search bar mode: Enter triggers search, Shift+Enter creates new line
+                keys["Enter"] = function(cm) {
+                    self.onSearch(cm.getValue());
+                };
+                keys["Shift-Enter"] = function(cm) {
+                    cm.execCommand('newlineAndIndent');
+                };
+            } else {
+                // Normal mode: Enter creates new line
+                keys["Enter"] = function(cm) {
+                    cm.execCommand('newlineAndIndent');
+                };
+            }
 
             // Ctrl-Space for manual hint trigger (standard)
             keys["Ctrl-Space"] = function(cm) {
@@ -260,7 +278,8 @@
                 });
             }, {
                 'completeSingle': false,
-                'async': true
+                'async': true,
+                'className': 'oql-search-hints'  // Add custom class for styling
             });
         },
 
@@ -312,21 +331,23 @@
             // Fetch hints from server when cache missing
             if (!hints) {
                 try {
+                    var requestData = {
+                        jsonrpc: '2.0',
+                        method: 'call',
+                        params: {
+                            model: self.model,
+                            method: self.hintMethod,
+                            args: [content, cursorIndex],
+                            kwargs: {limit: limit, offset: offset}
+                        },
+                        id: Math.floor(Math.random() * 1000000)
+                    };
+                    
                     var response = await $.ajax({
                         url: '/web/dataset/call_kw',
                         type: 'POST',
                         contentType: 'application/json',
-                        data: JSON.stringify({
-                            jsonrpc: '2.0',
-                            method: 'call',
-                            params: {
-                                model: self.model,
-                                method: 'oql_hint',
-                                args: [content, cursorIndex],
-                                kwargs: {limit: limit, offset: offset}
-                            },
-                            id: Math.floor(Math.random() * 1000000)
-                        }),
+                        data: JSON.stringify(requestData),
                         dataType: 'json'
                     });
                     

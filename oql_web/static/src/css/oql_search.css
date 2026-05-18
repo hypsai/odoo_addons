@@ -133,13 +133,13 @@
 }
 
 /* OQL Hint Styles for Search */
-.o_oql_search_container .CodeMirror-hints {
+.CodeMirror-hints.oql-search-hints {
     z-index: 9999;
     max-height: 300px;
     overflow-y: auto;
 }
 
-.o_oql_search_container .oql-hint-item {
+.CodeMirror-hints.oql-search-hints .oql-hint-item {
     padding: 6px 10px;
     cursor: pointer;
     display: flex;
@@ -147,11 +147,11 @@
     gap: 8px;
 }
 
-.o_oql_search_container .oql-hint-item:hover {
+.CodeMirror-hints.oql-search-hints .oql-hint-item:hover {
     background-color: #f0f0f0;
 }
 
-.o_oql_search_container .oql-hint-item .type-marker {
+.CodeMirror-hints.oql-search-hints .oql-hint-item .type-marker {
     width: 20px;
     height: 20px;
     border-radius: 3px;
@@ -164,28 +164,28 @@
     flex-shrink: 0;
 }
 
-.o_oql_search_container .oql-hint-term .type-marker {
+.CodeMirror-hints.oql-search-hints .oql-hint-term .type-marker {
     background-color: #4a90e2;
 }
 
-.o_oql_search_container .oql-hint-alias .type-marker {
+.CodeMirror-hints.oql-search-hints .oql-hint-alias .type-marker {
     background-color: #4caf50;
 }
 
-.o_oql_search_container .oql-hint-operator .type-marker {
+.CodeMirror-hints.oql-search-hints .oql-hint-operator .type-marker {
     background-color: #ff9800;
 }
 
-.o_oql_search_container .oql-hint-value .type-marker {
+.CodeMirror-hints.oql-search-hints .oql-hint-value .type-marker {
     background-color: #9c27b0;
 }
 
-.o_oql_search_container .oql-hint-content {
+.CodeMirror-hints.oql-search-hints .oql-hint-content {
     flex: 1;
     font-size: 13px;
 }
 
-.o_oql_search_container .oql-hint-desc {
+.CodeMirror-hints.oql-search-hints .oql-hint-desc {
     margin-left: auto;
     font-size: 11px;
     color: #999;

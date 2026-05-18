@@ -3,7 +3,6 @@ odoo.define('oql.oql_editor', function (require) {
 
     const DebouncedField = require('web.basic_fields').DebouncedField;
     const fieldRegistry = require('web.field_registry');
-    const OQLEditorCore = require('oql_web.oql_editor_core');
 
     const OQLEditor = DebouncedField.extend({
         className: 'o_oql_editor',
@@ -37,7 +36,7 @@ odoo.define('oql.oql_editor', function (require) {
             var self = this;
             
             // Create OQL Editor Core instance
-            this.oqlEditor = new OQLEditorCore({
+            this.oqlEditor = new window.OQLEditorCore({
                 container: this.$el,
                 model: this.model,
                 res_id: this.res_id,
