@@ -29,19 +29,20 @@ class OqlBase(models.AbstractModel):
         return self.searcho(oql_where).ids
 
     @api.model
-    def hinto(self, partial_oql_where: str, cursor: int = None, limit=100) -> dict:
+    def hinto(self, partial_oql_where: str, cursor: int = None, limit=100, offset=0) -> dict:
         """
         Get OQL code completion hints.
         * Note: FROM clause is defaulted to `self._name`.
         :param partial_oql_where: A complete or incomplete OQL where clause criteria.
         :param cursor: The cursor position in query to generate completion hints.
         :param limit: Count limit of hints.
+        :param offset: Hint item index offset.
         :return: List of hint.
         """
         prefix = f"FROM {self._name} SELECT id WHERE "
         oql = f"{prefix}{partial_oql_where}"
         cursor = None if cursor is None else len(prefix)+cursor
-        return self.oql_hint(oql, cursor, limit)
+        return self.oql_hint(oql, cursor, limit, offset)
 
     @api.model
     def oql(self, oql: str) -> List[dict]:
