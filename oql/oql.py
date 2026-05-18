@@ -2,6 +2,7 @@
 # @Time         : 17:50 2025/10/15
 # @Author       : Chris
 # @Description  :
+import copy
 import os.path
 from typing import Optional
 
@@ -267,6 +268,15 @@ class FieldAccess:
             chips.append(self.next[0].expr)
         return '.'.join(chips)
 
+    @property
+    def endswith_term(self) -> bool:
+        """Whether rear of this access chain is a Term."""
+        if self.next:
+            return any(x.endswith_term for x in self.next)
+        if self.pre_domain and self.pre_domain.term:
+            return True
+        return False
+
     def eval_bin(self, opr: str, value):
         return self._eval(False, opr, value)
 
@@ -371,6 +381,20 @@ class FieldAccess:
                 return RecordSets(
                     [RecordSet(res.browse(), OqlDomain("__oql_bin__", res._name, [("id", "in", res.ids)]))])
 
+    def flat(self) -> List["FieldAccess"]:
+        """Product with `next` field accesses recursively to make a full Cartesian set.
+        Note: All the result objects are copies."""
+        flatted_fas: List[FieldAccess] = []
+        if self.next:
+            for next_fa in self.next:
+                for next_flatted_fa in next_fa.flat():
+                    this = copy.copy(self)
+                    this.next = [next_flatted_fa]
+                    flatted_fas.append(this)
+        else:
+            flatted_fas.append(copy.copy(self))
+        return flatted_fas
+
     def __str__(self):
         return f"{type(self).__name__}({self.path}, next[{len(self.next)}])"
 
@@ -389,7 +413,7 @@ class OqlTransformer(lark.Transformer):
         self.recs = None
         self._meta = OqlMeta(env)
 
-    def query(self, from_, select: List[FieldAccess], where: RecordSets, orderby, limit, offset):
+    def query(self, from_: models.Model, select: List[FieldAccess], where: RecordSets, orderby, limit, offset):
         # 1 Categorize field access into plain and dot fields.
         dot_fas: List[FieldAccess] = []
         plain_fas: List[FieldAccess] = []
@@ -399,8 +423,8 @@ class OqlTransformer(lark.Transformer):
             else:
                 dot_fas.append(fa)
         # 2 Read data.
-        rec_set = where[0]
-        recs = rec_set.model.search(rec_set.domain.domain, offset, limit, orderby)
+        domain = where[0].domain.domain if where else []
+        recs = from_.search(domain, offset, limit, orderby)
         # 2.1 Read plain fields.
         plain_fields = [x.names[0] for x in plain_fas]
         if not plain_fields:
@@ -420,6 +444,7 @@ class OqlTransformer(lark.Transformer):
         acl[model].check("read", True)
         self.model_name = model
         self.recs = self.env[model].sudo()  # OQL ACL is fully controlled by OQL, so use sudo() here to pass Odoo ACL.
+        return self.recs
 
     def select_clause(self, fields="*"):
         if fields == "*":
@@ -472,7 +497,10 @@ class OqlTransformer(lark.Transformer):
         return name, dir_ or "asc"
 
     def string(self, value):
-        return value[1:-1]
+        return value
+
+    def ESCAPED_STRING(self, value: str):
+        return value[1:-1].replace("''", "'")
 
     def TRUE(self, value):
         return True

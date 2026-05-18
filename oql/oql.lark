@@ -1,6 +1,6 @@
 ?start: query
 
-query: from_clause select_clause where_clause [orderby_clause] [limit_clause] [offset_clause]
+query: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
 
 select_clause: "select"i ("*" | fields)
 from_clause: "from"i model
@@ -44,7 +44,6 @@ _value: string
      | array
 
 array: "(" [_value ("," _value)*] ")"
-     | "[" [_value ("," _value)*] "]"
 
 string: ESCAPED_STRING
 
@@ -78,7 +77,7 @@ BIN_OPR: "="
 
 // Lexis units
 CNAME: ("_"|LETTER) ("_"|LETTER|DIGIT)*
-ESCAPED_STRING: /'[^']*'/ | /"[^"]*"/
+ESCAPED_STRING: /'(?:[^']|'')*'/
 INT: /[-+]?\d+/
 FLOAT: /[-+]?\d+\.\d+/
 TRUE: "true"i
