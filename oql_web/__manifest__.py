@@ -1,6 +1,6 @@
 {
     "name": "OQL Web",
-    "version":"1.4.0",
+    "version":"1.4.2",
     "author": "Chris",
     "website": "https://github.com/chrisking94/odoo_addons/tree/main/oql_web",
     "license": "LGPL-3",
