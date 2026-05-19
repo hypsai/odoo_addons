@@ -38,7 +38,7 @@ class OqlMcpBase(models.AbstractModel):
 
     @mcp_tool
     @api.model
-    def oql_mcp_hint(self, partial_oql: str, cursor: int = None, limit=30, verbose=0):
+    def oql_mcp_hint(self, partial_oql: str, cursor: int = None, limit: int = 30, offset: int = 0, verbose: int = 0):
         """Auto-complete INCOMPLETE OQL fragments. NOT for executing queries.
 
         Use to find out valid model or field or value candidates at given cursor position in `partial_oql`.
@@ -54,12 +54,13 @@ class OqlMcpBase(models.AbstractModel):
         :param partial_oql: The unfinished text typed so far. NEVER a complete statement.
         :param cursor: Typing position (zero-based). `None` means end of string. You should always use `None` if your want to hint at end of `partial_oql`.
         :param limit: Max candidates to return (default: 30).
+        :param offset: Start index of result hint list in full hint list. Used for pagination.
         :param verbose: Verbosity level of hints.
             - 0: list of candidate strings. e.g. ['name', ...]
             - 1: list of candidate dict with value, description. e.g. [{'value': 'name', 'desc': 'Product Name'}, ...]
             - 2: list of candidate dict with value, description, type. e.g. [{'value': 'name', 'desc': 'Product Name', 'type': 'field'}, ...]
         """
-        hints = self.oql_hint(partial_oql, cursor, limit)
+        hints = self.oql_hint(partial_oql, cursor, limit, offset)
         if verbose == 0:
             return [x["value"] for x in hints]
         elif verbose == 1:
