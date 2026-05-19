@@ -60,13 +60,15 @@ class OqlMcpBase(models.AbstractModel):
             - 1: list of candidate dict with value, description. e.g. [{'value': 'name', 'desc': 'Product Name'}, ...]
             - 2: list of candidate dict with value, description, type. e.g. [{'value': 'name', 'desc': 'Product Name', 'type': 'field'}, ...]
         """
-        hints = self.oql_hint(partial_oql, cursor, limit, offset)
+        obj = self.oql_hint(partial_oql, cursor, limit, offset)
+        # Align hint verbosity with `verbose` parameter.
+        hints = obj["hints"]
         if verbose == 0:
-            return [x["value"] for x in hints]
+            hints = [x["value"] for x in hints]
         elif verbose == 1:
-            return [{
+            hints = [{
                 "value": x["value"],
                 "desc": x["desc"],
             } for x in hints]
-        else:
-            return hints
+        obj["hints"] = hints
+        return obj
