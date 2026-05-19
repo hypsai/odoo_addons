@@ -28,8 +28,17 @@ class AliasNode(ABC):
     def is_complex(self):
         return True
 
+    @property
+    def expr(self):
+        chips = []
+        if self.path:
+            chips.append(self.path)
+            chips.append(" => ")
+        chips.append(self._expr())
+        return "".join(chips)
+
     @classmethod
-    def parse(cls, text: str, alias: str) -> "AliasNode":
+    def parse(cls, text: str, alias: str, help_: str = None) -> "AliasNode":
         """
         Parse alias text into AliasNode. Supports three base formats, optionally prefixed with relational field expansion:
 
@@ -52,7 +61,9 @@ class AliasNode(ABC):
           * `address_ids => "Address: {city}"` (expand + string template)
           * `address_ids => {...}` (expand + JSON object)
         """
-        return cls._r_parse("", text, alias)
+        root = cls._r_parse("", text, alias)
+        root.help = help_
+        return root
 
     def read(self, rec, _check=False):
         """
@@ -88,6 +99,11 @@ class AliasNode(ABC):
 
     @abstractmethod
     def _format(self, rec, _check: bool):
+        pass
+
+    @abstractmethod
+    def _expr(self) -> str:
+        """Get expr string, without expansion."""
         pass
 
     @classmethod
@@ -145,7 +161,7 @@ class AliasNode(ABC):
         return path
 
     def __str__(self):
-        return f"{type(self).__name__}({self.alias or ''}@{self.path or ''})"
+        return f"{type(self).__name__}[{self.alias or ''}]({self.expr})"
         
         
 class AliasFieldPath(AliasNode):
@@ -159,6 +175,9 @@ class AliasFieldPath(AliasNode):
 
     def _format(self, rec, _check: bool):
         return read_object(rec, self.field)
+
+    def _expr(self) -> str:
+        return self.field
     
     
 class AliasSummary(AliasNode, ABC):
@@ -182,6 +201,12 @@ class AliasDict(AliasSummary):
     def _format(self, rec, _check: bool):
         return {k: v.read(rec) for k, v in self.alias2child.items()}
 
+    def _expr(self) -> str:
+        return json.dumps({
+            f"{alias}@{node.path}" if node.path and isinstance(node, AliasDict) else alias: node._expr()
+            for alias, node in self.alias2child.items()
+        })
+
         
 class AliasString(AliasSummary):
     """String template, format: 'Partner name is {partner_id.name}.'"""
@@ -200,6 +225,9 @@ class AliasString(AliasSummary):
         kwargs = {k: v.read(rec, _check) for k, v in self._name2var.items()}
         string = PathAwareFormatter().vformat(self.tmpl, [], kwargs)
         return string
+
+    def _expr(self) -> str:
+        return self.tmpl
 
     @classmethod
     def is_valid_tmpl(cls, tmpl: str):

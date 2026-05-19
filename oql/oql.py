@@ -60,6 +60,9 @@ class OqlMeta:
     def get_alias2path(self, model: str) -> Dict[str, str]:
         return self._model2alias2path[model]
 
+    def get_aliases(self, model: str) -> Iterable[AliasNode]:
+        return self._model2alias2node[model].values()
+
     def _load_term_fields(self):
         """Load fields that have a relation to `oql.term`."""
         env = self.env
@@ -151,7 +154,7 @@ class OqlMeta:
     def _load_alias2node(self, model: str) -> Dict[str, AliasNode]:
         recs = self.env["oql.alias.line"].sudo().search([("rule_id.model_id.model", "=", model)])
         perm_aliases = self.acl[model].perm_aliases("read")
-        alias2node = {x.alias: AliasNode.parse(x.path, x.alias) for x in recs if x.alias in perm_aliases}
+        alias2node = {x.alias: AliasNode.parse(x.path, x.alias, x.help) for x in recs if x.alias in perm_aliases}
         return alias2node
 
 
