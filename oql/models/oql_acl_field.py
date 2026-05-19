@@ -6,6 +6,8 @@ from typing import Literal, Set
 
 from odoo import fields, models, api
 
+from ..compatible import model_flush
+
 
 class OqlAclField(models.Model):
     """
@@ -42,8 +44,8 @@ class OqlAclField(models.Model):
             # User root have all accesses
             return set(self.env[model]._fields)
 
-        self.env["ir.model.access"].flush()
-        self.flush(self._fields)
+        model_flush(self.env["ir.model.access"])
+        model_flush(self, self._fields)
 
         sql = f"""
         SELECT d.name

@@ -16,9 +16,9 @@ from .util import get_field_def, field_type2python_type, read_object, PathAwareF
 
 
 class AliasNode(ABC):
+    _REGEX_EXPAND = re.compile(r"^\s*(?:(\w+(?:\.\w+)*)\s*=>\s*)?(.*)$", re.DOTALL)
     _REGEX_FIELD = re.compile(r"^\w+(\.\w+)*$")
     _REGEX_DOTPATH = re.compile(r"^\s*(\w+(?:\.\w+)*)\s*$")  # Looser restriction.
-    _REGEX_EXPAND = re.compile(r"^\s*(?:(\w+(?:\.\w+)*)\s*=>\s*)?(.*)$", re.DOTALL)
 
     def __init__(self, path: str, alias: str):
         self.path = self._validate_path(path, "field path")
@@ -105,7 +105,7 @@ class AliasNode(ABC):
             # Format [xx.yy.zz] => aa.bb
             match = cls._REGEX_DOTPATH.fullmatch(body)
             if match:
-                return AliasFieldPath(match.group(1), alias, match.group(2))
+                return AliasFieldPath(path, alias, match.group(1))
             # Format [xx.yy.zz] => JSON
             try:
                 obj = json.loads(body)
