@@ -2,102 +2,12 @@
  * OQL Editor Core - Standalone Version
  * Reusable CodeMirror-based OQL editor with intelligent hints
  * Can be used in any environment (Odoo backend, standalone pages, etc.)
+ * 
+ * Note: Requires oql_highlight.js to be loaded first for syntax highlighting
  */
 
 (function(window) {
     'use strict';
-
-    // ==========================================
-    // Register OQL Mode for CodeMirror
-    // ==========================================
-    if (typeof CodeMirror !== 'undefined') {
-        CodeMirror.defineMode("oql", function(config, parserConfig) {
-            var keywords = parserConfig.keywords || {};
-            
-            function regexClass(src) {
-                return new RegExp("^[" + src + "]");
-            }
-            
-            var puncChars = regexClass("\\(\\)\\[\\]\\{\\},:;");
-            var operatorChars = regexClass("\\*\\+\\-\\/=<>");
-            
-            function tokenBase(stream, state) {
-                var ch = stream.next();
-                
-                // Comment
-                if (ch == "#") {
-                    stream.skipToEnd();
-                    return "comment";
-                }
-                
-                // String
-                if (ch == "'" || ch == '"') {
-                    state.tokenize = tokenString(ch);
-                    return state.tokenize(stream, state);
-                }
-                
-                // Number
-                if (/\d/.test(ch)) {
-                    stream.eatWhile(/[\w\.]/);
-                    return "number";
-                }
-                
-                // Operators
-                if (operatorChars.test(ch)) {
-                    stream.eatWhile(operatorChars);
-                    return "operator";
-                }
-                
-                // Punctuation
-                if (puncChars.test(ch)) {
-                    return null;
-                }
-                
-                // Keywords and identifiers
-                stream.eatWhile(/[\w\$_]/);
-                var word = stream.current().toLowerCase();
-                
-                if (keywords.hasOwnProperty(word)) {
-                    return "keyword";
-                }
-                
-                return "variable";
-            }
-            
-            function tokenString(quote) {
-                return function(stream, state) {
-                    var escaped = false, next;
-                    while ((next = stream.next()) != null) {
-                        if (next == quote && !escaped) break;
-                        escaped = !escaped && next == "\\";
-                    }
-                    if (!escaped) state.tokenize = tokenBase;
-                    return "string";
-                };
-            }
-            
-            return {
-                startState: function() {
-                    return {tokenize: tokenBase};
-                },
-                token: function(stream, state) {
-                    if (stream.eatSpace()) return null;
-                    return state.tokenize(stream, state);
-                }
-            };
-        });
-
-        CodeMirror.defineMIME("text/x-oql", {
-            name: "oql",
-            keywords: {
-                "from": true, "select": true, "where": true, "and": true, "or": true,
-                "in": true, "like": true, "not": true, "null": true, "true": true,
-                "false": true, "limit": true, "offset": true, "order": true, "by": true,
-                "asc": true, "desc": true, "group": true, "having": true, "count": true,
-                "sum": true, "avg": true, "min": true, "max": true, "as": true
-            }
-        });
-    }
 
     // ==========================================
     // OQL Editor Core Class

@@ -26,7 +26,10 @@
             <script src="/oql_web/static/lib/codemirror/lib/codemirror.js"></script>
             <script src="/oql_web/static/lib/codemirror/addon/hint/show-hint.js"></script>
             
-            <!-- OQL Editor Core - includes syntax highlighting -->
+            <!-- OQL Syntax Highlighting (must load before oql_editor.js) -->
+            <script src="/oql_web/static/src/js/oql_highlight.js"></script>
+            
+            <!-- OQL Editor Core -->
             <script src="/oql_web/static/src/js/oql_editor.js"></script>
             
             <!-- OQL Workbench App (ONLY loaded on workbench page) -->
