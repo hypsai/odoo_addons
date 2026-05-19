@@ -1,6 +1,6 @@
 {
     "name": "OQL - Odoo Query Language",
-    "version":"1.4.0",
+    "version":"1.4.1",
     "author": "Chris",
     "website": "https://github.com/chrisking94/odoo_addons/tree/main/oql",
     "license": "LGPL-3",
