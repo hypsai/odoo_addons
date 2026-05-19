@@ -132,68 +132,7 @@
     min-width: 0 !important;
 }
 
-/* OQL Hint Styles for Search */
-.CodeMirror-hints.oql-search-hints {
-    z-index: 9999;
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-item {
-    padding: 6px 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-item:hover {
-    background-color: #f0f0f0;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-item .type-marker {
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: bold;
-    color: white;
-    flex-shrink: 0;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-term .type-marker {
-    background-color: #4a90e2;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-alias .type-marker {
-    background-color: #4caf50;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-operator .type-marker {
-    background-color: #ff9800;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-value .type-marker {
-    background-color: #9c27b0;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-content {
-    flex: 1;
-    font-size: 13px;
-}
-
-.CodeMirror-hints.oql-search-hints .oql-hint-desc {
-    margin-left: auto;
-    font-size: 11px;
-    color: #999;
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+/* OQL Hint Styles for Search - Uses oql-editor-hints from oql_editor.css */
 
 /* OQL History Dropdown */
 .oql_history_dropdown {

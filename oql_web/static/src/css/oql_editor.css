@@ -1,26 +1,15 @@
-/* oql_editor.css */
-.o_oql_editor {
-    height: 100%;
-    position: relative;
-}
+/* oql_editor.css - Styles for OQL Editor Core (standalone/editor component) */
 
-.CodeMirror {
-    height: 100%;
-    font-family: monospace;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
+/* OQL Hint Styles */
 .CodeMirror-hints {
-    max-height: 180px;
+    z-index: 9999;
+    max-height: 300px;
     overflow-y: auto;
     padding: 0;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     background: white;
-    z-index: 9999;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 12px;
     line-height: 1.2;
@@ -29,7 +18,7 @@
 }
 
 .CodeMirror-hint {
-    padding: 3px 6px;
+    padding: 6px 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -46,7 +35,7 @@
 }
 
 .CodeMirror-hint:hover {
-    background-color: #f5f9ff;
+    background-color: #f0f0f0;
 }
 
 .CodeMirror-hint-active {
@@ -55,31 +44,53 @@
 }
 
 .oql-hint-item {
+    padding: 0;
+    cursor: pointer;
     display: flex;
     align-items: center;
+    gap: 8px;
     width: 100%;
+}
+
+.oql-hint-item .type-marker {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+    flex-shrink: 0;
+}
+
+.oql-hint-term .type-marker {
+    background-color: #4a90e2;
+}
+
+.oql-hint-field .type-marker {
+    background-color: #52c41a;
+}
+
+.oql-hint-alias .type-marker {
+    background-color: #4caf50;
+}
+
+.oql-hint-operator .type-marker {
+    background-color: #ff9800;
+}
+
+.oql-hint-value .type-marker {
+    background-color: #9c27b0;
 }
 
 .oql-hint-content {
     flex: 1;
+    font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: monospace;
-    font-size: 11px;
-}
-
-.oql-hint-desc {
-    font-size: 10px;
-    color: #666;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px;
-    font-style: italic;
-    padding-left: 5px;
-    border-left: 1px solid #eee;
-    margin-left: auto;
 }
 
 .oql-hint-content strong {
@@ -87,88 +98,12 @@
     font-weight: bold;
 }
 
-/* 类型标记样式 */
-.type-marker {
-    width: 14px;
-    height: 14px;
-    line-height: 14px;
-    text-align: center;
-    border-radius: 2px;
-    margin-right: 5px;
-    font-size: 9px;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-/* 类型特定样式 */
-.oql-hint-term .type-marker {
-    background-color: #e6f7ff;
-    color: #1890ff;
-    border: 1px solid #91d5ff;
-}
-
-.oql-hint-field .type-marker {
-    background-color: #f6ffed;
-    color: #52c41a;
-    border: 1px solid #b7eb8f;
-}
-
-.oql-hint-alias .type-marker {
-    background-color: #fff7e6;
-    color: #fa8c16;
-    border: 1px solid #ffd591;
-}
-
-.oql-hint-value .type-marker {
-    background-color: #fff0f6;
-    color: #eb2f96;
-    border: 1px solid #ffadd2;
-}
-
-/* 紧凑模式 */
-.compact-hint .CodeMirror-hint {
-    padding: 2px 5px;
+.oql-hint-desc {
+    margin-left: auto;
     font-size: 11px;
-    min-height: 20px;
-}
-
-.compact-hint .oql-hint-content {
-    font-size: 10px;
-}
-
-.compact-hint .oql-hint-desc {
-    font-size: 9px;
-    max-width: 100px;
-}
-
-.compact-hint .type-marker {
-    width: 12px;
-    height: 12px;
-    line-height: 12px;
-    font-size: 8px;
-    margin-right: 4px;
-}
-
-/* 当提示少于5个时更紧凑 */
-.small-hint-list .CodeMirror-hint {
-    padding: 1px 4px;
-    min-height: 18px;
-    font-size: 10px;
-}
-
-.small-hint-list .oql-hint-content {
-    font-size: 9px;
-}
-
-.small-hint-list .oql-hint-desc {
-    font-size: 8px;
-    max-width: 90px;
-}
-
-.small-hint-list .type-marker {
-    width: 10px;
-    height: 10px;
-    line-height: 10px;
-    font-size: 7px;
-    margin-right: 3px;
+    color: #999;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

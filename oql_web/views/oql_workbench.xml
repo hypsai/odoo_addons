@@ -16,6 +16,7 @@
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
             
             <!-- Custom CSS -->
+            <link rel="stylesheet" href="/oql_web/static/src/css/oql_editor.css"/>
             <link rel="stylesheet" href="/oql_web/static/src/css/oql_workbench.css"/>
             
             <!-- jQuery (required by OQL Editor Core) -->
@@ -25,8 +26,8 @@
             <script src="/oql_web/static/lib/codemirror/lib/codemirror.js"></script>
             <script src="/oql_web/static/lib/codemirror/addon/hint/show-hint.js"></script>
             
-            <!-- OQL Editor Core (Standalone) - includes syntax highlighting -->
-            <script src="/oql_web/static/src/js/oql_editor_standalone.js"></script>
+            <!-- OQL Editor Core - includes syntax highlighting -->
+            <script src="/oql_web/static/src/js/oql_editor.js"></script>
             
             <!-- OQL Workbench App (ONLY loaded on workbench page) -->
             <script src="/oql_web/static/src/js/oql_workbench_app.js"></script>
