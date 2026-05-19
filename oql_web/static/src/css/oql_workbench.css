@@ -1,32 +1,25 @@
 /* OQL Workbench - Main Styles */
 
+/* ==========================================
+   CSS Variables for OQL Workbench
+   ========================================== */
+:root {
+    --oql-primary-color: #4caf50;
+    --oql-primary-hover: #45a049;
+    --oql-secondary-color: #4a90e2;
+    --oql-secondary-hover: #357abd;
+    --oql-danger-color: #f44336;
+    --oql-border-color: #e0e0e0;
+    --oql-bg-light: #fafafa;
+    --oql-text-primary: #333;
+    --oql-text-secondary: #666;
+    --oql-text-muted: #999;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-}
-
-/* Navbar Button Styles */
-.oql-workbench-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    height: 46px !important;
-    padding: 0 12px;
-    color: #ffffff !important;
-    font-weight: 500;
-    transition: all 0.2s;
-    border-radius: 0;
-}
-
-.oql-workbench-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: #ffffff !important;
-}
-
-.oql-workbench-btn i {
-    font-size: 16px;
 }
 
 .o_oql_workbench {
@@ -41,7 +34,7 @@
 /* Header Toolbar */
 .oql-workbench-header {
     background: #ffffff;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--oql-border-color);
     padding: 10px 16px;
     display: flex;
     align-items: center;
@@ -54,7 +47,7 @@
 .oql-workbench-title {
     font-size: 16px;
     font-weight: 600;
-    color: #333;
+    color: var(--oql-text-primary);
 }
 
 .oql-user-info {
@@ -62,7 +55,7 @@
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #666;
+    color: var(--oql-text-secondary);
     padding: 4px 12px;
     background: #f5f5f5;
     border-radius: 4px;
@@ -82,24 +75,24 @@
 }
 
 .oql-toolbar-btn:hover {
-    border-color: #4caf50;
-    color: #4caf50;
+    border-color: var(--oql-primary-color);
+    color: var(--oql-primary-color);
 }
 
 .oql-toolbar-btn.btn-primary {
-    background: #4caf50;
+    background: var(--oql-primary-color);
     color: white;
-    border-color: #4caf50;
+    border-color: var(--oql-primary-color);
 }
 
 .oql-toolbar-btn.btn-primary:hover {
-    background: #45a049;
+    background: var(--oql-primary-hover);
 }
 
 .oql-toolbar-separator {
     width: 1px;
     height: 24px;
-    background: #e0e0e0;
+    background: var(--oql-border-color);
     margin: 0 4px;
 }
 
@@ -115,7 +108,7 @@
 .oql-sidebar {
     width: 260px;
     background: white;
-    border-right: 1px solid #e0e0e0;
+    border-right: 1px solid var(--oql-border-color);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -125,16 +118,16 @@
 
 .oql-sidebar-header {
     padding: 12px 16px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--oql-border-color);
     font-weight: 600;
     font-size: 14px;
-    color: #333;
-    background: #fafafa;
+    color: var(--oql-text-primary);
+    background: var(--oql-bg-light);
 }
 
 .oql-model-search {
     padding: 8px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--oql-border-color);
 }
 
 .oql-model-search input {
@@ -147,7 +140,7 @@
 }
 
 .oql-model-search input:focus {
-    border-color: #4caf50;
+    border-color: var(--oql-primary-color);
 }
 
 .oql-model-list {
@@ -169,20 +162,20 @@
 
 .oql-model-item:hover {
     background: #f0f9f0;
-    border-left-color: #4caf50;
+    border-left-color: var(--oql-primary-color);
 }
 
 .oql-model-item.active {
     background: #e8f5e9;
-    border-left-color: #4caf50;
+    border-left-color: var(--oql-primary-color);
     color: #2e7d32;
     font-weight: 500;
 }
 
 /* Tab Bar */
 .oql-tab-bar {
-    background: #fafafa;
-    border-bottom: 1px solid #e0e0e0;
+    background: var(--oql-bg-light);
+    border-bottom: 1px solid var(--oql-border-color);
     display: flex;
     align-items: center;
     overflow-x: auto;
@@ -205,40 +198,40 @@
 
 /* Pencil icon for editing */
 .oql-tab-edit-icon {
-    font-size: 13px !important;
-    color: #999 !important;
-    opacity: 0.7 !important; /* Always visible */
+    font-size: 13px;
+    color: var(--oql-text-muted);
+    opacity: 0.7; /* Always visible */
     transition: opacity 0.2s;
     cursor: pointer;
     flex-shrink: 0; /* Prevent icon from shrinking */
-    display: inline-block !important;
-    visibility: visible !important;
+    display: inline-block;
+    visibility: visible;
     line-height: 1;
     margin-right: 2px;
 }
 
-.oql-tab:hover .oql-tab-edit-icon {
-    opacity: 1 !important; /* Fully visible on hover */
+.oql-tab:hover > .oql-tab-edit-icon {
+    opacity: 1; /* Fully visible on hover */
 }
 
 .oql-tab-edit-icon:hover {
-    color: #4a90e2 !important;
+    color: var(--oql-secondary-color);
 }
 
 /* Tab name input for editing */
 .oql-tab-name-input {
-    border: 1px solid #4a90e2 !important;
-    border-radius: 3px !important;
-    padding: 2px 6px !important;
-    font-size: 13px !important;
-    outline: none !important;
-    background: white !important;
+    border: 1px solid var(--oql-secondary-color);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 13px;
+    outline: none;
+    background: white;
     min-width: 80px;
     max-width: 150px;
-    cursor: text !important;
-    caret-color: #333 !important; /* Ensure cursor is visible */
-    color: #333 !important;
-    display: inline-block !important;
+    cursor: text;
+    caret-color: #333; /* Ensure cursor is visible */
+    color: var(--oql-text-primary);
+    display: inline-block;
     vertical-align: middle;
 }
 
@@ -248,8 +241,8 @@
 
 .oql-tab.active {
     background: white;
-    color: #4caf50;
-    border-bottom: 2px solid #4caf50;
+    color: var(--oql-primary-color);
+    border-bottom: 2px solid var(--oql-primary-color);
     font-weight: 500;
 }
 
@@ -281,13 +274,13 @@
 }
 
 .oql-tab-add:hover {
-    color: #4caf50;
+    color: var(--oql-primary-color);
 }
 
 /* Editor and Result Area */
 .oql-editor-toolbar {
-    background: #fafafa;
-    border-bottom: 1px solid #e0e0e0;
+    background: var(--oql-bg-light);
+    border-bottom: 1px solid var(--oql-border-color);
     padding: 6px 12px;
     display: flex;
     align-items: center;
@@ -309,7 +302,7 @@
 
 .oql-result-info {
     font-size: 13px;
-    color: #666;
+    color: var(--oql-text-secondary);
     font-weight: 500;
 }
 
@@ -343,18 +336,18 @@
 
 .oql-btn-execute {
     background: transparent;
-    color: #4caf50;
-    border: 1px solid #4caf50;
+    color: var(--oql-primary-color);
+    border: 1px solid var(--oql-primary-color);
 }
 
 .oql-btn-execute:hover {
-    background: #4caf50;
+    background: var(--oql-primary-color);
     color: white;
 }
 
 .oql-btn-execute:active {
     background: transparent;
-    color: #4caf50;
+    color: var(--oql-primary-color);
 }
 
 .oql-btn-execute:active .oql-btn-icon {
@@ -363,18 +356,18 @@
 
 .oql-btn-stop {
     background: transparent;
-    color: #f44336;
-    border: 1px solid #f44336;
+    color: var(--oql-danger-color);
+    border: 1px solid var(--oql-danger-color);
 }
 
 .oql-btn-stop:hover {
-    background: #f44336;
+    background: var(--oql-danger-color);
     color: white;
 }
 
 .oql-btn-stop:active {
     background: transparent;
-    color: #f44336;
+    color: var(--oql-danger-color);
 }
 
 .oql-btn-stop:active .oql-btn-icon {
@@ -391,7 +384,7 @@
     margin-left: 8px;
     width: 14px;
     height: 14px;
-    border: 2px solid #f44336;
+    border: 2px solid var(--oql-danger-color);
     border-top-color: transparent;
     border-radius: 50%;
     animation: oql-spin 0.8s linear infinite;
@@ -413,7 +406,7 @@
 .oql-editor-container {
     flex: 0 0 auto;
     height: 200px;
-    border-bottom: 2px solid #e0e0e0;
+    border-bottom: 2px solid var(--oql-border-color);
 }
 .oql-main-area {
     flex: 1;
@@ -427,7 +420,7 @@
 .oql-editor-container {
     flex: 0 0 auto;
     height: 200px;
-    border-bottom: 2px solid #e0e0e0;
+    border-bottom: 2px solid var(--oql-border-color);
     position: relative;
 }
 
@@ -456,7 +449,7 @@
 }
 
 .oql-result-table thead {
-    background: #fafafa;
+    background: var(--oql-bg-light);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -466,8 +459,8 @@
     padding: 10px 12px;
     text-align: left;
     font-weight: 600;
-    color: #333;
-    border-bottom: 2px solid #e0e0e0;
+    color: var(--oql-text-primary);
+    border-bottom: 2px solid var(--oql-border-color);
     white-space: nowrap;
 }
 
@@ -484,7 +477,7 @@
 .oql-result-empty {
     text-align: center;
     padding: 40px;
-    color: #999;
+    color: var(--oql-text-muted);
     font-size: 14px;
 }
 
@@ -500,11 +493,11 @@
 
 /* Status Bar */
 .oql-status-bar {
-    background: #fafafa;
-    border-top: 1px solid #e0e0e0;
+    background: var(--oql-bg-light);
+    border-top: 1px solid var(--oql-border-color);
     padding: 6px 16px;
     font-size: 12px;
-    color: #666;
+    color: var(--oql-text-secondary);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -548,121 +541,4 @@
 
 .oql-tab-content.active {
     display: flex;
-}
-
-/* ==========================================
-   CodeMirror Hint Styles
-   ========================================== */
-
-.CodeMirror-hints {
-    max-height: 180px;
-    overflow-y: auto;
-    padding: 0;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    background: white;
-    z-index: 9999;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    font-size: 12px;
-    line-height: 1.2;
-    min-width: 200px;
-    max-width: 350px;
-}
-
-.CodeMirror-hint {
-    padding: 3px 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-bottom: 1px solid #f0f0f0;
-    min-height: 22px;
-    display: flex;
-    align-items: center;
-}
-
-.CodeMirror-hint:last-child {
-    border-bottom: none;
-}
-
-.CodeMirror-hint:hover {
-    background-color: #f5f9ff;
-}
-
-.CodeMirror-hint-active {
-    background-color: #e6f2ff;
-    border-left: 2px solid #1a5fb4;
-}
-
-.oql-hint-item {
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.oql-hint-content {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: monospace;
-    font-size: 11px;
-}
-
-.oql-hint-desc {
-    font-size: 10px;
-    color: #666;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px;
-    font-style: italic;
-    padding-left: 5px;
-    border-left: 1px solid #eee;
-    margin-left: auto;
-}
-
-.oql-hint-content strong {
-    color: #ff6600;
-    font-weight: bold;
-}
-
-/* Type marker styles */
-.type-marker {
-    width: 14px;
-    height: 14px;
-    line-height: 14px;
-    text-align: center;
-    border-radius: 2px;
-    margin-right: 5px;
-    font-size: 9px;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-/* Type-specific styles */
-.oql-hint-term .type-marker {
-    background-color: #e6f7ff;
-    color: #1890ff;
-    border: 1px solid #91d5ff;
-}
-
-.oql-hint-field .type-marker {
-    background-color: #f6ffed;
-    color: #52c41a;
-    border: 1px solid #b7eb8f;
-}
-
-.oql-hint-alias .type-marker {
-    background-color: #fff7e6;
-    color: #fa8c16;
-    border: 1px solid #ffd591;
-}
-
-.oql-hint-value .type-marker {
-    background-color: #fff0f6;
-    color: #eb2f96;
-    border: 1px solid #ffadd2;
 }
