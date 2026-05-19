@@ -24,7 +24,7 @@
             return true;
         }
 
-        // Define the OQL mode with complete syntax rules
+        // Define the OQL mode with complete syntax rules based on oql.lark
         CodeMirror.defineMode('oql', function() {
             return {
                 token: function(stream) {
@@ -33,25 +33,45 @@
                         return null;
                     }
 
-                    // Keywords (logical operators and literals)
-                    if (stream.match(/^\b(and|or|not|is|null|true|false)\b/)) {
+                    // String literals (single quotes with escaped single quotes) - check before keywords
+                    if (stream.match(/^'(?:[^']|'')*'/)) {
+                        return 'string';
+                    }
+
+                    // Multi-word operators with spaces (must come before single-word keywords/operators)
+                    if (stream.match(/^not\s+like/i) || 
+                        stream.match(/^not\s+ilike/i) || 
+                        stream.match(/^not\s+in/i)) {
+                        return 'operator';
+                    }
+
+                    // ORDER BY clause (multi-word keyword)
+                    if (stream.match(/^order\s+by/i)) {
                         return 'keyword';
                     }
 
-                    // Multi-word operators with spaces (must come before single-word operators)
-                    if (stream.match(/^not\s+like/) || 
-                        stream.match(/^not\s+ilike/) || 
-                        stream.match(/^not\s+in/)) {
-                        return 'operator';
+                    // SQL-like keywords (case-insensitive)
+                    if (stream.match(/^\b(from|select|where|limit|offset|order|by|as)\b/i)) {
+                        return 'keyword';
+                    }
+
+                    // Logical operators and literals
+                    if (stream.match(/^\b(and|or|not|is|null|true|false)\b/i)) {
+                        return 'keyword';
+                    }
+
+                    // Sorting direction keywords
+                    if (stream.match(/^\b(asc|desc)\b/i)) {
+                        return 'keyword';
                     }
 
                     // Multi-character operators (must come before single-char)
-                    if (stream.match(/^(!=|<>|<=|>=|=like|=ilike|=\?|child_of|parent_of)/)) {
+                    if (stream.match(/^(!=|<>|<=|>=|=like|=ilike|=\?|child_of|parent_of)/i)) {
                         return 'operator';
                     }
 
-                    // Single-word operators (must be word-bounded to avoid matching in identifiers)
-                    if (stream.match(/^\b(like|ilike|in)\b/)) {
+                    // Single-word comparison operators
+                    if (stream.match(/^\b(like|ilike|in)\b/i)) {
                         return 'operator';
                     }
 
@@ -60,14 +80,9 @@
                         return 'operator';
                     }
 
-                    // Unary operators
-                    if (stream.match(/^\bsize\b/)) {
+                    // Unary operator
+                    if (stream.match(/^\b_sizeof_\b/i)) {
                         return 'operator';
-                    }
-
-                    // String literals (single or double quotes)
-                    if (stream.match(/^'[^']*'|^"[^"]*"/)) {
-                        return 'string';
                     }
 
                     // Float numbers (must come before int)
@@ -80,13 +95,13 @@
                         return 'number';
                     }
 
-                    // Field names and identifiers
+                    // Field names, model names, and identifiers (dot-separated allowed)
                     if (stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/)) {
                         return 'variable';
                     }
 
                     // Brackets and punctuation
-                    if (stream.match(/^[\[\](){}.,]/)) {
+                    if (stream.match(/^[\[\](){}.,*]/)) {
                         return 'bracket';
                     }
 
@@ -116,23 +131,23 @@
         var styleElement = document.createElement('style');
         styleElement.id = 'oql-highlight-styles';
         styleElement.textContent = [
-            /* Keywords */
-            '.cm-keyword { color: #667eea; font-weight: bold; }',
+            /* Keywords - Deep purple for language keywords */
+            '.cm-keyword { color: #7c3aed; font-weight: 600; }',
             
-            /* Operators */
-            '.cm-operator { color: #ff9800; font-weight: bold; }',
+            /* Operators - Bright orange for operators and comparison symbols */
+            '.cm-operator { color: #ea580c; font-weight: 600; }',
             
-            /* Numbers */
-            '.cm-number { color: #4caf50; }',
+            /* Numbers - Teal for numeric values */
+            '.cm-number { color: #0891b2; }',
             
-            /* Strings */
-            '.cm-string { color: #e91e63; }',
+            /* Strings - Rose red for string literals */
+            '.cm-string { color: #dc2626; }',
             
-            /* Variables (field names) */
-            '.cm-variable { color: #2196f3; }',
+            /* Variables (field names) - Blue for identifiers */
+            '.cm-variable { color: #2563eb; }',
             
-            /* Brackets */
-            '.cm-bracket { color: #9e9e9e; }'
+            /* Brackets - Neutral gray for punctuation */
+            '.cm-bracket { color: #64748b; }'
         ].join('\n');
 
         document.head.appendChild(styleElement);
