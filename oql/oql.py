@@ -277,6 +277,11 @@ class FieldAccess:
             return True
         return False
 
+    @property
+    def is_field(self) -> bool:
+        """Whether this is a plain field access. e.g. `name`, `price`."""
+        return len(self.names) == 1 and not self._tail_alias and not self.next
+
     def eval_bin(self, opr: str, value):
         return self._eval(False, opr, value)
 
@@ -418,7 +423,7 @@ class OqlTransformer(lark.Transformer):
         dot_fas: List[FieldAccess] = []
         plain_fas: List[FieldAccess] = []
         for fa in select:
-            if len(fa.names) == 1:
+            if fa.is_field:
                 plain_fas.append(fa)
             else:
                 dot_fas.append(fa)
