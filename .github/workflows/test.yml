@@ -1,4 +1,4 @@
-name: Test MCP Base Compatibility
+name: Test Odoo Addons
 
 on:
   push:
@@ -7,82 +7,113 @@ on:
     branches: [main, '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
 
 jobs:
-  test-13:
+  # Detect which modules were changed
+  detect-changes:
     runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/13.0' ||
-      (github.event_name == 'pull_request' && github.base_ref == '13.0')
+    outputs:
+      modules: ${{ steps.detect.outputs.modules }}
     
-    services:
-      postgres:
-        image: postgres:12
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Run tests with Odoo 13.0 Docker
-        run: |
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL to be ready..."
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U odoo; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting... ($i/30)"
-            sleep 2
-          done
-          
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:13.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --test-tags /mcp_base \
-                 --stop-after-init \
-                 -d test_mcp_13.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=warn
-        env:
-          PGPASSWORD: odoo
-
-
-      - name: Upload test logs
-        if: failure()
-        uses: actions/upload-artifact@v4
         with:
-          name: odoo-logs-13.0
-          path: /tmp/odoo_output.log
-          retention-days: 7
+          fetch-depth: 2
+      
+      - name: Detect changed modules
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # For PR, compare with base branch
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            # For push, compare with previous commit
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+          
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Extract module names from changed files
+          MODULES=""
+          for file in $CHANGED_FILES; do
+            # Get the top-level directory (module name)
+            MODULE=$(echo "$file" | cut -d'/' -f1)
+            
+            # Check if it's a valid module directory
+            if [ -d "$MODULE" ] && [ -f "$MODULE/__manifest__.py" ]; then
+              if [[ ! "$MODULES" =~ "$MODULE" ]]; then
+                if [ -z "$MODULES" ]; then
+                  MODULES="$MODULE"
+                else
+                  MODULES="$MODULES,$MODULE"
+                fi
+              fi
+            fi
+          done
+          
+          # If no modules detected, test all modules for this branch
+          if [ -z "$MODULES" ]; then
+            echo "No specific modules detected, will test all modules for this branch"
+            # Read from catalog.json
+            BRANCH="${{ github.ref_name }}"
+            MODULES=$(python3 -c "
+          import json
+          with open('catalog.json') as f:
+              config = json.load(f)
+          modules = [m for m, info in config['modules'].items() if '$BRANCH' in info['supported_versions']]
+          print(','.join(modules))
+          ")
+          fi
+          
+          echo "Modules to test: $MODULES"
+          echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
-  test-14:
+  # Dynamic test matrix - tests only changed modules
+  test:
+    needs: detect-changes
     runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/14.0' ||
-      (github.event_name == 'pull_request' && github.base_ref == '14.0')
+    if: ${{ needs.detect-changes.outputs.modules != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Odoo 13.0
+          - odoo_version: '13.0'
+            postgres_version: '12'
+            test_db: 'test_13'
+            
+          # Odoo 14.0
+          - odoo_version: '14.0'
+            postgres_version: '12'
+            test_db: 'test_14'
+            
+          # Odoo 15.0
+          - odoo_version: '15.0'
+            postgres_version: '15'
+            test_db: 'test_15'
+            
+          # Odoo 16.0
+          - odoo_version: '16.0'
+            postgres_version: '15'
+            test_db: 'test_16'
+            
+          # Odoo 17.0
+          - odoo_version: '17.0'
+            postgres_version: '15'
+            test_db: 'test_17'
+            
+          # Odoo 18.0
+          - odoo_version: '18.0'
+            postgres_version: '15'
+            test_db: 'test_18'
+            
+          # Odoo 19.0
+          - odoo_version: '19.0'
+            postgres_version: '15'
+            test_db: 'test_19'
     
     services:
       postgres:
-        image: postgres:12
+        image: postgres:${{ matrix.postgres_version }}
         env:
           POSTGRES_USER: odoo
           POSTGRES_PASSWORD: odoo
@@ -98,143 +129,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Run tests with Odoo 14.0 Docker
+      - name: Filter modules for this branch
+        id: filter
         run: |
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL to be ready..."
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U odoo; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting... ($i/30)"
-            sleep 2
-          done
+          BRANCH="${{ matrix.odoo_version }}"
+          ALL_MODULES="${{ needs.detect-changes.outputs.modules }}"
           
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:14.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --test-tags /mcp_base \
-                 --stop-after-init \
-                 -d test_mcp_14.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=warn
-        env:
-          PGPASSWORD: odoo
-
-
-      - name: Upload test logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-14.0
-          path: /tmp/odoo_output.log
-          retention-days: 7
-
-  test-15:
-    runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/15.0' || github.ref == 'refs/heads/main' ||
-      (github.event_name == 'pull_request' && (github.base_ref == '15.0' || github.base_ref == 'main'))
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
+          # Filter modules that support this Odoo version
+          FILTERED_MODULES=$(python3 -c "
+          import json
+          
+          with open('catalog.json') as f:
+              config = json.load(f)
+          
+          all_modules = '$ALL_MODULES'.split(',')
+          filtered = [m for m in all_modules if '$BRANCH' in config['modules'][m]['supported_versions']]
+          print(','.join(filtered))
+          ")
+          
+          echo "Filtered modules for $BRANCH: $FILTERED_MODULES"
+          echo "modules=$FILTERED_MODULES" >> $GITHUB_OUTPUT
       
-      - name: Run tests with Odoo 15.0 Docker
-        run: |
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL to be ready..."
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U odoo; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting... ($i/30)"
-            sleep 2
-          done
-          
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:15.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --test-tags /mcp_base \
-                 --stop-after-init \
-                 -d test_mcp_15.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=warn
-        env:
-          PGPASSWORD: odoo
-
-
-      - name: Upload test logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-15.0
-          path: /tmp/odoo_output.log
-          retention-days: 7
-
-  test-16:
-    runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/16.0' ||
-      (github.event_name == 'pull_request' && github.base_ref == '16.0')
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
+      - name: Skip if no modules for this version
+        if: ${{ steps.filter.outputs.modules == '' }}
+        run: echo "No modules to test for this Odoo version"
       
-      - name: Run tests with Odoo 16.0 Docker
+      - name: Wait for PostgreSQL
+        if: ${{ steps.filter.outputs.modules != '' }}
         run: |
-          # Wait for PostgreSQL to be ready
           echo "Waiting for PostgreSQL to be ready..."
           for i in {1..30}; do
             if pg_isready -h localhost -p 5432 -U odoo; then
@@ -244,6 +166,14 @@ jobs:
             echo "Waiting... ($i/30)"
             sleep 2
           done
+      
+      - name: Run tests with Odoo ${{ matrix.odoo_version }}
+        if: ${{ steps.filter.outputs.modules != '' }}
+        run: |
+          MODULES="${{ steps.filter.outputs.modules }}"
+          
+          echo "Testing modules: $MODULES"
+          echo "Odoo version: ${{ matrix.odoo_version }}"
           
           docker run --rm \
             --network host \
@@ -252,12 +182,11 @@ jobs:
             -e PORT=5432 \
             -e USER=odoo \
             -e PASSWORD=odoo \
-            odoo:16.0 \
-            odoo -i mcp_base \
+            odoo:${{ matrix.odoo_version }} \
+            odoo -i $MODULES \
                  --test-enable \
-                 --test-tags /mcp_base \
                  --stop-after-init \
-                 -d test_mcp_16.0 \
+                 -d ${{ matrix.test_db }} \
                  --db_host=localhost \
                  --db_port=5432 \
                  --db_user=odoo \
@@ -270,205 +199,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: odoo-logs-16.0
-          path: /tmp/odoo_output.log
-          retention-days: 7
-
-  test-17:
-    runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/17.0' ||
-      (github.event_name == 'pull_request' && github.base_ref == '17.0')
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run tests with Odoo 17.0 Docker
-        run: |
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL to be ready..."
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U odoo; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting... ($i/30)"
-            sleep 2
-          done
-          
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:17.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --test-tags /mcp_base \
-                 --stop-after-init \
-                 -d test_mcp_17.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-17.0
-          path: /tmp/odoo_output.log
-          retention-days: 7
-
-  test-18:
-    runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/18.0' ||
-      (github.event_name == 'pull_request' && github.base_ref == '18.0')
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run tests with Odoo 18.0 Docker
-        run: |
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL to be ready..."
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U odoo; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting... ($i/30)"
-            sleep 2
-          done
-          
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:18.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --test-tags /mcp_base \
-                 --stop-after-init \
-                 -d test_mcp_18.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-18.0
-          path: /tmp/odoo_output.log
-          retention-days: 7
-
-  test-19:
-    runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/19.0' ||
-      (github.event_name == 'pull_request' && github.base_ref == '19.0')
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run tests with Odoo 19.0 Docker
-        run: |
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL to be ready..."
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U odoo; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting... ($i/30)"
-            sleep 2
-          done
-          
-          docker run --rm \
-            --network host \
-            -v $(pwd):/mnt/extra-addons \
-            -e HOST=localhost \
-            -e PORT=5432 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:19.0 \
-            odoo -i mcp_base \
-                 --test-enable \
-                 --test-tags /mcp_base \
-                 --stop-after-init \
-                 -d test_mcp_19.0 \
-                 --db_host=localhost \
-                 --db_port=5432 \
-                 --db_user=odoo \
-                 --db_password=odoo \
-                 --log-level=warn 2>&1 | tee /tmp/odoo_output.log
-        env:
-          PGPASSWORD: odoo
-
-      - name: Upload test logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-logs-19.0
+          name: odoo-logs-${{ matrix.odoo_version }}
           path: /tmp/odoo_output.log
           retention-days: 7
 
@@ -487,8 +218,19 @@ jobs:
           pip install pylint
           pip install pylint-odoo
 
-      - name: Run pylint
+      - name: Run pylint on all modules
         run: |
-          pylint --load-plugins=pylint_odoo \
-                 --rcfile=/dev/null \
-                 mcp_base/ || true
+          python3 -c "
+          import json
+          with open('catalog.json') as f:
+              config = json.load(f)
+          for module in config['modules'].keys():
+              print(module)
+          " | while read module; do
+            if [ -d "$module" ]; then
+              echo "Linting $module..."
+              pylint --load-plugins=pylint_odoo \
+                     --rcfile=/dev/null \
+                     "$module/" || true
+            fi
+          done

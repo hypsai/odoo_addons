@@ -15,17 +15,30 @@ import subprocess
 import sys
 import re
 import shutil
+import json
 from pathlib import Path
 
+# Load module configuration from JSON file
+CONFIG_FILE = Path(__file__).parent / 'catalog.json'
 
-# Module to supported Odoo versions mapping
-MODULE_VERSIONS = {
-    "mcp_base": ['13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0'],
-    "oql": ['15.0'],
-    "oql_web": ['15.0'],
-    "web_widget_pill_icon": ['15.0'],
-    "web_widget_yaml": ['15.0'],
-}
+def load_module_config():
+    """Load module configuration from modules_config.json"""
+    if not CONFIG_FILE.exists():
+        print(f"❌ Error: Configuration file not found: {CONFIG_FILE}")
+        sys.exit(1)
+    
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    
+    # Convert to MODULE_VERSIONS format for backward compatibility
+    module_versions = {}
+    for module_name, module_info in config['modules'].items():
+        module_versions[module_name] = module_info['supported_versions']
+    
+    return module_versions
+
+# Module to supported Odoo versions mapping (loaded from config)
+MODULE_VERSIONS = load_module_config()
 
 
 def get_manifest_path(module):
@@ -287,6 +300,17 @@ def main():
     for branch in odoo_branches:
         branch_ver = get_branch_version(branch, new_version)
         print(f"  - {branch}: {branch_ver}")
+    
+    # 7. Trigger CI/CD
+    print(f"\n{'='*60}")
+    print("📋 Step 7: CI/CD will be triggered automatically")
+    print('='*60)
+    print(f"\nGitHub Actions will automatically test the following modules on each branch:")
+    for branch in odoo_branches:
+        # Find all modules supported in this branch
+        branch_modules = [mod for mod, branches in MODULE_VERSIONS.items() if branch in branches]
+        print(f"  - {branch}: {', '.join(branch_modules)}")
+    
     print(f"\nCheck CI/CD status: https://github.com/chrisking94/odoo_addons/actions")
 
 
