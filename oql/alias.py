@@ -2,17 +2,23 @@
 # @Time         : 10:46 2025/10/17
 # @Author       : Chris
 # @Description  :
+import logging
 import re
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Iterable, Type
 
+import jinja2
+import jinja2.meta
+import jmespath
 from odoo import fields, _
 from odoo.models import BaseModel
 
-from .libs import jmespath
+from .libs import jmespath_ex, jinja2_ex
 from .recs import RecordSet
 from .util import get_field_def, field_type2python_type, RecordDictAdapter
+
+_logger = logging.getLogger(__name__)
 
 
 class AliasNode(ABC):
@@ -25,16 +31,17 @@ class AliasNode(ABC):
         self.alias = self._validate_path(alias, "alias")  # Alias of current node.
         self.path = path
         self.help = None
+        self._fields = None
 
     @property
     def is_complex(self):
         return True
 
     @property
-    @abstractmethod
     def fields(self) -> Iterable[str]:
-        """The fields this alias node uses, in dot-style."""
-        pass
+        if self._fields is None:
+            self._fields = self._parse_fields()
+        return self._fields
 
     @classmethod
     def register(cls, mode: str, t: Type["AliasNode"]):
@@ -46,26 +53,18 @@ class AliasNode(ABC):
     @classmethod
     def parse(cls, alias: str, mode, path: str, help_: str = None) -> "AliasNode":
         """
-        Parse alias text into AliasNode. Supports three base formats, optionally prefixed with relational field expansion:
+        Parse alias text into AliasNode. Supports three modes:
 
-        Base formats:
-        1. Dot path: `partner_id.company_id.name`
-        2. String template: `"Partner: {partner_id.name}"`
-        3. JSON mapping object (keys as aliases, values as paths):
-           {
-               "name": "partner_id.name",
-               "addresses @ address_ids": {
-                   "city": "city",
-                   "country": "country_id.name"
-               }
-           }
+        1. Field mode: Simple dot notation path
+           Example: `partner_id.company_id.name`
 
-        Optional expansion prefix (`field_path =>`):
-        - Expands a relational field as data source for the base format
-        - Examples:
-          * `address_ids => country_id.name` (expand + dot path)
-          * `address_ids => "Address: {city}"` (expand + string template)
-          * `address_ids => {...}` (expand + JSON object)
+        2. JMESPath mode: JSON query expression for complex data transformation
+           Example: `{name: partner_id.name, email: partner_id.email}`
+
+        3. Jinja2 mode: Template string for formatted output
+           Example: `Name is {{ rec.partner_id.name }}`
+        
+        All modes support accessing record fields through the `rec` context variable in templates.
         """
         t = cls._MODE2CLS.get(mode)
         if not t:
@@ -81,10 +80,17 @@ class AliasNode(ABC):
         :param _check: Internal use only, use to check complex lias field existence.
         :return: Scalar or object.
         """
-        return self._read(rec, _check)
+        try:
+            return self._read(rec, _check)
+        except Exception as e:
+            raise Exception(f"{type(self).__name__} query failed for alias '{self.alias}': {str(e)}") from e
 
     @abstractmethod
     def _read(self, rec, _check: bool):
+        pass
+
+    @abstractmethod
+    def _parse_fields(self) -> Iterable[str]:
         pass
 
     @classmethod
@@ -107,8 +113,7 @@ class AliasField(AliasNode):
     def is_complex(self):
         return False
 
-    @property
-    def fields(self) -> Iterable[str]:
+    def _parse_fields(self) -> Iterable[str]:
         return [self.path]
 
     def _read(self, rec, _check=False):
@@ -142,151 +147,29 @@ class AliasJMESPath(AliasNode):
     def __init__(self, alias: str, path: str):
         super().__init__(alias, path)
         self._jmespath = jmespath.compile(path)
-        # Cache extracted fields
-        self._cached_fields = None
 
-    @property
-    def fields(self) -> Iterable[str]:
-        """
-        Extract field names from JMESPath expression.
-        
-        Returns a list of dot-notation field paths that this JMESPath expression accesses.
-        For example:
-        - 'partner_id.name' -> ['partner_id.name']
-        - '{name: partner_id.name, email: partner_id.email}' -> ['partner_id.name', 'partner_id.email']
-        - 'order_lines[].product_id.name' -> ['order_lines.product_id.name']
-        """
-        if self._cached_fields is not None:
-            return self._cached_fields
-        
-        try:
-            # Parse JMESPath to AST
-            ast_tree = jmespath.parser.Parser().parse(self.path)
-            fields_set = set()
-            self._extract_fields_from_ast(ast_tree, '', fields_set)
-            self._cached_fields = list(fields_set)
-            return self._cached_fields
-        except Exception:
-            # If parsing fails, return empty list (fallback)
-            return []
-    
-    def _extract_fields_from_ast(self, node, prefix: str, fields_set: set):
-        """
-        Recursively extract field names from JMESPath AST nodes.
-        
-        :param node: JMESPath AST node
-        :param prefix: Current field path prefix (from record root)
-        :param fields_set: Set to collect complete field paths
-        """
-        if node is None:
-            return
-        
-        node_type = type(node).__name__
-        
-        if node_type == 'Field':
-            # Direct field reference - build complete path from root
-            field_name = node.value
-            full_path = f"{prefix}.{field_name}" if prefix else field_name
-            fields_set.add(full_path)
-        
-        elif node_type == 'Subexpression':
-            # Chained access like a.b.c
-            # Left side builds the prefix, right side continues with that prefix
-            self._extract_fields_from_ast(node.left, prefix, fields_set)
-            # For right side, we need to get all fields from left and use them as prefix
-            left_fields = set()
-            self._collect_all_fields(node.left, '', left_fields)
-            for left_field in left_fields:
-                self._extract_fields_from_ast(node.right, left_field, fields_set)
-        
-        elif node_type == 'IndexExpression':
-            # Array index access like items[0] - index doesn't change field path
-            self._extract_fields_from_ast(node.children[0], prefix, fields_set)
-        
-        elif node_type in ('SliceExpression', 'Projection'):
-            # Array projection like items[] - projection doesn't change field path
-            self._extract_fields_from_ast(node.children[0], prefix, fields_set)
-            if len(node.children) > 1:
-                self._extract_fields_from_ast(node.children[1], prefix, fields_set)
-        
-        elif node_type == 'MultiSelectHash':
-            # Object construction like {name: partner_id.name, email: partner_id.email}
-            for pair in node.pairs:
-                # Each expression is independent, starts from root
-                self._extract_fields_from_ast(pair.expression, '', fields_set)
-        
-        elif node_type == 'MultiSelectList':
-            # List selection like [partner_id.name, partner_id.email]
-            for child in node.expressions:
-                self._extract_fields_from_ast(child, '', fields_set)
-        
-        elif node_type == 'Comparator':
-            # Comparison like partner_id.age > `18`
-            self._extract_fields_from_ast(node.children[0], prefix, fields_set)
-            self._extract_fields_from_ast(node.children[1], prefix, fields_set)
-        
-        elif node_type in ('AndExpression', 'OrExpression'):
-            # Logical operations
-            self._extract_fields_from_ast(node.children[0], prefix, fields_set)
-            self._extract_fields_from_ast(node.children[1], prefix, fields_set)
-        
-        elif node_type == 'NotExpression':
-            # Negation
-            self._extract_fields_from_ast(node.children[0], prefix, fields_set)
-        
-        elif node_type == 'FunctionExpression':
-            # Function calls like sort_by(order_lines, &price)
-            for arg in node.arguments:
-                self._extract_fields_from_ast(arg, prefix, fields_set)
-        
-        elif hasattr(node, 'children'):
-            # Generic handling for nodes with children
-            for child in node.children:
-                self._extract_fields_from_ast(child, prefix, fields_set)
-    
-    def _collect_all_fields(self, node, prefix: str, fields_set: set):
-        """
-        Collect all complete field paths from a node.
-        Used to get left-side fields for Subexpression handling.
-        """
-        if node is None:
-            return
-        
-        node_type = type(node).__name__
-        
-        if node_type == 'Field':
-            field_name = node.value
-            full_path = f"{prefix}.{field_name}" if prefix else field_name
-            fields_set.add(full_path)
-        
-        elif node_type == 'Subexpression':
-            self._collect_all_fields(node.left, prefix, fields_set)
-            left_fields = set()
-            self._collect_all_fields(node.left, '', left_fields)
-            for left_field in left_fields:
-                self._collect_all_fields(node.right, left_field, fields_set)
-        
-        elif hasattr(node, 'children'):
-            for child in node.children:
-                self._collect_all_fields(child, prefix, fields_set)
+    def _parse_fields(self) -> Iterable[str]:
+        return jmespath_ex.extract_fields(self._jmespath)
 
     def _read(self, rec, _check: bool):
         if not rec:
             return None
-        try:
-            return self._jmespath.search(RecordDictAdapter(rec, _check))
-        except Exception as e:
-            raise Exception(f"JMESPath query failed for alias '{self.alias}': {str(e)}") from e
+        return self._jmespath.search(RecordDictAdapter(rec, _check))
 
 
 class AliasJinja2(AliasNode):
+    def __init__(self, alias: str, path: str):
+        super().__init__(alias, path)
+        self._template = jinja2.Template(self.path)
 
-    @property
-    def fields(self) -> Iterable[str]:
-        return []
+    def _parse_fields(self) -> Iterable[str]:
+        return jinja2_ex.extract_fields(self.path)
 
     def _read(self, rec, _check: bool):
-        return self.path
+        if not rec:
+            return None
+        obj = RecordDictAdapter(rec, _check)
+        return self._template.render(rec=obj, record=obj)
 
 
 AliasNode.register("field", AliasField)

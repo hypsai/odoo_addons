@@ -24,9 +24,6 @@ Menu: Settings > Technical > OQL
     """,
     'depends': ['base'],
     'images': ['static/description/banner.png'],
-    'external_dependencies': {
-        'python': ['lark'],
-    },
     "data": [
         "security/ir.model.access.csv",
         "views/oql_term_views.xml",

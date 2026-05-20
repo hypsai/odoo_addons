@@ -215,7 +215,7 @@ class FieldAccess:
                 else:
                     assert isinstance(alias, AliasField), \
                         f"Only `{AliasField.__name__}` could be non-complex alias. Not `{type(alias).__name__}`."
-                    chips = alias.field.split('.')
+                    chips = alias.path.split('.')
                     i += 1
                     names[i:i] = chips
                     continue

@@ -5,7 +5,7 @@
 
 from odoo import Command
 from odoo.tests import tagged, TransactionCase
-from ..alias import AliasNode, AliasFieldPath, AliasDict, AliasString
+from ..alias import AliasNode, AliasField, AliasJMESPath, AliasJinja2
 from .test_model_defs import ensure_model_meta
 
 
@@ -19,81 +19,87 @@ class TestAliasParsing(TransactionCase):
 
     def test_parse_dot_path(self):
         """Test parsing simple dot path."""
-        node = AliasNode.parse("partner_id.name", "partner_name")
-        self.assertIsInstance(node, AliasFieldPath)
-        self.assertEqual(node.field, "partner_id.name")
+        node = AliasNode.parse("partner_name", "field", "partner_id.name")
+        self.assertIsInstance(node, AliasField)
+        self.assertEqual(node.path, "partner_id.name")
         self.assertEqual(node.alias, "partner_name")
         self.assertFalse(node.is_complex)
 
-    def test_parse_string_template(self):
-        """Test parsing string template."""
-        node = AliasNode.parse('Name is {partner_id.name}', "partner_info")
-        self.assertIsInstance(node, AliasString)
-        self.assertEqual(node.tmpl, 'Name is {partner_id.name}')
+    def test_parse_jinja2_template(self):
+        """Test parsing Jinja2 template."""
+        node = AliasNode.parse("partner_info", "jinja2", 'Name is {{ rec.partner_id.name }}')
+        self.assertIsInstance(node, AliasJinja2)
         self.assertEqual(node.alias, "partner_info")
         self.assertTrue(node.is_complex)
 
-    def test_parse_json_object(self):
-        """Test parsing JSON object with nested structure."""
-        json_str = '{"name": "partner_id.name", "city": "partner_id.city_id.name"}'
-        node = AliasNode.parse(json_str, "partner_data")
-        self.assertIsInstance(node, AliasDict)
+    def test_parse_jmespath_expression(self):
+        """Test parsing JMESPath expression."""
+        json_str = '{name: partner_id.name, email: partner_id.email}'
+        node = AliasNode.parse("partner_data", "jmespath", json_str)
+        self.assertIsInstance(node, AliasJMESPath)
         self.assertEqual(node.alias, "partner_data")
         self.assertTrue(node.is_complex)
-        self.assertIn("name", node.alias2child)
-        self.assertIn("city", node.alias2child)
 
-    def test_parse_expand_with_dot_path(self):
-        """Test parsing expand prefix with dot path."""
-        node = AliasNode.parse("address_ids => country_id.name", "country")
-        self.assertIsInstance(node, AliasFieldPath)
-        self.assertEqual(node.path, "address_ids")
-        self.assertEqual(node.field, "country_id.name")
-        self.assertEqual(node.alias, "country")
+    def test_fields_extraction_field(self):
+        """Test fields extraction for Field mode."""
+        node = AliasNode.parse("name", "field", "partner_id.name")
+        fields = list(node.fields)
+        self.assertEqual(fields, ["partner_id.name"])
 
-    def test_parse_expand_with_string_template(self):
-        """Test parsing expand prefix with string template."""
-        node = AliasNode.parse('address_ids => "Address: {city}"', "addr_info")
-        self.assertIsInstance(node, AliasString)
-        self.assertEqual(node.path, "address_ids")
-        self.assertEqual(node.alias, "addr_info")
-
-    def test_parse_expand_with_json(self):
-        """Test parsing expand prefix with JSON object."""
-        json_str = 'address_ids => {"city": "city", "country": "country_id.name"}'
-        node = AliasNode.parse(json_str, "addresses")
-        self.assertIsInstance(node, AliasDict)
-        self.assertEqual(node.path, "address_ids")
-        self.assertEqual(node.alias, "addresses")
-        self.assertIn("city", node.alias2child)
-        self.assertIn("country", node.alias2child)
-
-    def test_parse_json_with_at_syntax(self):
-        """Test parsing JSON with @ syntax for relational expansion."""
-        json_str = '''{
-            "name": "partner_id.name",
-            "addresses @ address_ids": {
-                "city": "city",
-                "country": "country_id.name"
-            }
-        }'''
-        node = AliasNode.parse(json_str, "partner_full")
-        self.assertIsInstance(node, AliasDict)
-        self.assertIn("name", node.alias2child)
-        self.assertIn("addresses", node.alias2child)
+    def test_fields_extraction_jinja2(self):
+        """Test fields extraction for Jinja2 mode with nested fields."""
+        # Simple nested field
+        node = AliasNode.parse("info", "jinja2", "{{ rec.partner_id.name }}")
+        fields = set(node.fields)
+        self.assertIn("partner_id.name", fields)
         
-        # Check nested structure
-        addresses_node = node.alias2child["addresses"]
-        self.assertIsInstance(addresses_node, AliasDict)
-        self.assertEqual(addresses_node.path, "address_ids")
-        self.assertIn("city", addresses_node.alias2child)
-        self.assertIn("country", addresses_node.alias2child)
+        # Multiple nested fields
+        node = AliasNode.parse("info", "jinja2", "{{ rec.partner_id.name }} - {{ rec.partner_id.email }}")
+        fields = set(node.fields)
+        self.assertIn("partner_id.name", fields)
+        self.assertIn("partner_id.email", fields)
+        
+        # Deep nested fields
+        node = AliasNode.parse("info", "jinja2", "{{ rec.partner_id.country_id.name }}")
+        fields = set(node.fields)
+        self.assertIn("partner_id.country_id.name", fields)
+        
+        # Mixed depth fields
+        node = AliasNode.parse("info", "jinja2", "Name: {{ rec.name }}, Country: {{ rec.partner_id.country_id.name }}")
+        fields = set(node.fields)
+        self.assertIn("name", fields)
+        self.assertIn("partner_id.country_id.name", fields)
 
-    def test_parse_invalid_json_key(self):
-        """Test parsing invalid JSON key with multiple @ symbols."""
-        with self.assertRaises(Exception) as context:
-            AliasNode.parse('{"a @ b @ c": "value"}', "alias")
-        self.assertIn("Invalid complex alias key", str(context.exception))
+    def test_fields_extraction_jmespath(self):
+        """Test fields extraction for JMESPath mode with nested fields."""
+        # Simple nested field
+        node = AliasNode.parse("data", "jmespath", "{name: partner_id.name}")
+        fields = set(node.fields)
+        self.assertIn("partner_id.name", fields)
+        
+        # Multiple nested fields
+        node = AliasNode.parse("data", "jmespath", "{name: partner_id.name, email: partner_id.email}")
+        fields = set(node.fields)
+        self.assertIn("partner_id.name", fields)
+        self.assertIn("partner_id.email", fields)
+        
+        # Deep nested fields
+        node = AliasNode.parse("data", "jmespath", "{country: partner_id.country_id.name}")
+        fields = set(node.fields)
+        self.assertIn("partner_id.country_id.name", fields)
+        
+        # Array projection with nested fields
+        node = AliasNode.parse("data", "jmespath", "order_lines[].{product: product_id.name, qty: quantity}")
+        fields = set(node.fields)
+        self.assertIn("order_lines.product_id.name", fields)
+        self.assertIn("order_lines.quantity", fields)
+        
+        # Complex nested structure
+        node = AliasNode.parse("data", "jmespath", "{customer: partner_id.name, address: {city: partner_id.city, country: partner_id.country_id.name}}")
+        fields = set(node.fields)
+        self.assertIn("partner_id.name", fields)
+        self.assertIn("partner_id.city", fields)
+        self.assertIn("partner_id.country_id.name", fields)
 
 
 @tagged("oql_alias_read", '-at_install', 'post_install')
@@ -134,61 +140,45 @@ class TestAliasReading(TransactionCase):
 
     def test_read_field_path(self):
         """Test reading simple field path."""
-        node = AliasNode.parse("spu_name", "name")
+        node = AliasNode.parse("name", "field", "spu_name")
         result = node.read(self.prod_cold)
         self.assertEqual(result, "Cold Boot")
 
     def test_read_related_field_path(self):
         """Test reading related field path through inheritance."""
-        node = AliasNode.parse("tmpl_id.name", "template_name")
+        node = AliasNode.parse("template_name", "field", "tmpl_id.name")
         result = node.read(self.prod_cold)
         self.assertEqual(result, "Cold Boot")
 
-    def test_read_string_template(self):
-        """Test reading string template."""
-        node = AliasNode.parse('"Product: {spu_name}"', "info")
+    def test_read_jinja2_template(self):
+        """Test reading Jinja2 template."""
+        node = AliasNode.parse("info", "jinja2", 'Product: {{ rec.spu_name }}')
         result = node.read(self.prod_cold)
         self.assertEqual(result, "Product: Cold Boot")
 
-    def test_read_json_dict(self):
-        """Test reading JSON dict alias."""
-        json_str = '{"name": "spu_name", "active": "active"}'
-        node = AliasNode.parse(json_str, "product_info")
+    def test_read_jmespath_expression(self):
+        """Test reading JMESPath expression."""
+        json_str = '{name: spu_name, active: active}'
+        node = AliasNode.parse("product_info", "jmespath", json_str)
         result = node.read(self.prod_cold)
         self.assertIsInstance(result, dict)
         self.assertEqual(result["name"], "Cold Boot")
         self.assertEqual(result["active"], True)
 
-    def test_read_one2many_expansion(self):
-        """Test reading One2many field expansion."""
-        json_str = 'attribute_value_ids => {"value": "name"}'
-        node = AliasNode.parse(json_str, "attr_values")
+    def test_read_one2many_jmespath(self):
+        """Test reading One2many field with JMESPath."""
+        json_str = 'attribute_value_ids[].{value: name}'
+        node = AliasNode.parse("attr_values", "jmespath", json_str)
         result = node.read(self.prod_cold)
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 3)
         values = {item["value"] for item in result}
         self.assertEqual(values, {"5", "6", "7"})
 
-    def test_read_nested_json_with_at(self):
-        """Test reading nested JSON with @ syntax."""
-        json_str = '''{
-            "product_name": "spu_name",
-            "tags @ tag_ids": {
-                "tag_name": "name"
-            }
-        }'''
-        node = AliasNode.parse(json_str, "product_with_tags")
-        result = node.read(self.prod_cold)
-        
-        self.assertIsInstance(result, dict)
-        self.assertEqual(result["product_name"], "Cold Boot")
-        self.assertIsInstance(result["tags"], list)
-        self.assertEqual(len(result["tags"]), 1)
-        self.assertEqual(result["tags"][0]["tag_name"], "Waterproof:GTX")
 
     def test_read_multiple_records_error(self):
         """Test that reading with multiple records raises error."""
-        node = AliasNode.parse("spu_name", "name")
+        node = AliasNode.parse("name", "field", "spu_name")
         recs = self.prod_cold | self.prod_hot
         with self.assertRaises(Exception) as context:
             node.read(recs)
