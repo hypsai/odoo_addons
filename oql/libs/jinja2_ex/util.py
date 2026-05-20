@@ -20,28 +20,74 @@ def extract_fields(template_str):
         return []
 
     found_paths = set()
+    loop_context = {}  # Track loop variables: {loop_var: iterable_path}
 
     def _reconstruct(node):
         """Recursively build the path string (e.g., 'partner_id.name')."""
         if isinstance(node, nodes.Name):
-            return node.name
+            name = node.name
+            # Check if this is a loop variable
+            if name in loop_context:
+                return loop_context[name]
+            return name
         if isinstance(node, nodes.Getattr):
             base = _reconstruct(node.node)
             if base:
                 return f"{base}.{node.attr}"
         return None
 
-    # Find all attribute access and standalone names
-    for node in ast.find_all((nodes.Getattr, nodes.Name)):
-        path = _reconstruct(node)
-        if path:
-            # Clean up the path by removing internal wrapper prefixes
-            # For example: 'record.partner_id.name' -> 'partner_id.name'
-            parts = path.split('.')
-            if parts[0] in ('record', 'rec', 'obj'):
-                parts = parts[1:]
+    def _extract_iterable_path(node):
+        """Extract the path from the iterable expression in a for loop."""
+        if isinstance(node, nodes.Getattr):
+            return _reconstruct(node)
+        elif isinstance(node, nodes.Name):
+            return node.name
+        return None
 
-            if parts:
-                found_paths.add(".".join(parts))
+    def _visit_node(node):
+        """Recursively visit nodes and track loop contexts."""
+        # Handle For loops
+        if isinstance(node, nodes.For):
+            # Extract the iterable path (e.g., 'rec.order_lines')
+            iterable_path = _extract_iterable_path(node.iter)
+            
+            if iterable_path:
+                # Clean up root prefix
+                parts = iterable_path.split('.')
+                if parts[0] in ('record', 'rec', 'obj'):
+                    parts = parts[1:]
+                
+                if parts:
+                    # Store the loop variable context
+                    old_value = loop_context.get(node.target.name)
+                    loop_context[node.target.name] = ".".join(parts)
+                    
+                    # Visit the loop body
+                    for child in node.body:
+                        _visit_node(child)
+                    
+                    # Restore old context
+                    if old_value is not None:
+                        loop_context[node.target.name] = old_value
+                    else:
+                        del loop_context[node.target.name]
+                    return
+        
+        # Handle attribute access and names
+        if isinstance(node, (nodes.Getattr, nodes.Name)):
+            path = _reconstruct(node)
+            if path:
+                # Clean up the path by removing internal wrapper prefixes
+                parts = path.split('.')
+                if parts[0] in ('record', 'rec', 'obj'):
+                    parts = parts[1:]
+                
+                if parts:
+                    found_paths.add(".".join(parts))
+        
+        # Recursively visit children
+        for child_node in node.iter_child_nodes():
+            _visit_node(child_node)
 
+    _visit_node(ast)
     return list(found_paths)

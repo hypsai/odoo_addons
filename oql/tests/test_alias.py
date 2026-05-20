@@ -69,6 +69,22 @@ class TestAliasParsing(TransactionCase):
         fields = set(node.fields)
         self.assertIn("name", fields)
         self.assertIn("partner_id.country_id.name", fields)
+        
+        # Loop with nested field access
+        node = AliasNode.parse("info", "jinja2", "{% for line in rec.order_lines %}{{ line.product_id.name }}{% endfor %}")
+        fields = set(node.fields)
+        self.assertIn("order_lines.product_id.name", fields)
+        
+        # Loop with multiple nested fields
+        node = AliasNode.parse("info", "jinja2", "{% for item in rec.items %}{{ item.name }} - {{ item.category_id.name }}{% endfor %}")
+        fields = set(node.fields)
+        self.assertIn("items.name", fields)
+        self.assertIn("items.category_id.name", fields)
+        
+        # Nested loop with deep nesting
+        node = AliasNode.parse("info", "jinja2", "{% for order in rec.orders %}{% for line in order.lines %}{{ line.product_id.name }}{% endfor %}{% endfor %}")
+        fields = set(node.fields)
+        self.assertIn("orders.lines.product_id.name", fields)
 
     def test_fields_extraction_jmespath(self):
         """Test fields extraction for JMESPath mode with nested fields."""
