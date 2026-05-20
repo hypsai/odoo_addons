@@ -183,6 +183,42 @@ class TestOql(TransactionCase):
         res_false = self.env["test.oql.product"].searcho("active = false")
         self.assertEqual({"Inactive Boot"}, set(res_false.mapped("spu_name")))
 
+    @tagged("oql.alias")
+    def test_select_as_alias(self):
+        """Test SELECT field AS alias syntax."""
+        # Test simple field alias
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select spu_name as product_name where spu_name = 'Cold Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertIn('product_name', res[0])
+        self.assertEqual(res[0]['product_name'], 'Cold Boot')
+        # Original field name should not be present
+        self.assertNotIn('spu_name', res[0])
+
+        # Test nested field alias (field.path as alias)
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select tag_ids.name as tag_name where tag_ids.name = 'Waterproof:GTX'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertIn('tag_name', res[0])
+        # tag_ids.name returns a list, so check if value is in the list
+        self.assertIn('Waterproof:GTX', res[0]['tag_name'])
+        # Original path should not be present
+        self.assertNotIn('tag_ids.name', res[0])
+
+        # Test multiple aliases in one query
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select id as product_id, spu_name as name where spu_name = 'Hot Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertIn('product_id', res[0])
+        self.assertIn('name', res[0])
+        self.assertEqual(res[0]['name'], 'Hot Boot')
+        # Original field names should not be present
+        self.assertNotIn('id', res[0])
+        self.assertNotIn('spu_name', res[0])
+
     @tagged("oql.limit")
     def test_limit_clause(self):
         """Test LIMIT clause to restrict number of returned records."""

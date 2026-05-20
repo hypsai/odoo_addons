@@ -28,11 +28,13 @@ get_expr: field "[" _value "]"  // For Many2one relation, e.g. partner[1]
 nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
-fields: field ("," field)*  // Field list
+fields: field_as ("," field_as)*  // Field list
 orderby_fields: orderby_field ("," orderby_field)*  // Order by field list
 
-model: CNAME ("." CNAME)*  // Dot-style model name
-field: CNAME ("." CNAME)*  // Dot-style field access
+dot_names: CNAME ("." CNAME)*  // Dot-style names
+model: dot_names  // Dot-style model name
+field: dot_names  // Dot-style field access
+field_as: dot_names ["as"i dot_names]  // Dot-style field with dot-style alias
 orderby_field: CNAME [ASC | DESC]  // Plain field with order direction
 
 _value: string

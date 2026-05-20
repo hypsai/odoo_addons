@@ -383,7 +383,7 @@ Basic Structure
 
 An OQL query follows this structure::
 
-    FROM <model> SELECT <fields> WHERE <conditions> [ORDER BY <field> [ASC|DESC], ...] [LIMIT n] [OFFSET n]
+    FROM <model> SELECT <fields> [AS <alias>] WHERE <conditions> [ORDER BY <field> [ASC|DESC], ...] [LIMIT n] [OFFSET n]
 
 Example::
 

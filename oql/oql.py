@@ -407,6 +407,9 @@ class FieldAccess:
     def __str__(self):
         return f"{type(self).__name__}({self.path}, next[{len(self.next)}])"
 
+    def __repr__(self):
+        return str(self)
+
 
 @lark.v_args(inline=True)
 class OqlTransformer(lark.Transformer):
@@ -424,13 +427,13 @@ class OqlTransformer(lark.Transformer):
 
     def query(self, from_: models.Model, select: List[FieldAccess], where: RecordSets, orderby, limit, offset):
         # 1 Categorize field access into plain and dot fields.
-        dot_fas: List[FieldAccess] = []
+        complex_fas: List[FieldAccess] = []
         plain_fas: List[FieldAccess] = []
         for fa in select:
             if fa.is_field:
                 plain_fas.append(fa)
             else:
-                dot_fas.append(fa)
+                complex_fas.append(fa)
         # 2 Read data.
         domain = where[0].domain.domain if where else []
         recs = from_.search(domain, offset, limit, orderby)
@@ -440,8 +443,8 @@ class OqlTransformer(lark.Transformer):
             plain_fields.append("id")
         rows = recs.read(plain_fields)
         rows = [{f.as_: row[f.names[0]] for f in plain_fas} for row in rows]  # Align field names with SELECT clause.
-        # 2.2 Read dot-style fields.
-        for fa in dot_fas:
+        # 2.2 Read complex fields.
+        for fa in complex_fas:
             for row, val in zip_c(rows, fa.read(recs), strict=True):
                 row[fa.as_] = val
         # 2.3 Sort field order to align with SELECT clause.
@@ -496,14 +499,20 @@ class OqlTransformer(lark.Transformer):
     def orderby_fields(self, *fields):
         return fields
 
-    def model(self, *args):
-        return '.'.join(args)
+    def model(self, names: Tuple[str]):
+        return '.'.join(names)
 
-    def field(self, *args: str):
-        return FieldAccess(self.recs, args, self._meta)
+    def field(self, names: Tuple[str]):
+        return FieldAccess(self.recs, names, self._meta)
+
+    def field_as(self, field: Tuple[str], as_: Optional[Tuple[str]]):
+        return FieldAccess(self.recs, field, self._meta, as_='.'.join(as_) if as_ else None)
 
     def orderby_field(self, name: str, dir_: str):
         return name, dir_ or "asc"
+
+    def dot_names(self, *args):
+        return args
 
     def string(self, value):
         return value

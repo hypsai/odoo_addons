@@ -33,8 +33,8 @@ def zip_c(*args, **kwargs):
     Returns an iterator (like native zip), not a list.
     """
     if _HAS_ZIP_STRICT:
-        # Use native zip for Python 3.10+ (returns iterator)
-        return zip(*args, **kwargs)
+        # Use native zip for Python 3.10+
+        yield from zip(*args, **kwargs)
     else:
         # Custom implementation for older Python versions
         strict = kwargs.pop('strict', False)
@@ -66,4 +66,4 @@ def zip_c(*args, **kwargs):
                 yield tuple(items)
         else:
             # Normal zip behavior (returns iterator)
-            return zip(*args)
+            yield from zip(*args)
