@@ -184,6 +184,8 @@ jobs:
           
           echo "Test tags: $TEST_TAGS"
           
+          # Run tests and capture exit code
+          set +e  # Don't exit on error, we'll check the exit code manually
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
@@ -202,6 +204,25 @@ jobs:
                  --db_user=odoo \
                  --db_password=odoo \
                  --log-level=warn 2>&1 | tee /tmp/odoo_output.log
+          
+          EXIT_CODE=${PIPESTATUS[0]}
+          set -e  # Re-enable exit on error
+          
+          echo "Docker exit code: $EXIT_CODE"
+          
+          # Check for test failures in the log
+          if grep -q "ERROR\|FAIL" /tmp/odoo_output.log; then
+            echo "❌ Tests failed!"
+            exit 1
+          fi
+          
+          # Also check docker exit code
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ Docker command failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          
+          echo "✅ All tests passed!"
         env:
           PGPASSWORD: odoo
 

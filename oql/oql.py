@@ -14,6 +14,7 @@ from odoo.tools.safe_eval import safe_eval
 
 from .acl import OqlAcl
 from .alias import AliasRule, AliasNode, AliasField
+from .compatible import zip_c
 from .recs import *
 from .util import KeyPassingDefaultDict, tn, read_object
 
@@ -441,7 +442,7 @@ class OqlTransformer(lark.Transformer):
         rows = [{f.as_: row[f.names[0]] for f in plain_fas} for row in rows]  # Align field names with SELECT clause.
         # 2.2 Read dot-style fields.
         for fa in dot_fas:
-            for row, val in zip(rows, fa.read(recs), strict=True):
+            for row, val in zip_c(rows, fa.read(recs), strict=True):
                 row[fa.as_] = val
         # 2.3 Sort field order to align with SELECT clause.
         rows = [{f.as_: row[f.as_] for f in select} for row in rows]
