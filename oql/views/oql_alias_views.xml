@@ -24,7 +24,7 @@
                             <strong>Path Format (3 modes):</strong><br/>
                             • <b>Field:</b> Dot notation - <code>partner_id.name</code><br/>
                             • <b>JMESPath:</b> Query expression - <code>{name: partner_id.name, email: partner_id.email}</code><br/>
-                            • <b>Jinja2:</b> Template string - <code>Name is {{ '{partner_id.name}' }}</code>
+                            • <b>Jinja2:</b> Template string - <code>Name is {{ rec.partner_id.name }}</code>
                         </div>
                         <field name="line_ids">
                             <tree editable="bottom">

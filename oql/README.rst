@@ -97,9 +97,7 @@ Get started with OQL in 3 steps:
 
 **1. Install**
 
-Install the OQL module and its dependency::
-
-    pip install lark
+Install the OQL module in your Odoo instance.
 
 **2. Configure Terms**
 
@@ -202,37 +200,25 @@ Navigate to **Settings > Technical > OQL > Aliases** and add alias rules for you
    :align: center
    :width: 800px
 
-**Path Format:** Three base formats, optionally prefixed with relational field expansion (``field_path =>``)
+**Three Path Modes:**
 
-1. **Dot path**: Simple field navigation
+1. **Field mode**: Simple dot notation path
    
    ``partner_id.name`` → use as ``partner_name``
 
-2. **String template**: Compose formatted strings
-   
-   ``"Name is {partner_id.name}"`` → use as ``partner_info``
-
-3. **JSON object**: Complex nested structures with recursive mapping
+2. **JMESPath mode**: JSON query expression for complex data transformation
    
    .. code-block:: json
    
-       {
-           "name": "partner_id.name",
-           "addresses @ address_ids": {
-               "city": "city_id.name",
-               "country": "country_id.name"
-           }
-       }
+       {name: partner_id.name, email: partner_id.email}
+   
+   Supports array projections: ``order_lines[].{product: product_id.name, qty: quantity}``
 
-   The ``@`` syntax in keys maps parent alias to child field path for nested data.
-
-**Expansion Prefix Examples:**
-
-Add ``field_path =>`` before any base format to expand a relational field as the data source:
-
-- ``address_ids => country_id.name`` (expand + dot path)
-- ``address_ids => "Address: {city}"`` (expand + string template)
-- ``address_ids => {...}`` (expand + JSON object)
+3. **Jinja2 mode**: Template string for formatted output (uses ``rec`` context variable)
+   
+   ``Name is {{ rec.partner_id.name }}``
+   
+   Supports loops: ``{% for line in rec.order_lines %}{{ line.product_id.name }}{% endfor %}``
 
 **Shorthand Notation**
 
@@ -489,13 +475,9 @@ Check for existence without specifying values::
 Installation
 ------------
 
-1. Install the Python dependency::
+1. Install the OQL module in your Odoo instance
 
-    pip install lark
-
-2. Install the OQL module in your Odoo instance
-
-3. Configure terms and aliases for your models
+2. Configure terms and aliases for your models
 
 Best Practices
 --------------
