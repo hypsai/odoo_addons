@@ -175,6 +175,15 @@ jobs:
           echo "Testing modules: $MODULES"
           echo "Odoo version: ${{ matrix.odoo_version }}"
           
+          # Convert comma-separated to space-separated for -i parameter
+          MODULES_SPACE=$(echo "$MODULES" | tr ',' ' ')
+          
+          # Convert comma-separated to tag format for --test-tags parameter
+          # e.g., "oql,oql_web" becomes "/oql,/oql_web"
+          TEST_TAGS=$(echo "$MODULES" | sed 's/,/\//g' | sed 's/^/\//' )
+          
+          echo "Test tags: $TEST_TAGS"
+          
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
@@ -183,8 +192,9 @@ jobs:
             -e USER=odoo \
             -e PASSWORD=odoo \
             odoo:${{ matrix.odoo_version }} \
-            odoo -i $MODULES \
+            odoo -i $MODULES_SPACE \
                  --test-enable \
+                 --test-tags $TEST_TAGS \
                  --stop-after-init \
                  -d ${{ matrix.test_db }} \
                  --db_host=localhost \
