@@ -13,7 +13,7 @@ from odoo.fields import _RelationalMulti
 from odoo.tools.safe_eval import safe_eval
 
 from .acl import OqlAcl
-from .alias import AliasRule, AliasNode, AliasFieldPath
+from .alias import AliasRule, AliasNode, AliasField
 from .recs import *
 from .util import KeyPassingDefaultDict, tn, read_object
 
@@ -154,7 +154,7 @@ class OqlMeta:
     def _load_alias2node(self, model: str) -> Dict[str, AliasNode]:
         recs = self.env["oql.alias.line"].sudo().search([("rule_id.model_id.model", "=", model)])
         perm_aliases = self.acl[model].perm_aliases("read")
-        alias2node = {x.alias: AliasNode.parse(x.path, x.alias, x.help) for x in recs if x.alias in perm_aliases}
+        alias2node = {x.alias: AliasNode.parse(x.alias, x.mode, x.path, x.help) for x in recs if x.alias in perm_aliases}
         return alias2node
 
 
@@ -213,8 +213,8 @@ class FieldAccess:
                     b_x2m = True  # Treat complex alais as X2Many field.
                     break
                 else:
-                    assert isinstance(alias, AliasFieldPath), \
-                        f"Only `{AliasFieldPath.__name__}` could be non-complex alias. Not `{type(alias).__name__}`."
+                    assert isinstance(alias, AliasField), \
+                        f"Only `{AliasField.__name__}` could be non-complex alias. Not `{type(alias).__name__}`."
                     chips = alias.field.split('.')
                     i += 1
                     names[i:i] = chips

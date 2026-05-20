@@ -2,11 +2,12 @@
 # @Time         : 11:01 2025/10/17
 # @Author       : Chris
 # @Description  :
+import inspect
 from collections import defaultdict
 from string import Formatter
 from typing import List, Callable, Any, Union
 
-from odoo import models, fields
+from odoo import models, fields, _
 
 
 def parse_list(s: str) -> List[str]:
@@ -185,3 +186,32 @@ class PathAwareFormatter(Formatter):
         if key in kwargs:
             return kwargs[key]
         raise KeyError(key)
+
+
+class RecordDictAdapter:
+    """Wraps an Odoo record to look like a dict."""
+
+    def __init__(self, rec, _test: bool = False):
+        self._rec = rec
+        self._test = _test
+
+    def get(self, key, default=None):
+        rec = self._rec
+        f_meta: fields.Field = rec._fields.get(key)
+        if not f_meta:  # Key error.
+            return default
+        # Format result.
+        val = rec[key]
+        if f_meta.relational:
+            if isinstance(f_meta, fields._RelationalMulti):
+                if self._test:
+                    return [RecordDictAdapter(val.browse())]  # Make an empty record to test path access.
+                return [RecordDictAdapter(x) for x in val]
+            return RecordDictAdapter(val)
+        return val
+
+    def __getitem__(self, key):
+        val = self.get(key, inspect.Parameter.empty)
+        if val is inspect.Parameter.empty:
+            raise KeyError(_("Field `%s` -> `%s` not exists.") % (self._rec, key))
+        return val

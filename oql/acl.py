@@ -9,8 +9,8 @@ from typing import Dict, Union, List, Set, Literal, Iterable, Tuple
 from odoo import models, _, fields
 from odoo.exceptions import AccessError
 
-from .util import KeyPassingDefaultDict, read_object
-from .alias import AliasNode, AliasSummary, AliasFieldPath
+from .alias import AliasNode
+from .util import KeyPassingDefaultDict
 
 _logger = logging.getLogger(__name__)
 
@@ -122,39 +122,19 @@ class OqlModelAcl:
 
     def perm_aliases(self, mode: Literal["read", "write"]) -> Set[str]:
         """Return aliases that have the specified `mode` access."""
-        acl = self.acl
-        Model = self.env[self.model_name]
-
         # Check direct access rights configured for aliases on current model.
         ok_aliases = self._mode2aliases[mode]
 
         # Check access rights for referencing fields to determine alias access right.
-
-        def r_check(node: AliasNode, model: models.Model):
-            # Check model access.
-            mac = acl[model._name]
-            if not mac.check(mode):
-                return False
-            # Check path access and expand data source.
-            if node.path:
-                if not mac.check_path(node.path, mode):
-                    return
-                model = read_object(mode, node.path)
-                mac = acl[model._name]
-            # Check child node access.
-            if isinstance(node, AliasFieldPath):
-                if not mac.check_path(node.field, mode):
-                    return False
-            elif isinstance(node, AliasSummary):
-                for child in node.get_children():
-                    if not r_check(child, model):
-                        return False
-            return True
-
         alias_recs = self.env["oql.alias.line"].sudo().search(
             [("model_id.name", "=", self.model_name), ("alias", "not in", list(ok_aliases))])
         for alias_rec in alias_recs:
-            if r_check(AliasNode.parse(alias_rec.path, alias_recs.alias), Model):
+            node = AliasNode.parse(alias_recs.alias, alias_rec.mode, alias_rec.path)
+            paths = set(node.fields)
+            if not paths:  # For safety reason, decline access right inheritance if node doesn't provide paths.
+                continue
+            perm_paths = self.perm_paths(paths, mode)
+            if len(paths) == len(perm_paths):  # All paths are allowed to be accessed.
                 ok_aliases.add(alias_rec.alias)
 
         return ok_aliases
