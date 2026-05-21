@@ -34,7 +34,7 @@ class TestAliasParsing(TransactionCase):
 
     def test_parse_jmespath_expression(self):
         """Test parsing JMESPath expression."""
-        json_str = '{name: partner_id.name, email: partner_id.email}'
+        json_str = '{name: rec.partner_id.name, email: rec.partner_id.email}'
         node = AliasNode.parse("partner_data", "jmespath", json_str)
         self.assertIsInstance(node, AliasJMESPath)
         self.assertEqual(node.alias, "partner_data")
@@ -89,29 +89,29 @@ class TestAliasParsing(TransactionCase):
     def test_fields_extraction_jmespath(self):
         """Test fields extraction for JMESPath mode with nested fields."""
         # Simple nested field
-        node = AliasNode.parse("data", "jmespath", "{name: partner_id.name}")
+        node = AliasNode.parse("data", "jmespath", "{name: rec.partner_id.name}")
         fields = set(node.fields)
         self.assertIn("partner_id.name", fields)
         
         # Multiple nested fields
-        node = AliasNode.parse("data", "jmespath", "{name: partner_id.name, email: partner_id.email}")
+        node = AliasNode.parse("data", "jmespath", "{name: rec.partner_id.name, email: rec.partner_id.email}")
         fields = set(node.fields)
         self.assertIn("partner_id.name", fields)
         self.assertIn("partner_id.email", fields)
         
         # Deep nested fields
-        node = AliasNode.parse("data", "jmespath", "{country: partner_id.country_id.name}")
+        node = AliasNode.parse("data", "jmespath", "{country: rec.partner_id.country_id.name}")
         fields = set(node.fields)
         self.assertIn("partner_id.country_id.name", fields)
         
         # Array projection with nested fields
-        node = AliasNode.parse("data", "jmespath", "order_lines[].{product: product_id.name, qty: quantity}")
+        node = AliasNode.parse("data", "jmespath", "rec.order_lines[].{product: product_id.name, qty: quantity}")
         fields = set(node.fields)
         self.assertIn("order_lines.product_id.name", fields)
         self.assertIn("order_lines.quantity", fields)
         
         # Complex nested structure
-        node = AliasNode.parse("data", "jmespath", "{customer: partner_id.name, address: {city: partner_id.city, country: partner_id.country_id.name}}")
+        node = AliasNode.parse("data", "jmespath", "{customer: rec.partner_id.name, address: {city: rec.partner_id.city, country: rec.partner_id.country_id.name}}")
         fields = set(node.fields)
         self.assertIn("partner_id.name", fields)
         self.assertIn("partner_id.city", fields)
@@ -174,7 +174,7 @@ class TestAliasReading(TransactionCase):
 
     def test_read_jmespath_expression(self):
         """Test reading JMESPath expression."""
-        json_str = '{name: spu_name, active: active}'
+        json_str = '{name: rec.spu_name, active: rec.active}'
         node = AliasNode.parse("product_info", "jmespath", json_str)
         result = node.read(self.prod_cold)
         self.assertIsInstance(result, dict)
@@ -183,7 +183,7 @@ class TestAliasReading(TransactionCase):
 
     def test_read_one2many_jmespath(self):
         """Test reading One2many field with JMESPath."""
-        json_str = 'attribute_value_ids[].{value: name}'
+        json_str = 'rec.attribute_value_ids[].{value: name}'
         node = AliasNode.parse("attr_values", "jmespath", json_str)
         result = node.read(self.prod_cold)
         self.assertIsInstance(result, list)

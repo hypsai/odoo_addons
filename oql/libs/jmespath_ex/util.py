@@ -2,6 +2,8 @@
 # @Time         : 14:46 2026/5/20
 # @Author       : Chris
 # @Description  :
+from typing import List
+
 from jmespath import visitor
 
 __all__ = ["extract_fields"]
@@ -11,6 +13,7 @@ class FullPathExtractor(visitor.Visitor):
     def __init__(self):
         self.found_paths = set()
         self._prefix_stack = []  # Stack to track array/object prefixes
+        self._in_projection_body = False  # Flag to indicate we're in projection body
 
     def visit(self, node, *args, **kwargs):
         """Visit AST node and extract field paths."""
@@ -22,22 +25,25 @@ class FullPathExtractor(visitor.Visitor):
             return self.found_paths
         
         # Handle key_val_pair nodes (inside multi_select_dict)
-        if node_type == 'key_val_pair':
+        elif node_type == 'key_val_pair':
+            # In projection body, extract fields but don't let them be processed again
             for child in node.get('children', []):
                 self.visit(child)
             return self.found_paths
         
         # Extract subexpression chains
-        if node_type == 'subexpression':
+        elif node_type == 'subexpression':
             path = self._resolve_chain(node)
             if path:
                 self._add_with_prefix(path)
+            # Don't recurse into children of subexpression to avoid duplicate partial paths
+            return self.found_paths
         
         # Extract field names
         elif node_type == 'field':
             self._add_with_prefix(node['value'])
 
-        # Recursively check children
+        # Recursively check children (only for non-subexpression nodes)
         for child in node.get('children', []):
             self.visit(child)
         return self.found_paths
@@ -56,10 +62,23 @@ class FullPathExtractor(visitor.Visitor):
             if flatten_child['type'] == 'field':
                 self._prefix_stack.append(flatten_child['value'])
                 prefix_added = True
+            elif flatten_child['type'] == 'subexpression':
+                # For subexpression like rec.order_lines, get the full chain without 'rec' prefix
+                chain = self._resolve_chain(flatten_child)
+                if chain:
+                    # Remove 'rec.' prefix if present (e.g., 'rec.order_lines' -> 'order_lines')
+                    if chain.startswith('rec.'):
+                        chain = chain[4:]
+                    # Use the chain as prefix
+                    self._prefix_stack.append(chain)
+                    prefix_added = True
         
-        # Visit all children with the prefix context
-        for child in node.get('children', []):
-            self.visit(child)
+        # Visit the projection body (second child) with prefix context
+        if len(node.get('children', [])) > 1:
+            old_flag = self._in_projection_body
+            self._in_projection_body = True
+            self.visit(node['children'][1])
+            self._in_projection_body = old_flag
         
         # Pop the prefix after processing
         if prefix_added:
@@ -89,4 +108,8 @@ class FullPathExtractor(visitor.Visitor):
 def extract_fields(jmespath):
     """Extract full dot-style field path relative to root object."""
     extractor = FullPathExtractor()
-    return extractor.visit(jmespath.parsed)
+    fields: List[str] = extractor.visit(jmespath.parsed)
+    # Remove 'rec.' prefix from fields that start with it
+    prefix = "rec."
+    fields = [x[len(prefix):] if x.startswith(prefix) else x for x in fields]
+    return fields
