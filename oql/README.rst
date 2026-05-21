@@ -210,9 +210,9 @@ Navigate to **Settings > Technical > OQL > Aliases** and add alias rules for you
    
    .. code-block:: json
    
-       {name: partner_id.name, email: partner_id.email}
+       {name: rec.partner_id.name, email: rec.partner_id.email}
    
-   Supports array projections: ``order_lines[].{product: product_id.name, qty: quantity}``
+   Supports array projections: ``order_lines[].{product: rec.product_id.name, qty: rec.quantity}``
 
 3. **Jinja2 mode**: Template string for formatted output (uses ``rec`` context variable)
    

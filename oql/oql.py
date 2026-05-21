@@ -426,7 +426,11 @@ class OqlTransformer(lark.Transformer):
         self._meta = OqlMeta(env)
 
     def query(self, from_: models.Model, select: List[FieldAccess], where: RecordSets, orderby, limit, offset):
-        # 1 Categorize field access into plain and dot fields.
+        # 1 Ensure `id` is in result.
+        if not any(f.path == "id" for f in select):
+            select = [FieldAccess(from_, ["id"], self._meta)] + select
+
+        # 2 Categorize field access into plain and dot fields.
         complex_fas: List[FieldAccess] = []
         plain_fas: List[FieldAccess] = []
         for fa in select:
@@ -434,21 +438,21 @@ class OqlTransformer(lark.Transformer):
                 plain_fas.append(fa)
             else:
                 complex_fas.append(fa)
-        # 2 Read data.
+
+        # 3 Read data.
         domain = where[0].domain.domain if where else []
         recs = from_.search(domain, offset, limit, orderby)
-        # 2.1 Read plain fields.
+        # 3.1 Read plain fields.
         plain_fields = [x.names[0] for x in plain_fas]
-        if not plain_fields:
-            plain_fields.append("id")
         rows = recs.read(plain_fields)
         rows = [{f.as_: row[f.names[0]] for f in plain_fas} for row in rows]  # Align field names with SELECT clause.
-        # 2.2 Read complex fields.
+        # 3.2 Read complex fields.
         for fa in complex_fas:
             for row, val in zip_c(rows, fa.read(recs), strict=True):
                 row[fa.as_] = val
-        # 2.3 Sort field order to align with SELECT clause.
+        # 3.3 Sort field order to align with SELECT clause.
         rows = [{f.as_: row[f.as_] for f in select} for row in rows]
+
         return rows
 
     def from_clause(self, model: str):
@@ -494,10 +498,10 @@ class OqlTransformer(lark.Transformer):
         return field.eval_una("bool")
 
     def fields(self, *fields):
-        return fields
+        return list(fields)
 
     def orderby_fields(self, *fields):
-        return fields
+        return list(fields)
 
     def model(self, names: Tuple[str]):
         return '.'.join(names)

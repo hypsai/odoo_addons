@@ -154,7 +154,10 @@ class AliasJMESPath(AliasNode):
     def _read(self, rec, _check: bool):
         if not rec:
             return None
-        return self._jmespath.search(RecordDictAdapter(rec, _check))
+        obj = RecordDictAdapter(rec, _check)
+        return self._jmespath.search({
+            "rec": obj,
+        })
 
 
 class AliasJinja2(AliasNode):
@@ -169,7 +172,7 @@ class AliasJinja2(AliasNode):
         if not rec:
             return None
         obj = RecordDictAdapter(rec, _check)
-        return self._template.render(rec=obj, record=obj)
+        return self._template.render(rec=obj)
 
 
 AliasNode.register("field", AliasField)
