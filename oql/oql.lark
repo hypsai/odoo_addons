@@ -45,7 +45,7 @@ _value: string
      | NULL
      | array
 
-array: "(" [_value ("," _value)*] ")"
+array: "(" [_value ("," _value)* [","]] ")"
 
 string: ESCAPED_STRING
 

@@ -117,6 +117,28 @@ class TestAliasParsing(TransactionCase):
         self.assertIn("partner_id.city", fields)
         self.assertIn("partner_id.country_id.name", fields)
 
+    def test_fields_extraction_jmespath_with_ctx(self):
+        """Test fields extraction for JMESPath mode with ctx root variable (should be filtered out)."""
+        # Fields with ctx root should be filtered out
+        node = AliasNode.parse("data", "jmespath", "{name: ctx.user_id.name, email: ctx.user_id.email}")
+        fields = set(node.fields)
+        # ctx fields should not be included
+        self.assertNotIn("user_id.name", fields)
+        self.assertNotIn("user_id.email", fields)
+        self.assertEqual(len(fields), 0)
+        
+        # Mixed rec and ctx - only rec fields should be kept
+        node = AliasNode.parse("data", "jmespath", "{rec_name: rec.name, ctx_name: ctx.other_name}")
+        fields = set(node.fields)
+        self.assertIn("name", fields)
+        self.assertNotIn("other_name", fields)
+        self.assertEqual(len(fields), 1)
+        
+        # Array projection with ctx should be filtered out
+        node = AliasNode.parse("data", "jmespath", "ctx.items[].{name: name, value: value}")
+        fields = set(node.fields)
+        self.assertEqual(len(fields), 0)
+
 
 @tagged("oql_alias_read", '-at_install', 'post_install')
 class TestAliasReading(TransactionCase):
