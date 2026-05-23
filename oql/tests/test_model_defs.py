@@ -53,7 +53,8 @@ class TestOqlProduct(models.Model):
     _description = 'Test OQL Product'
     _inherits = {"test.oql.template": "tmpl_id"}
 
-    name = fields.Char("Name", compute="_compute_name")
+    name = fields.Char("Name", compute="_compute_name", store=True)
+    name_no_store = fields.Char("Name", compute="_compute_name_no_store")
     spu_name = fields.Char(related="tmpl_id.name", string="Template Name", readonly=False)
     tmpl_id = fields.Many2one("test.oql.template", "Template",
                               delegate=True, required=True, ondelete="cascade")
@@ -64,6 +65,10 @@ class TestOqlProduct(models.Model):
     def _compute_name(self):
         for rec in self:
             rec.name = f"{rec.tmpl_id.name}({', '.join(rec.attribute_value_ids.mapped('name'))})"
+
+    def _compute_name_no_store(self):
+        for rec in self:
+            rec.name_no_store = self.name
 
 
 class TestOqlAttribute(models.Model):

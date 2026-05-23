@@ -6,6 +6,7 @@ import copy
 import os.path
 from typing import Optional
 
+import odoo.fields
 import lark
 from lark.exceptions import VisitError
 from odoo import models, _
@@ -107,7 +108,7 @@ class OqlMeta:
             recs = env.get(model)
             if recs is None:
                 continue  # Simply ignore terms of missing model.
-            referring_recs = recs.sudo().search([(field_name, "in", term_recs.ids)], order="id")
+            referring_recs = recs.sudo().search(acl[model].perm_records([(field_name, "in", term_recs.ids)], "read"), order="id")
             for rec in referring_recs:
                 ref_term_recs = rec[field_name]
                 for term_rec in ref_term_recs:
@@ -127,6 +128,7 @@ class OqlMeta:
                 str_domain = domain_rec.domain
                 try:
                     domain = safe_eval(str_domain)
+                    domain = acl[model].perm_records(domain, "read")
                     term2model2name2domains[term][model][domain_name].append(domain)
                 except Exception as e:
                     _logger.warning(f"Invalid domain `{domain_name}` for term `{term}`: {str_domain} has been ignored. "
@@ -441,6 +443,7 @@ class OqlTransformer(lark.Transformer):
 
         # 3 Read data.
         domain = where[0].domain.domain if where else []
+        domain = self._meta.acl[self.model_name].perm_records(domain, "read")  # Record level ACL
         recs = from_.search(domain, offset, limit, orderby)
         # 3.1 Read plain fields.
         plain_fields = [x.names[0] for x in plain_fas]
@@ -472,6 +475,12 @@ class OqlTransformer(lark.Transformer):
         return expr
 
     def orderby_clause(self, __, fields):
+        # Check.
+        _fields = self.recs._fields
+        for name, __ in fields:
+            f_meta: odoo.fields.Field = _fields.get(name)
+            if not f_meta.store:
+                raise Exception(_("Can't order by `%s`, it's not a stored field.") % (name, ))
         return ','.join(f"{t[0]} {t[1]}" for t in fields)
 
     def offset_clause(self, num: int):

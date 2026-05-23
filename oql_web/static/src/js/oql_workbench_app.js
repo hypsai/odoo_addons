@@ -548,7 +548,7 @@
                         '<span id="status-rows">Rows: 0</span>' +
                         '<span id="status-time">Time: 0ms</span>' +
                     '</div>' +
-                    '<div>OQL Workspace v1.0</div>' +
+                    '<div>OQL Workbench v1.0</div>' +
                 '</div>'
             );
             

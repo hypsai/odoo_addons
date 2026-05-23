@@ -410,7 +410,7 @@ class TestOql(TransactionCase):
         # WHERE clause cannot use non-searchable fields - should raise Exception
         with self.assertRaises(Exception) as context:
             self.env["test.oql.product"].oql(
-                "from test.oql.product select spu_name where name = 'Cold Boot'"
+                "from test.oql.product select spu_name where name_no_store ilike 'Cold Boot'"
             )
 
         # Verify error message is informative
@@ -421,7 +421,7 @@ class TestOql(TransactionCase):
         # Test in complex WHERE conditions
         with self.assertRaises(Exception):
             self.env["test.oql.product"].oql(
-                "from test.oql.product select spu_name where name = 'Cold Boot' and Waterproof"
+                "from test.oql.product select spu_name where name_no_store = 'Cold Boot' and Waterproof"
             )
 
     def _get_transformer(self):

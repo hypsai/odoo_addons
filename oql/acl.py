@@ -8,6 +8,7 @@ from typing import Dict, Union, List, Set, Literal, Iterable, Tuple
 
 from odoo import models, _, fields
 from odoo.exceptions import AccessError
+from odoo.osv.expression import AND
 
 from .alias import AliasNode
 from .util import KeyPassingDefaultDict
@@ -141,6 +142,13 @@ class OqlModelAcl:
 
     def perm_paths(self, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
         return self.acl.perm_paths(self.model_name, paths, mode)
+
+    def perm_records(self, domain, mode: Literal["read", "write"]) -> list:
+        """Return domain."""
+        perm_domain = self.env['ir.rule']._compute_domain(self.model_name, mode=mode)
+        if perm_domain:
+            domain = AND([domain, perm_domain])
+        return domain
 
     def _perm_fields(self, mode: str) -> Set[str]:
         return self.env["oql.acl.field"].perm_fields(self.model_name, mode)

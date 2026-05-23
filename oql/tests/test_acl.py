@@ -724,3 +724,554 @@ class TestOqlAcl(TransactionCase):
         # Also verify we can check the field without raising an error
         recs = user_env["test.oql.product"].browse([self.prod_cold.id])
         acl.check_field(recs, "tag_ids", "read")
+
+
+@tagged("oql_record_rule", "-at_install", 'post_install')
+class TestOqlRecordRule(TransactionCase):
+    """Test record-level permission control via ir.rule integration.
+
+    OQL's record-level ACL is fully aligned with Odoo's native design,
+    using ir.rule domain restrictions applied via
+    `self.env['ir.rule']._compute_domain(self.model_name, mode=mode)`.
+    """
+
+    def setUp(self):
+        super().setUp()
+        env = self.env
+
+        # 1. Load model meta.
+        ensure_model_meta(env)
+        self.metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
+        self.metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
+        self.metaAttributeValue = env["ir.model"].search([("model", "=", "test.oql.attribute.value")], limit=1)
+        self.metaTag = env["ir.model"].search([("model", "=", "test.oql.tag")], limit=1)
+        self.metaTemplate = env["ir.model"].search([("model", "=", "test.oql.template")], limit=1)
+
+        # 2. Create test records.
+        self.prod_cold = env["test.oql.product"].create({"spu_name": "Cold Boot"})
+        self.prod_hot = env["test.oql.product"].create({"spu_name": "Hot Boot"})
+        self.prod_inactive = env["test.oql.product"].create({"spu_name": "Inactive Boot", "active": False})
+
+        attr_size = env["test.oql.attribute"].create({"name": "Size"})
+        attr_width = env["test.oql.attribute"].create({"name": "Width"})
+        for prod in [self.prod_cold, self.prod_hot]:
+            for attr, values in [(attr_size, ["5", "6", "7"]),
+                                 (attr_width, ["D", "EE"])]:
+                for value in values:
+                    env["test.oql.attribute.value"].create({
+                        "name": value,
+                        "product_id": prod.id,
+                        "attribute_id": attr.id})
+
+        self.tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "tmpl_id": self.prod_cold.tmpl_id.id})
+        self.tag_cold = env["test.oql.tag"].create({"name": "Weather:Cold", "tmpl_id": self.prod_cold.tmpl_id.id})
+        self.tag_hot = env["test.oql.tag"].create({"name": "Weather:Hot", "tmpl_id": self.prod_hot.tmpl_id.id})
+
+        # 3. Create a test user with Internal User group.
+        self.test_user = env['res.users'].create({
+            'name': 'Record Rule Test User',
+            'login': 'record_rule_test_user',
+            'email': 'record_rule@example.com',
+            'groups_id': [(6, 0, [env.ref('base.group_user').id])],
+        })
+        self.user_group = env.ref('base.group_user')
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _grant_model_access(self, model_meta, perm_read=True, group=None):
+        """Create an ir.model.access record granting read access to a model."""
+        env = self.env
+        return env["ir.model.access"].create({
+            'name': f'Test Access {model_meta.model}',
+            'model_id': model_meta.id,
+            'group_id': (group or self.user_group).id,
+            'perm_read': perm_read,
+            'perm_write': False,
+            'perm_create': False,
+            'perm_unlink': False,
+            'perm_oql_fac_default_read': True,
+            'perm_oql_fac_default_write': False,
+        })
+
+    def _create_ir_rule(self, model_meta, domain_force, groups=None):
+        """Create an ir.rule record for record-level permission control."""
+        env = self.env
+        vals = {
+            'name': f'Test Record Rule for {model_meta.model}',
+            'model_id': model_meta.id,
+            'domain_force': domain_force,
+        }
+        if groups is not None:
+            vals['groups'] = groups
+        return env['ir.rule'].create(vals)
+
+    def _get_user_env(self):
+        """Get environment for the test user."""
+        return self.env(user=self.test_user)
+
+    # ------------------------------------------------------------------
+    # Tests: Basic record-level rule filtering
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.basic")
+    def test_record_rule_filter_by_name(self):
+        """An ir.rule that restricts visible products by spu_name should
+        be respected by searcho."""
+        # Grant model access and create a record rule: only see spu_name containing "Cold"
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=like', 'Cold%')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].searcho("tag_ids")
+        names = set(res.mapped("spu_name"))
+        self.assertEqual({"Cold Boot"}, names)
+
+    @tagged("record_rule.basic")
+    def test_record_rule_no_restriction(self):
+        """Without any ir.rule, a user with model access should see all records."""
+        self._grant_model_access(self.metaProduct)
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].searcho("tag_ids")
+        names = set(res.mapped("spu_name"))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+
+    @tagged("record_rule.basic")
+    def test_record_rule_filter_active(self):
+        """An ir.rule filtering active=True should exclude inactive records."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('active', '=', True)]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        # Search without any additional filter — should only see active products
+        res = user_env["test.oql.product"].searcho("id > 0")
+        names = set(res.mapped("spu_name"))
+        self.assertIn("Cold Boot", names)
+        self.assertIn("Hot Boot", names)
+        self.assertNotIn("Inactive Boot", names)
+
+    # ------------------------------------------------------------------
+    # Tests: oql() queries with record rules
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.oql")
+    def test_record_rule_with_oql_select(self):
+        """Verify oql() results are filtered by ir.rule."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', 'ilike', 'hot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where tag_ids"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['spu_name'], "Hot Boot")
+
+    @tagged("record_rule.oql")
+    def test_record_rule_oql_combined_where(self):
+        """Record rule domain AND user's WHERE clause are combined."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', 'ilike', 'boot')]",  # restricts to Boot products
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where tag_ids"
+        )
+        # Both Cold Boot and Hot Boot should match
+        names = {row['spu_name'] for row in res}
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+
+    @tagged("record_rule.oql")
+    def test_record_rule_oql_empty_result(self):
+        """When record rule matches nothing, query should return empty."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Nonexistent Product')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where tag_ids"
+        )
+        self.assertEqual(len(res), 0)
+
+    # ------------------------------------------------------------------
+    # Tests: Multiple rules (AND logic)
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.multi")
+    def test_record_rule_global_and(self):
+        """Two global ir.rule records are intersected (AND logic).
+
+        In Odoo's ir.rule._compute_domain:
+          AND(global_domains + [OR(group_domains)])
+        Global rules (no groups) are AND-ed together.
+        """
+        self._grant_model_access(self.metaProduct)
+        # Rule 1 (global): spu_name contains "Boot"
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', 'ilike', 'Boot')]",
+        )
+        # Rule 2 (global): active = True
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('active', '=', True)]",
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].searcho("id > 0")
+        names = set(res.mapped("spu_name"))
+        # AND of two global rules: only active Boot products
+        self.assertNotIn("Inactive Boot", names)
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+
+    @tagged("record_rule.multi")
+    def test_record_rule_group_or(self):
+        """Two group ir.rule records are OR-ed together.
+
+        In Odoo's ir.rule._compute_domain:
+          AND(global_domains + [OR(group_domains)])
+        Group rules (with groups) are OR-ed together within a group domain.
+        """
+        self._grant_model_access(self.metaProduct)
+        # Rule 1 (group): only Cold Boot
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+        # Rule 2 (group): only Hot Boot
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Hot Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].searcho("id > 0")
+        names = set(res.mapped("spu_name"))
+        # OR of group rules: Cold Boot OR Hot Boot = both
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+
+    @tagged("record_rule.multi")
+    def test_record_rule_global_and_group(self):
+        """Global rule AND group rules OR: global AND (group1 OR group2).
+
+        Verdict: global(active=True) AND (group(spu_name=Cold) OR group(spu_name=Hot))
+        Should only see active Boot products.
+        """
+        self._grant_model_access(self.metaProduct)
+        # Global rule: active = True (excludes Inactive Boot)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('active', '=', True)]",
+        )
+        # Group rule 1: spu_name = Cold Boot
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+        # Group rule 2: spu_name = Hot Boot (note: NOT created, to show OR)
+        # Actually let's create it to test full OR behavior
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Hot Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].searcho("id > 0")
+        names = set(res.mapped("spu_name"))
+        # global(active=True) AND (group(Cold Boot) OR group(Hot Boot))
+        # = {Cold Boot, Hot Boot} (Inactive Boot excluded by global)
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+        self.assertNotIn("Inactive Boot", names)
+
+    # ------------------------------------------------------------------
+    # Tests: Record rules with orderby / limit / offset
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.oql")
+    def test_record_rule_with_limit(self):
+        """LIMIT clause should work correctly under record rule filtering."""
+        self._grant_model_access(self.metaProduct)
+        # No restriction rule => all 2 products visible
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where tag_ids limit 1"
+        )
+        self.assertEqual(len(res), 1)
+
+    @tagged("record_rule.oql")
+    def test_record_rule_with_orderby(self):
+        """ORDER BY should work correctly with record rules."""
+        self._grant_model_access(self.metaProduct)
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where tag_ids order by name desc"
+        )
+        self.assertEqual(len(res), 2)
+        # "Hot Boot" should come before "Cold Boot" in descending order
+        self.assertEqual(res[0]['spu_name'], "Hot Boot")
+        self.assertEqual(res[1]['spu_name'], "Cold Boot")
+
+    # ------------------------------------------------------------------
+    # Tests: Record rules combined with field-level ACL
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.field_acl")
+    def test_record_rule_with_field_restriction(self):
+        """Record-level rule + field-level ACL should both be enforced."""
+        env = self.env
+
+        # Create model access with restricted field access.
+        temp_access = env["ir.model.access"].create({
+            'name': 'Restricted Access',
+            'model_id': self.metaProduct.id,
+            'group_id': self.user_group.id,
+            'perm_read': True,
+            'perm_write': False,
+            'perm_oql_fac_default_read': False,
+            'perm_oql_fac_default_write': False,
+        })
+
+        # Grant read access only to spu_name and tag_ids.
+        for field_name in ['spu_name', 'tag_ids']:
+            field = env["ir.model.fields"].search([
+                ('model_id', '=', self.metaProduct.id),
+                ('name', '=', field_name),
+            ], limit=1)
+            env["oql.acl.field"].create({
+                'mac_id': temp_access.id,
+                'field_id': field.id,
+                'perm_read': True,
+            })
+
+        # Create record rule: only see spu_name containing "Boot"
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', 'ilike', 'Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where tag_ids"
+        )
+        names = {row['spu_name'] for row in res}
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+
+    # ------------------------------------------------------------------
+    # Tests: Record rule with no groups (user-specific rule)
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.basic")
+    def test_record_rule_non_group_rule(self):
+        """A rule without groups should still be computed by _compute_domain
+        (Odoo applies non-global rules to all users)."""
+        self._grant_model_access(self.metaProduct)
+        # Create a rule without groups — Odoo treats this as a global rule
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=None,  # No group restriction => global rule
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].searcho("id > 0")
+        names = set(res.mapped("spu_name"))
+        self.assertEqual({"Cold Boot"}, names)
+
+    # ------------------------------------------------------------------
+    # Tests: Record rules across inherited models
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.inherit")
+    def test_record_rule_inherited_model(self):
+        """Record rules on _inherits parent model are per-model, do NOT cascade.
+
+        Odoo's ir.rule._compute_domain only looks up rules for the exact model
+        being queried. A rule on test.oql.template does NOT restrict
+        test.oql.product (which _inherits template). This test verifies that
+        template rules correctly restrict direct template queries.
+        """
+        self._grant_model_access(self.metaTemplate)
+        # Create a rule on the template (parent) model
+        self._create_ir_rule(
+            self.metaTemplate,
+            "[('name', 'ilike', 'Cold')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        # Query the template model directly — rule applies here
+        res = user_env["test.oql.template"].searcho("id > 0")
+        names = set(res.mapped("name"))
+        self.assertEqual({"Cold Boot"}, names)
+
+    # ------------------------------------------------------------------
+    # Tests: Admin/sudo should NOT be affected
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.admin")
+    def test_record_rule_admin_not_affected(self):
+        """Admin/sudo user should bypass ir.rule restrictions."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        # Admin with .sudo() should see all active products
+        # (Inactive Boot has active=False, excluded by Odoo's default filtering)
+        res = self.env["test.oql.product"].sudo().searcho("id > 0")
+        names = set(res.mapped("spu_name"))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+
+    # ------------------------------------------------------------------
+    # Tests: Direct perm_records method
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.read_only")
+    def test_record_rule_perm_records_direct(self):
+        """Directly test perm_records method with an ir.rule in place."""
+        from ..acl import OqlAcl
+
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        acl = OqlAcl(user_env)
+        product_acl = acl["test.oql.product"]
+
+        # perm_records should merge the rule domain via AND
+        result_domain = product_acl.perm_records([('id', '>', 0)], "read")
+
+        # Should produce a combined AND domain
+        self.assertIsInstance(result_domain, list)
+        # Verify the AND structure: [('id', '>', 0)] AND [rule domain]
+        self.assertTrue(len(result_domain) > 1)
+
+    @tagged("record_rule.searcho")
+    def test_record_rule_searcho_and_direct_search(self):
+        """Record rule via searcho should match direct Odoo search behavior."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=like', 'Cold%')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+
+        # searcho result
+        res_oql = user_env["test.oql.product"].searcho("id > 0")
+        names_oql = set(res_oql.mapped("spu_name"))
+
+        # Direct search with the same domain should return same result
+        res_direct = user_env["test.oql.product"].search([('id', '>', 0)])
+        names_direct = set(res_direct.mapped("spu_name"))
+
+        self.assertEqual(names_oql, names_direct)
+        self.assertEqual({"Cold Boot"}, names_oql)
+
+    @tagged("record_rule.searcho")
+    def test_record_rule_searcho_id_query(self):
+        """Record rule applied to a specific ID query."""
+        self._grant_model_access(self.metaProduct)
+        # Rule: only Cold Boot
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        # Try to get Hot Boot by ID — should be empty because record rule blocks it
+        res = user_env["test.oql.product"].searcho(f"id = {self.prod_hot.id}")
+        self.assertEqual(len(res), 0)
+
+        # Try to get Cold Boot by ID — should succeed
+        res = user_env["test.oql.product"].searcho(f"id = {self.prod_cold.id}")
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res.spu_name, "Cold Boot")
+
+    @tagged("record_rule.searcho")
+    def test_record_rule_searcho_una_expr(self):
+        """Record rule combined with unary expression (bool field check)."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', 'ilike', 'Cold')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        # Unary expression: products that have tag_ids
+        res = user_env["test.oql.product"].searcho("tag_ids")
+        names = set(res.mapped("spu_name"))
+        self.assertEqual({"Cold Boot"}, names)
+
+    # ------------------------------------------------------------------
+    # Tests: Additional edge cases
+    # ------------------------------------------------------------------
+
+    @tagged("record_rule.edge")
+    def test_record_rule_or_logic(self):
+        """OR logic in WHERE clause should be properly intersected with record rule."""
+        self._grant_model_access(self.metaProduct)
+        # Rule: all Boot products
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', 'ilike', 'Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        # WHERE: Cold Boot OR Hot Boot by name
+        res = user_env["test.oql.product"].searcho(
+            "spu_name='Cold Boot' or spu_name='Hot Boot'"
+        )
+        names = set(res.mapped("spu_name"))
+        self.assertEqual({"Cold Boot", "Hot Boot"}, names)
+
+    @tagged("record_rule.edge")
+    def test_record_rule_matching_no_record(self):
+        """Record rule matching no records should still allow searcho (returns empty)."""
+        self._grant_model_access(self.metaProduct)
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('id', '<', 0)]",  # impossible condition
+            groups=[(4, self.user_group.id)],
+        )
+
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].searcho("id > 0")
+        self.assertEqual(len(res), 0)
