@@ -6,6 +6,8 @@ from typing import Literal, Set
 
 from odoo import models, fields
 
+from ..compatible import model_flush
+
 
 class OqlIrModelAccess(models.Model):
     _inherit = "ir.model.access"
@@ -25,7 +27,7 @@ class OqlIrModelAccess(models.Model):
             return set(env.registry.models.keys())
 
         # Query ir.model.access to find models with the specified permission
-        env["ir.model.access"].flush()
+        model_flush(env["ir.model.access"])
 
         sql = f"""
         SELECT DISTINCT c.model
