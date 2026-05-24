@@ -244,9 +244,9 @@ Values
 | Array (for IN)    | ``('40', '40.5', '41')``          |
 +-------------------+-----------------------------------+
 
--------------------------------------------------------------------------------
 .. _advanced-usage:
 
+-------------------------------------------------------------------------------
 Advanced Usage
 -------------------------------------------------------------------------------
 
@@ -427,7 +427,7 @@ Using Aliases in Queries
 .. _operator-overloading:
 
 3. Operator Overloading (``__oql_bin__``)
-   --------------------------------------
+-----------------------------------------
 
 When a **Term** appears with an operator and value (e.g. ``EuShoeSize = '40'``),
 OQL calls the target model's ``__oql_bin__()`` method to resolve the operation.
