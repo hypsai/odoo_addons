@@ -1,0 +1,16 @@
+{
+  "_comment": "External Odoo addon dependencies for CI testing.",
+  "_usage": "When a module's __manifest__.py 'depends' lists a module that is not core Odoo and not in this repo, CI will download it from the source configured below.",
+  "_types": {
+    "git": "Clone from a git repository. Most reliable.",
+    "url": "Download a zip from a direct URL. Good for Odoo App Store modules.",
+    "app_store": "Attempt to download from Odoo App Store (best-effort, may fail on paid modules)."
+  },
+  "_example": {
+    "example_module": {
+      "type": "git",
+      "repo": "https://github.com/OCA/example_repo.git",
+      "branch": "17.0"
+    }
+  }
+}

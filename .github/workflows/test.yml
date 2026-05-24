@@ -151,6 +151,9 @@ jobs:
             sleep 2
           done
 
+      - name: Install external dependencies
+        run: python3 install_deps.py ${{ matrix.module }} --odoo-version ${{ matrix.odoo_version }}
+
       - name: Run tests for ${{ matrix.module }} on Odoo ${{ matrix.odoo_version }}
         run: |
           MODULE="${{ matrix.module }}"
