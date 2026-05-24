@@ -10,12 +10,39 @@ Write *what* you mean — not *how* to find it.
    :align: center
    :width: 100%
 
+Table of Contents
+=================
+
+* `Simple Usage`_
+
+  * `Quick Start`_
+  * `The Problem — And the OQL Solution`_
+  * `API Reference`_
+  * `Query Syntax`_
+
+* `Advanced Usage`_
+
+  * `1. Terms — Business Terminology`_
+  * `2. Aliases — Path Simplification`_
+  * `3. Operator Overloading`_
+  * `4. Access Control`_
+
+* `Architecture`_
+* `Best Practices`_
+* `Installation`_
+* `Live Demo`_
+* `Related Addons`_
+
+.. _simple-usage:
+
 -------------------------------------------------------------------------------
 Simple Usage
 -------------------------------------------------------------------------------
 
 Get started with OQL in minutes. No configuration required — you can query any
 model immediately using field names, aliases, or pre-configured terms.
+
+.. _quick-start:
 
 Quick Start
 -----------
@@ -40,6 +67,8 @@ Use ``searcho()`` instead of ``search()``, or ``oql()`` for full queries::
 
 That's it! Start writing queries immediately. For terms, aliases, ACL, and
 operator overloading, see :ref:`advanced-usage` below.
+
+.. _the-problem:
 
 The Problem — And the OQL Solution
 ----------------------------------
@@ -96,6 +125,8 @@ How many lines of code does it take to find waterproof Danner boots in EU sizes
    - **Maintainable** — one line; trivial to modify
    - **Efficient** — no preparatory searches; OQL resolves everything internally
 
+.. _api-reference:
+
 API Reference
 -------------
 
@@ -133,6 +164,8 @@ Three methods are added to every Odoo model:
 
    ``searcho()`` and ``searcho_ids()`` internally call ``oql()`` by prepending
    ``FROM <model> SELECT id WHERE`` before your WHERE clause.
+
+.. _query-syntax:
 
 Query Syntax
 ------------
@@ -258,6 +291,8 @@ Terms, Aliases, Operator Overloading, and Access Control.
    These features require setup via **Settings → Technical → OQL**.
    Once configured, they are available to all users of the model.
 
+.. _terms:
+
 1. Terms — Business Terminology
 -------------------------------
 
@@ -329,6 +364,8 @@ Once configured, use terms directly::
    When a term appears with an operator and value (e.g. ``EuShoeSize = '40'``),
    OQL does **not** use domain rules directly. Instead, it calls the model's
    ``__oql_bin__()`` method. See :ref:`operator-overloading` below.
+
+.. _aliases:
 
 2. Aliases — Path Simplification
 ---------------------------------
@@ -472,6 +509,8 @@ With this implementation, ``EuShoeSize = '40'`` works as follows:
    ``__oql_bin__`` must return a recordset (``models.Model`` instance).
    Returning ``None`` raises ``NotImplementedError``.
 
+.. _access-control:
+
 4. Access Control (OQL ACL)
 ----------------------------
 
@@ -542,6 +581,8 @@ Restrict users to query only ``name`` and ``list_price`` via OQL::
     # Note: standard read() is unaffected
     products.read(['default_code'])  # ✓ Still works
 
+.. _architecture:
+
 Architecture
 ------------
 
@@ -589,6 +630,8 @@ missing key as an argument. This means:
 - After the first full term load (triggered by any term access), the cache
   is locked — new terms won't appear until server restart
 
+.. _best-practices:
+
 Best Practices
 --------------
 
@@ -629,12 +672,16 @@ Naming Conventions
 
 -------------------------------------------------------------------------------
 
+.. _installation:
+
 Installation
 ------------
 
 1. Place the ``oql`` module in your Odoo addons path
 2. Update the app list and install "OQL - Odoo Query Language" from the Apps menu
 3. No additional dependencies beyond ``base``
+
+.. _live-demo:
 
 Live Demo
 ---------
@@ -645,6 +692,41 @@ See OQL in action:
    :alt: OQL Search Demo - Writing business-focused queries in Odoo
    :align: center
    :width: 100%
+
+.. _related-addons:
+
+Related Addons
+--------------
+
+OQL is part of a family of modules that work together:
+
++----------------+--------------------------------------------------+
+| Module         | Description                                       |
++================+==================================================+
+| **oql_web**    | Graphical UI tools — **OQL Workbench** (full IDE  |
+|                | at ``/oql`` with multi-tab editing and model      |
+|                | browser), **search bar integration** (CodeMirror- |
+|                | powered syntax highlighting with native/OQL mode  |
+|                | toggle), and **OQL Editor** with search history,  |
+|                | auto-save, and cross-page state persistence.      |
++----------------+--------------------------------------------------+
+| **oql_pro**    | **Smart code completion** — provides context-     |
+|                | aware auto-complete hints and intelligent         |
+|                | suggestions to help users write valid OQL queries |
+|                | faster. Available on the Odoo App Store.          |
++----------------+--------------------------------------------------+
+| **oql_mcp**    | **MCP server for AI agents** — exposes            |
+|                | ``search_reado`` and ``get_oql_hints`` as MCP     |
+|                | tools so AI assistants like Claude, ChatGPT, and  |
+|                | Cursor can query your Odoo models using OQL       |
+|                | syntax (e.g. ``"Waterproof and Size = '40'"``).   |
++----------------+--------------------------------------------------+
+
+.. note::
+
+   All modules require ``oql`` (this module) as a dependency.
+   Install ``oql_web`` and ``oql_mcp`` from the same repository, and
+   ``oql_pro`` from the `Odoo App Store <https://apps.odoo.com>`_.
 
 Support and Contribution
 ------------------------
