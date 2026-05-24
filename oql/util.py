@@ -203,7 +203,7 @@ class RecordDictAdapter:
         # Format result.
         val = rec[key]
         if f_meta.relational:
-            if isinstance(f_meta, fields._RelationalMulti):
+            if f_meta.type in ('one2many', 'many2many'):
                 if self._test:
                     return [RecordDictAdapter(val.browse())]  # Make an empty record to test path access.
                 return [RecordDictAdapter(x) for x in val]

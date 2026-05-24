@@ -10,7 +10,6 @@ import odoo.fields
 import lark
 from lark.exceptions import VisitError
 from odoo import models, _
-from odoo.fields import _RelationalMulti
 from odoo.tools.safe_eval import safe_eval
 
 from .acl import OqlAcl
@@ -196,7 +195,7 @@ class FieldAccess:
                 f_meta = p_recs._fields[name]
                 # Check X2Many
                 if not b_x2m:
-                    if isinstance(f_meta, _RelationalMulti):
+                    if f_meta.type in ('one2many', 'many2many'):
                         b_x2m = True
                 # Check availability in search criteria.
                 if not f_meta._description_searchable:

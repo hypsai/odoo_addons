@@ -131,7 +131,7 @@ class AliasField(AliasNode):
             p_rec = rec
             for chip in chips:
                 f_meta: fields.Field = p_rec._fields[chip]
-                if isinstance(f_meta, fields._RelationalMulti):
+                if f_meta.type in ('one2many', 'many2many'):
                     b_x2m = True
                     break
                 p_rec = p_rec[chip]
