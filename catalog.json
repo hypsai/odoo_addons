@@ -12,6 +12,10 @@
       "supported_versions": ["15.0"],
       "description": "OQL Web Interface"
     },
+    "oql_mcp": {
+      "supported_versions": ["15.0"],
+      "description": "OQL MCP Server"
+    },
     "web_widget_pill_icon": {
       "supported_versions": ["15.0"],
       "description": "Web Widget Pill Icon"
