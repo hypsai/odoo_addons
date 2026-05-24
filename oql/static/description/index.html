@@ -6,14 +6,14 @@
                 OQL - Odoo Query Language
             </h1>
             <p class="mt-3" style="font-size: 1.15rem; color: #555; line-height: 1.8;">
-                Query Odoo ORM models with <strong>intuitive, business-focused syntax</strong> instead of complex technical domains. Transform verbose domain expressions into readable, maintainable queries that reflect your business requirements directly.
+                Query Odoo ORM models with <strong>intuitive, business-focused syntax</strong>. Write <em>what</em> you mean &mdash; not <em>how</em> to find it.
             </p>
         </div>
         <div class="col-lg-4 text-center">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 15px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
                 <i class="fa fa-search fa-3x mb-3" style="color: #4caf50;"></i>
                 <h5 style="font-weight: 700;">Simple. Intuitive. Powerful.</h5>
-                <p class="small text-muted"><strong>OQL, Business Queries, Domain Simplification, Natural Language</strong></p>
+                <p class="small text-muted"><strong>Business Queries &middot; Domain Simplification &middot; Natural Language</strong></p>
             </div>
         </div>
     </div>
@@ -21,46 +21,32 @@
     <!-- Main Image -->
     <div class="row oe_spaced mt-4">
         <div class="col-12 text-center">
-            <img src="workbench.png" alt="OQL Workbench - Query Odoo with business-focused syntax" class="img-responsive" style="width: 100%; max-width: 100%; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 0;" />
+            <img src="workbench.png" alt="OQL Workbench" class="img-responsive" style="width: 100%; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);" />
         </div>
     </div>
 
-    <!-- Quick Example -->
-    <div class="row oe_spaced mt-4">
+    <!-- The Big Problem &rarr; Solution -->
+    <div class="row oe_spaced mt-5">
         <div class="col-12">
             <div style="background-color: #e8f5e9; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);">
-                <h3 style="color: #2e7d32; margin-bottom: 20px; text-align: center;"><i class="fa fa-magic mr-2"></i>From Complex to Simple</h3>
-                
-                <!-- The Problem -->
-                <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #ff9800;">
-                    <h5 style="color: #e65100; font-weight: 700; margin-bottom: 10px;"><i class="fa fa-question-circle mr-2"></i>The Problem</h5>
-                    <p style="margin: 0; color: #555; font-size: 1.1rem; line-height: 1.6;">
-                        <strong>How do I find Danner waterproof military boots in EU size 40 or 40.5 from product data?</strong>
-                    </p>
-                    <p style="margin: 10px 0 0 0; color: #888; font-size: 0.95rem;">
-                        This seemingly simple question requires navigating multiple related models, understanding complex domain syntax, and writing verbose code...
-                    </p>
-                </div>
-                
+                <h3 style="color: #2e7d32; margin-bottom: 20px; text-align: center;"><i class="fa fa-magic mr-2"></i>From 30 Lines to 1 Line</h3>
+
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <h5 style="color: #c62828; font-weight: 700;"><i class="fa fa-times-circle mr-2"></i>Traditional Domain (30+ lines)</h5>
                         <div style="background-color: #ffebee; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #ffcdd2;">
-                            <pre style="margin: 0; color: #b71c1c; font-size: 0.8rem; background: transparent; border: none;">
+                            <pre style="margin: 0; color: #b71c1c; font-size: 0.75rem; background: transparent; border: none;">
 # Step 1: Find categories (2 searches)
 boot_catg = env['product.category'].search([
-    ('name', '=', 'Boot'),
-    ('level', '=', 'CatgS')
+    ('name', '=', 'Boot'), ('level', '=', 'CatgS')
 ])
 danner_brand = env['product.category'].search([
-    ('name', '=', 'Danner'),
-    ('parent_id', 'child_of', boot_catg.ids)
+    ('name', '=', 'Danner'), ('parent_id', 'child_of', boot_catg.ids)
 ])
 
 # Step 2: Find attributes (1 search)
 size_values = env['product.attribute.value'].search([
-    ('attribute_id.name', 'like', 'EU Shoe Size'),
-    ('name', 'in', ['40', '40.5'])
+    ('attribute_id.name', 'like', 'EU Shoe Size'), ('name', 'in', ['40', '40.5'])
 ])
 
 # Step 3: Find tags (1 search)
@@ -68,7 +54,7 @@ waterproof_tags = env['product.template.tag'].search([
     ('name', 'like', 'Waterproof')
 ])
 
-# Step 4: Execute query
+# Step 4: Execute
 products = env['product.product'].search([
     ('categ_id', 'child_of', danner_brand.ids),
     ('product_template_attribute_value_ids.product_attribute_value_id', 'in', size_values.ids),
@@ -76,21 +62,23 @@ products = env['product.product'].search([
 ])</pre>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6 mb-3">
                         <h5 style="color: #2e7d32; font-weight: 700;"><i class="fa fa-check-circle mr-2"></i>OQL Solution (1 line)</h5>
                         <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #a5d6a7;">
                             <pre style="margin: 0; color: #1b5e20; font-size: 0.95rem; background: transparent; border: none;">
 <span style="color: #4caf50; font-weight: bold;">products = env['product.product'].searcho(
-    "CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"
+    "CatgS = 'Boot' and Brand = 'Danner'
+     and EuShoeSize in ('40', '40.5')
+     and Waterproof"
 )</span></pre>
                         </div>
                         <div style="margin-top: 15px; padding: 10px; background: white; border-radius: 6px;">
                             <p style="margin: 0; color: #2e7d32; font-size: 0.9rem;">
-                                <i class="fa fa-check mr-1"></i> <strong>Business-focused</strong>: Uses terms like "Waterproof"<br>
-                                <i class="fa fa-check mr-1"></i> <strong>Intuitive</strong>: Reads like natural language<br>
-                                <i class="fa fa-check mr-1"></i> <strong>Maintainable</strong>: One line, easy to modify<br>
-                                <i class="fa fa-check mr-1"></i> <strong>Accessible</strong>: Business users can write queries
+                                <i class="fa fa-check mr-1"></i> <strong>Business-focused</strong> &mdash; uses terms like "Waterproof"<br>
+                                <i class="fa fa-check mr-1"></i> <strong>Readable</strong> &mdash; reads like natural language<br>
+                                <i class="fa fa-check mr-1"></i> <strong>Maintainable</strong> &mdash; one line, easy to change<br>
+                                <i class="fa fa-check mr-1"></i> <strong>Accessible</strong> &mdash; business users can write queries
                             </p>
                         </div>
                     </div>
@@ -99,305 +87,171 @@ products = env['product.product'].search([
         </div>
     </div>
 
-    <!-- Features Section -->
+    <!-- Key Features -->
     <div class="row oe_spaced mt-5">
         <div class="col-12 text-center mb-4">
             <h3 style="font-weight: 700; color: #4caf50;"><i class="fa fa-star mr-2"></i>Key Features</h3>
-            <p class="text-muted">Everything you need to write better Odoo queries</p>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
                 <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-language mr-2"></i>Business Terms</h5>
-                <p class="text-muted small">Use words like "Waterproof" instead of complex code. Anyone can understand your queries.</p>
+                <p class="text-muted small">Use words like "Waterproof" instead of field paths. Define terms via UI with domain rules or Many2many references to records.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
                 <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-compress mr-2"></i>Short Aliases</h5>
-                <p class="text-muted small">Replace <code>product_tmpl_id.default_code</code> with simple names like <code>spu</code>.</p>
+                <p class="text-muted small">Replace <code>product_tmpl_id.default_code</code> with <code>spu</code>. Three modes: <strong>Field</strong> path, <strong>JMESPath</strong> expression, <strong>Jinja2</strong> template.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-desktop mr-2"></i>Rich Web UI</h5>
-                <p class="text-muted small">Interactive query builder with syntax highlighting and autocomplete. Install free addon "oql_web" for enhanced experience.</p>
+                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-code-fork mr-2"></i>SQL-like Syntax</h5>
+                <p class="text-muted small"><code>FROM</code> <code>SELECT</code> <code>WHERE</code> <code>ORDER BY</code> <code>LIMIT</code> <code>OFFSET</code> &mdash; familiar structure with <code>AS</code> aliases and <code>*</code> wildcard support.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-code-fork mr-2"></i>Simple Syntax</h5>
-                <p class="text-muted small">Easy operators: AND, OR, IN, LIKE. Works just like natural language.</p>
+                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-shield mr-2"></i>Field-Level Security</h5>
+                <p class="text-muted small">Separate OQL ACL layer: control read/write access per field and per alias per user group. Independent of standard Odoo ACL.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-shield mr-2"></i>Field Security</h5>
-                <p class="text-muted small">Control who can query which fields. Keep sensitive data protected.</p>
+                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-magic mr-2"></i>Shorthand Auto-Resolution</h5>
+                <p class="text-muted small">Enable shorthand on aliases &mdash; OQL auto-matches value types to find the correct field path without explicit naming.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-magic mr-2"></i>Smart Resolution</h5>
-                <p class="text-muted small">OQL automatically finds the right fields. Less configuration, more productivity.</p>
+                <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-desktop mr-2"></i>Rich Web UI (Addon)</h5>
+                <p class="text-muted small">Install the free <strong>oql_web</strong> addon for interactive query building with syntax highlighting and autocomplete.</p>
             </div>
         </div>
     </div>
 
-    <!-- Core Concepts -->
+    <!-- How It Works -->
     <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
         <div class="col-12">
-            <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-book mr-2"></i>Core Concepts</h3>
-            
-            <!-- Concept 1: Terms -->
-            <div class="mb-4">
-                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50;">
-                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
-                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4caf50; color: #ffffff;">1</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #2e7d32;">Terms - Business Terminology</h4>
-                    </div>
-                    <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">Terms map business concepts to database records. Instead of writing complex domain filters, define meaningful names that represent specific record sets.</p>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6 style="font-weight: 700; color: #4caf50;"><i class="fa fa-cog mr-2"></i>Configuration Methods</h6>
-                                <ul style="list-style: none; padding: 0; color: #666;">
-                                    <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
-                                        <i class="fa fa-filter mr-2" style="color: #4caf50;"></i>
-                                        <strong>Domain-Based</strong><br>
-                                        <span style="font-size: 0.9em; color: #888;">Create term &rarr; Add domain rules via UI</span>
-                                    </li>
-                                    <li style="padding: 8px 0;">
-                                        <i class="fa fa-link mr-2" style="color: #4caf50;"></i>
-                                        <strong>Relationship Field</strong><br>
-                                        <span style="font-size: 0.9em; color: #888;">Add Many2many field &rarr; Tag records through interface</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <h6 style="font-weight: 700; color: #4caf50;"><i class="fa fa-code mr-2"></i>Usage Examples</h6>
-                                <div style="background-color: #e8f5e9; border-radius: 6px; padding: 12px; overflow-x: auto; border: 1px solid #a5d6a7;">
-                                    <pre style="margin: 0; color: #1b5e20; font-size: 0.85rem; background: transparent; border: none;">
-<span style="color: #4caf50;"># Find EU Size 40 products</span>
-env['product.product'].searcho("EuShoeSize = '40'")
+            <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-book mr-2"></i>How It Works</h3>
 
-<span style="color: #4caf50;"># Find waterproof products</span>
-env['product.product'].searcho("Waterproof")</pre>
-                                </div>
-                            </div>
+            <div class="row mb-4">
+                <div class="col-lg-6 mb-3">
+                    <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50; height: 100%;">
+                        <h4 style="font-weight: 700; color: #2e7d32; margin-bottom: 10px;"><span style="width: 30px; height: 30px; line-height: 30px; border-radius: 50%; display: inline-block; text-align: center; font-size: 16px; margin-right: 8px; background-color: #4caf50; color: #fff;">1</span>Terms</h4>
+                        <p style="color: #555; margin-bottom: 10px;">Map business words to record sets. Two resolution strategies:</p>
+                        <ul style="list-style: none; padding: 0; color: #666; font-size: 0.9rem;">
+                            <li style="padding: 4px 0;"><i class="fa fa-filter mr-2" style="color: #4caf50;"></i> <strong>Domain rules</strong> &mdash; configure via UI: which model, which domain</li>
+                            <li style="padding: 4px 0;"><i class="fa fa-link mr-2" style="color: #4caf50;"></i> <strong>Many2many references</strong> &mdash; auto-discovered: records tagged with the term</li>
+                        </ul>
+                        <div style="background-color: #e8f5e9; border-radius: 6px; padding: 10px; border: 1px solid #a5d6a7; margin-top: 10px;">
+                            <pre style="margin: 0; color: #1b5e20; font-size: 0.85rem; background: transparent; border: none;">
+<span style="color: #4caf50;"># Bare term &mdash; existence check</span>
+env['product.product'].searcho(<strong>"Waterproof"</strong>)
+
+<span style="color: #4caf50;"># Term with value &mdash; custom __oql_bin__</span>
+env['product.product'].searcho(<strong>"EuShoeSize = '40'"</strong>)</pre>
                         </div>
-                        
-                        <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #ffc107;">
-                            <p style="margin: 0; font-size: 0.9rem; color: #856404;">
-                                <i class="fa fa-info-circle mr-1"></i>
-                                <strong>Navigate to:</strong> Settings &gt; Technical &gt; OQL &gt; Terms to configure
-                            </p>
-                        </div>
+                        <p class="mt-2 small text-muted">Configure at <strong>Settings &gt; Technical &gt; OQL &gt; Terms</strong></p>
                     </div>
                 </div>
-            </div>
-
-            <!-- Concept 2: Aliases -->
-            <div class="mb-4">
-                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50;">
-                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
-                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4caf50; color: #ffffff;">2</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #2e7d32;">Aliases - Path Simplification</h4>
-                    </div>
-                    <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">Aliases shorten long field paths into concise, memorable names. Three modes available:</p>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; height: 100%;">
-                                    <h6 style="font-weight: 700; color: #4caf50; margin-bottom: 10px;"><i class="fa fa-road mr-2"></i>Field Mode</h6>
-                                    <p style="font-size: 0.9em; color: #666;">Simple dot notation path</p>
-                                    <div style="background-color: #f5f5f5; border-radius: 6px; padding: 10px; overflow-x: auto;">
-                                        <pre style="margin: 0; color: #333; font-size: 0.8rem;">partner_id.name
-→ partner_name</pre>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; height: 100%;">
-                                    <h6 style="font-weight: 700; color: #4caf50; margin-bottom: 10px;"><i class="fa fa-code mr-2"></i>JMESPath Mode</h6>
-                                    <p style="font-size: 0.9em; color: #666;">JSON query for data transformation</p>
-                                    <div style="background-color: #f5f5f5; border-radius: 6px; padding: 10px; overflow-x: auto;">
-                                        <pre style="margin: 0; color: #333; font-size: 0.8rem;">{name: rec.partner_id.name,
- email: rec.partner_id.email}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
-                                    <h6 style="font-weight: 700; color: #4caf50; margin-bottom: 10px;"><i class="fa fa-file-text-o mr-2"></i>Jinja2 Mode</h6>
-                                    <p style="font-size: 0.9em; color: #666;">Template string for formatted output with loops support (uses <code style="background: #f5f5f5; padding: 2px 5px; border-radius: 3px;">rec</code> variable)</p>
-                                    <div style="background-color: #f5f5f5; border-radius: 6px; padding: 10px; overflow-x: auto;">
-                                        <pre style="margin: 0; color: #333; font-size: 0.8rem;">Name is {{ rec.partner_id.name }}
-{% for line in rec.order_lines %}{{ line.product_id.name }}{% endfor %}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 15px;">
-                            <h6 style="font-weight: 700; color: #4caf50;"><i class="fa fa-magic mr-2"></i>Shorthand Notation</h6>
-                            <p style="font-size: 0.9em; color: #666;">Enable "Enable Shorthand" option for intelligent type-based resolution. OQL automatically matches value types to find correct field paths.</p>
-                        </div>
-                        
-                        <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #ffc107;">
-                            <p style="margin: 0; font-size: 0.9rem; color: #856404;">
-                                <i class="fa fa-info-circle mr-1"></i>
-                                <strong>Navigate to:</strong> Settings &gt; Technical &gt; OQL &gt; Aliases to configure
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Concept 3: Operator Overloading -->
-            <div class="mb-4">
-                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50;">
-                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
-                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4caf50; color: #ffffff;">3</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #2e7d32;">Operator Overloading - Custom Logic</h4>
-                    </div>
-                    <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">For advanced scenarios, customize operator behavior by implementing the <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">__oql_bin__</code> method on your models.</p>
-                        
-                        <div style="background-color: #f5f5f5; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #e0e0e0; margin-bottom: 15px;">
-                            <pre style="margin: 0; color: #333333; font-size: 0.85rem; background: transparent; border: none;">
-class ProductAttribute(models.Model):
-    _inherit = 'product.attribute'
-    
-    def <span style="color: #4caf50; font-weight: bold;">__oql_bin__</span>(self, term, opr, value, value_term):
-        """Custom logic for term-based operations."""
-        if term.domain == 'self.term_ids':
-            return self.value_ids.search([
-                ('id', 'in', self.value_ids.ids),
-                ('name', opr, value)
-            ])
-        raise NotImplementedError()</pre>
-                        </div>
-                        
-                        <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; border-left: 3px solid #2196f3;">
-                            <p style="margin: 0; font-size: 0.9rem; color: #0d47a1;">
-                                <i class="fa fa-lightbulb-o mr-1"></i>
-                                <strong>Use when:</strong> Terms link to parent records but you need to query child records, or when default resolution doesn't match business requirements.
-                            </p>
-                        </div>
+                <div class="col-lg-6 mb-3">
+                    <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50; height: 100%;">
+                        <h4 style="font-weight: 700; color: #2e7d32; margin-bottom: 10px;"><span style="width: 30px; height: 30px; line-height: 30px; border-radius: 50%; display: inline-block; text-align: center; font-size: 16px; margin-right: 8px; background-color: #4caf50; color: #fff;">2</span>Aliases</h4>
+                        <p style="color: #555; margin-bottom: 10px;">Shorten long field paths. Three modes plus shorthand:</p>
+                        <ul style="list-style: none; padding: 0; color: #666; font-size: 0.9rem;">
+                            <li style="padding: 4px 0;"><i class="fa fa-road mr-2" style="color: #4caf50;"></i> <strong>Field</strong> &mdash; <code>partner_id.name &rarr; partner_name</code></li>
+                            <li style="padding: 4px 0;"><i class="fa fa-code mr-2" style="color: #4caf50;"></i> <strong>JMESPath</strong> &mdash; JSON query for data transformation</li>
+                            <li style="padding: 4px 0;"><i class="fa fa-file-text-o mr-2" style="color: #4caf50;"></i> <strong>Jinja2</strong> &mdash; template strings with <code>rec</code> context</li>
+                            <li style="padding: 4px 0;"><i class="fa fa-magic mr-2" style="color: #4caf50;"></i> <strong>Shorthand</strong> &mdash; type-based auto-resolution</li>
+                        </ul>
+                        <p class="mt-2 small text-muted">Configure at <strong>Settings &gt; Technical &gt; OQL &gt; Aliases</strong></p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Query Syntax -->
+    <!-- Query Syntax Quick Reference -->
     <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
         <div class="col-12">
-            <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-keyboard-o mr-2"></i>Query Syntax</h3>
-            
-            <!-- Complete Example -->
-            <div class="mb-4">
-                <div style="background: #f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50;">
-                    <h4 style="color: #2e7d32; margin-bottom: 15px;"><i class="fa fa-star mr-2"></i>Complete OQL Query Example</h4>
-                    <p style="color: #666; margin-bottom: 15px;">One query showcasing all OQL features:</p>
-                    
-                    <div style="background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; overflow-x: auto;">
-                        <pre style="margin: 0; color: #333; font-size: 0.9rem; line-height: 1.8; background: transparent; border: none;"><span style="color: #0066cc; font-weight: bold;">FROM</span> product.product 
-<span style="color: #0066cc; font-weight: bold;">SELECT</span> name, default_code, list_price, partner_id.name
-<span style="color: #0066cc; font-weight: bold;">WHERE</span> 
-    <span style="color: #4caf50;">CatgS = 'Boot'</span> <span style="color: #ff6600;">and</span> 
-    <span style="color: #4caf50;">Brand = 'Danner'</span> <span style="color: #ff6600;">and</span> 
-    <span style="color: #4caf50;">EuShoeSize in ('40', '40.5')</span> <span style="color: #ff6600;">and</span> 
-    <span style="color: #4caf50;">Waterproof</span> <span style="color: #ff6600;">and</span> 
-    list_price > <span style="color: #cc6600;">1000</span>
-<span style="color: #0066cc; font-weight: bold;">LIMIT</span> <span style="color: #cc6600;">10</span> 
-<span style="color: #0066cc; font-weight: bold;">OFFSET</span> <span style="color: #cc6600;">20</span></pre>
-                    </div>
-                    
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <ul style="list-style: none; padding: 0; font-size: 0.9rem; color: #555;">
-                                <li style="padding: 5px 0;"><i class="fa fa-check-circle mr-2" style="color: #4caf50;"></i><strong>FROM/SELECT/WHERE</strong> - SQL-like structure</li>
-                                <li style="padding: 5px 0;"><i class="fa fa-check-circle mr-2" style="color: #4caf50;"></i><strong>Business Terms</strong> - CatgS, Brand, Waterproof</li>
-                                <li style="padding: 5px 0;"><i class="fa fa-check-circle mr-2" style="color: #4caf50;"></i><strong>Dot Notation</strong> - partner_id.name</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <ul style="list-style: none; padding: 0; font-size: 0.9rem; color: #555;">
-                                <li style="padding: 5px 0;"><i class="fa fa-check-circle mr-2" style="color: #4caf50;"></i><strong>Operators</strong> - =, in, >, and</li>
-                                <li style="padding: 5px 0;"><i class="fa fa-check-circle mr-2" style="color: #4caf50;"></i><strong>Pagination</strong> - LIMIT 10 OFFSET 20</li>
-                                <li style="padding: 5px 0;"><i class="fa fa-check-circle mr-2" style="color: #4caf50;"></i><strong>Aliases</strong> - Auto-resolved paths</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
+            <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-keyboard-o mr-2"></i>Quick Syntax Reference</h3>
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-equals mr-2"></i>Comparison Operators</h5>
-                        <div style="background-color: #f5f5f5; border-radius: 6px; padding: 12px; margin-top: 10px; overflow-x: auto;">
-                            <pre style="margin: 0; color: #333; font-size: 0.85rem;">
-<span style="color: #4caf50;"># Equality</span>
-searcho("name = 'Cold Boot'")
-
-<span style="color: #4caf50;"># Inequality</span>
-searcho("name != 'Hot Boot'")
-
-<span style="color: #4caf50;"># Greater/Less Than</span>
-searcho("age > 18")
-searcho("price <= 100")
-
-<span style="color: #4caf50;"># LIKE patterns</span>
-searcho("name like 'Boot%'")
-
-<span style="color: #4caf50;"># IN clause</span>
-searcho("Size in ('40', '40.5', '41')")</pre>
+                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-table mr-2"></i>Operators</h5>
+                        <div style="margin-top: 10px; overflow-x: auto;">
+                            <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #e8f5e9;">
+                                        <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #2e7d32; border-bottom: 2px solid #4caf50;">Category</th>
+                                        <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #2e7d32; border-bottom: 2px solid #4caf50;">Operators</th>
+                                        <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #2e7d32; border-bottom: 2px solid #4caf50;">Example</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #e9ecef;">
+                                        <td style="padding: 6px 10px; color: #555; font-weight: 600; white-space: nowrap;">Comparison</td>
+                                        <td style="padding: 6px 10px;"><code>=</code>, <code>!=</code>, <code>&lt;&gt;</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code>, <code>&lt;=</code></td>
+                                        <td style="padding: 6px 10px;"><code>price > 100</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e9ecef;">
+                                        <td style="padding: 6px 10px; color: #555; font-weight: 600; white-space: nowrap;">Pattern</td>
+                                        <td style="padding: 6px 10px;"><code>like</code>, <code>ilike</code>, <code>not like</code>, <code>not ilike</code></td>
+                                        <td style="padding: 6px 10px;"><code>name like 'Boot'</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e9ecef;">
+                                        <td style="padding: 6px 10px; color: #555; font-weight: 600; white-space: nowrap;">Set</td>
+                                        <td style="padding: 6px 10px;"><code>in</code>, <code>not in</code></td>
+                                        <td style="padding: 6px 10px;"><code>Size in ('40', '40.5')</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e9ecef;">
+                                        <td style="padding: 6px 10px; color: #555; font-weight: 600; white-space: nowrap;">Hierarchy</td>
+                                        <td style="padding: 6px 10px;"><code>child_of</code>, <code>parent_of</code></td>
+                                        <td style="padding: 6px 10px;"><code>categ_id child_of parent</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e9ecef;">
+                                        <td style="padding: 6px 10px; color: #555; font-weight: 600; white-space: nowrap;">Null</td>
+                                        <td style="padding: 6px 10px;"><code>is null</code>, <code>is not null</code></td>
+                                        <td style="padding: 6px 10px;"><code>partner_id is null</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e9ecef;">
+                                        <td style="padding: 6px 10px; color: #555; font-weight: 600; white-space: nowrap;">Unset</td>
+                                        <td style="padding: 6px 10px;"><code>=?</code></td>
+                                        <td style="padding: 6px 10px;"><code>partner_id =? partner_id</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 6px 10px; color: #555; font-weight: 600; white-space: nowrap;">Existence</td>
+                                        <td style="padding: 6px 10px;"><em>bare field/term</em></td>
+                                        <td style="padding: 6px 10px;"><code>tag_ids</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-md-6 mb-3">
                     <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-random mr-2"></i>Logical Operators</h5>
+                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-code mr-2"></i>Two Ways to Query</h5>
                         <div style="background-color: #f5f5f5; border-radius: 6px; padding: 12px; margin-top: 10px; overflow-x: auto;">
-                            <pre style="margin: 0; color: #333; font-size: 0.85rem;">
-<span style="color: #4caf50;"># AND</span>
-searcho("Brand = 'Danner' and Waterproof")
+                            <pre style="margin: 0; color: #333; font-size: 0.85rem; background: transparent; border: none;">
+<span style="color: #4caf50;"># searcho() &mdash; returns RecordSet
+# Accepts WHERE clause only</span>
+env['product.product'].<strong>searcho</strong>(
+    "Waterproof and Size = '40'"
+)
 
-<span style="color: #4caf50;"># OR</span>
-searcho("Size = '40' or Size = '40.5'")
-
-<span style="color: #4caf50;"># Combined with parentheses</span>
-searcho("(Brand = 'Danner' or Brand = 'Merrell') 
-         and Waterproof")
-
-<span style="color: #4caf50;"># Complex nesting</span>
-searcho("(Size in ('40', '40.5') and Waterproof) 
-         or (Size = '42' and Breathable)")</pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px;">
-                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-question-circle mr-2"></i>Unary Expressions</h5>
-                        <p class="text-muted small">Check for existence without specifying values:</p>
-                        <div style="background-color: #f5f5f5; border-radius: 6px; padding: 12px; overflow-x: auto;">
-                            <pre style="margin: 0; color: #333; font-size: 0.85rem;">
-<span style="color: #4caf50;"># Products that have any tags</span>
-searcho("tag_ids")
-
-<span style="color: #4caf50;"># Products with tags carrying `Waterproof` term</span>
-searcho("Waterproof")</pre>
+<span style="color: #4caf50;"># oql() &mdash; returns List[dict]
+# Full SQL-like syntax</span>
+env['product.product'].<strong>oql</strong>(
+    "from product.product
+     select name, list_price, partner_id.name
+     where active = true
+     order by list_price desc
+     limit 10 offset 20"
+)</pre>
                         </div>
                     </div>
                 </div>
@@ -410,256 +264,34 @@ searcho("Waterproof")</pre>
         <div class="col-12">
             <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-rocket mr-2"></i>Get Started in 3 Steps</h3>
 
-            <!-- Step 1: Install -->
-            <div class="mb-4">
-                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50;">
-                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
-                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4caf50; color: #ffffff;">1</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #2e7d32;">Install Module</h4>
-                    </div>
-                    <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">Install the OQL module in your Odoo instance:</p>
-                        <ul style="list-style: none; padding: 0; color: #666;">
-                            <li style="padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
-                                <i class="fa fa-folder-open mr-2" style="color: #4caf50;"></i>
-                                <strong>Place module in addons directory</strong><br>
-                                <span style="font-size: 0.9em; color: #888;">Copy the <code style="background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.95em;">oql</code> folder to your Odoo addons path</span>
-                            </li>
-                            <li style="padding: 8px 0;">
-                                <i class="fa fa-cogs mr-2" style="color: #4caf50;"></i>
-                                <strong>Install via Odoo Interface</strong><br>
-                                <span style="font-size: 0.9em; color: #888;">
-                                    Enable Developer Mode &rarr; <strong>Apps</strong> &rarr; Click <strong>Update Apps List</strong> &rarr; Search "<strong>oql</strong>" &rarr; Click <strong>Install</strong>
-                                </span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 2: Configure Terms -->
-            <div class="mb-4">
-                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50;">
-                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
-                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4caf50; color: #ffffff;">2</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #2e7d32;">Configure Terms & Aliases</h4>
-                    </div>
-                    <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">Set up your business terminology through the Odoo interface:</p>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
-                                    <h6 style="font-weight: 700; color: #4caf50; margin-bottom: 10px;"><i class="fa fa-tag mr-2"></i>Create Terms</h6>
-                                    <p class="small text-muted mb-2">Navigate to:</p>
-                                    <code style="background: #e8f5e9; padding: 5px 10px; border-radius: 4px; font-size: 0.9em; display: block; margin-bottom: 10px;">Settings > Technical > OQL > Terms</code>
-                                    <p class="small text-muted">Create terms like "Waterproof", add domain rules or link to records</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
-                                    <h6 style="font-weight: 700; color: #4caf50; margin-bottom: 10px;"><i class="fa fa-compress mr-2"></i>Setup Aliases</h6>
-                                    <p class="small text-muted mb-2">Navigate to:</p>
-                                    <code style="background: #e8f5e9; padding: 5px 10px; border-radius: 4px; font-size: 0.9em; display: block; margin-bottom: 10px;">Settings > Technical > OQL > Aliases</code>
-                                    <p class="small text-muted">Map short names to field paths, enable shorthand if needed</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 3: Start Querying -->
-            <div class="mb-4">
-                <div style="background-color:#f8f9fa; border-radius: 10px; padding: 25px; border-left: 4px solid #4caf50;">
-                    <div class="d-flex align-items-center" style="margin-bottom: 15px;">
-                        <div class="text-center" style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin-right: 15px; background-color: #4caf50; color: #ffffff;">3</div>
-                        <h4 style="margin: 0; font-weight: 700; color: #2e7d32;">Start Querying</h4>
-                    </div>
-                    <div style="padding-left: 55px;">
-                        <p style="color: #555; margin-bottom: 15px;">Use <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">searcho()</code> for simple WHERE clauses, or <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">oql()</code> for full queries:</p>
-                        <div style="background-color: #e8f5e9; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #a5d6a7;">
-                            <pre style="margin: 0; color: #1b5e20; font-size: 0.9rem;">
-<span style="color: #4caf50;"># Simple search (WHERE only)</span>
-products = env['product.product'].searcho("Waterproof and Size = '40'")
-
-<span style="color: #4caf50;"># Full query with SELECT, LIMIT, OFFSET</span>
-results = env['product.product'].oql(
-    "from product.product select name, price where active = true limit 10 offset 20"
-)</pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Success Message -->
-            <div style="background: white; border: 3px solid #4caf50; color: #2e7d32; padding: 20px; border-radius: 10px; text-align: center;">
-                <h5 style="margin: 0 0 10px 0; font-weight: 700;"><i class="mr-2"></i>You're All Set!</h5>
-                <p style="margin: 0; font-size: 15px;">Start writing business-focused queries that your team can understand and maintain!</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Best Practices -->
-    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
-        <div class="col-12">
-            <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-star mr-2"></i>Best Practices</h3>
-            
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <div style="background: #e8f5e9; border-radius: 10px; padding: 20px; border-left: 4px solid #4caf50; height: 100%;">
-                        <h5 style="font-weight: 700; color: #2e7d32;"><i class="fa fa-check-circle mr-2"></i>When to Use OQL</h5>
-                        <ul style="list-style: none; padding: 0; margin-top: 15px;">
-                            <li style="padding: 8px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-angle-right mr-2" style="color: #4caf50;"></i>Complex queries involving multiple related models
-                            </li>
-                            <li style="padding: 8px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-angle-right mr-2" style="color: #4caf50;"></i>User-facing search features where readability matters
-                            </li>
-                            <li style="padding: 8px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-angle-right mr-2" style="color: #4caf50;"></i>Business rules that change frequently
-                            </li>
-                            <li style="padding: 8px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-angle-right mr-2" style="color: #4caf50;"></i>Scenarios where non-developers need to understand queries
-                            </li>
-                        </ul>
+                <div class="col-md-4 mb-3">
+                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; text-align: center; height: 100%;">
+                        <div style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin: 0 auto 10px; background-color: #4caf50; color: #ffffff;">1</div>
+                        <h5 style="font-weight: 700; color: #2e7d32;">Install</h5>
+                        <p class="small text-muted">Place the <code>oql</code> module in your addons path, then install it from the Odoo Apps menu.</p>
                     </div>
                 </div>
-                
-                <div class="col-md-6 mb-3">
-                    <div style="background: #fce4ec; border-radius: 10px; padding: 20px; border-left: 4px solid #e91e63; height: 100%;">
-                        <h5 style="font-weight: 700; color: #c2185b;"><i class="fa fa-times-circle mr-2"></i>When to Use Traditional Domains</h5>
-                        <ul style="list-style: none; padding: 0; margin-top: 15px;">
-                            <li style="padding: 8px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-angle-right mr-2" style="color: #e91e63;"></i>Simple, single-model queries
-                            </li>
-                            <li style="padding: 8px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-angle-right mr-2" style="color: #e91e63;"></i>Performance-critical operations requiring domain optimization
-                            </li>
-                            <li style="padding: 8px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-angle-right mr-2" style="color: #e91e63;"></i>Cases requiring very specific Odoo ORM features
-                            </li>
-                        </ul>
+                <div class="col-md-4 mb-3">
+                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; text-align: center; height: 100%;">
+                        <div style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin: 0 auto 10px; background-color: #4caf50; color: #ffffff;">2</div>
+                        <h5 style="font-weight: 700; color: #2e7d32;">Configure</h5>
+                        <p class="small text-muted">Create <strong>Terms</strong> (e.g., "Waterproof") and <strong>Aliases</strong> at Settings &gt; Technical &gt; OQL.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; text-align: center; height: 100%;">
+                        <div style="width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-weight: 700; font-size: 18px; margin: 0 auto 10px; background-color: #4caf50; color: #ffffff;">3</div>
+                        <h5 style="font-weight: 700; color: #2e7d32;">Query</h5>
+                        <p class="small text-muted">Use <code>searcho()</code> for simple searches (returns records), or <code>oql()</code> for full queries with <code>SELECT</code>/<code>ORDER BY</code>/<code>LIMIT</code>/<code>OFFSET</code> (returns <code>List[dict]</code>).</p>
                     </div>
                 </div>
             </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px;">
-                        <h5 style="font-weight: 700; color: #4caf50; margin-bottom: 15px;"><i class="fa fa-tachometer mr-2"></i>Performance Considerations</h5>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <ul style="list-style: none; padding: 0;">
-                                    <li style="padding: 6px 0; color: #666; font-size: 0.9rem;">
-                                        <i class="fa fa-info-circle mr-2" style="color: #2196f3;"></i>OQL adds parsing and resolution layer
-                                    </li>
-                                    <li style="padding: 6px 0; color: #666; font-size: 0.9rem;">
-                                        <i class="fa fa-info-circle mr-2" style="color: #2196f3;"></i>Term lookups are cached after first load
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <ul style="list-style: none; padding: 0;">
-                                    <li style="padding: 6px 0; color: #666; font-size: 0.9rem;">
-                                        <i class="fa fa-info-circle mr-2" style="color: #2196f3;"></i>Monitor query execution times for complex alias chains
-                                    </li>
-                                    <li style="padding: 6px 0; color: #666; font-size: 0.9rem;">
-                                        <i class="fa fa-info-circle mr-2" style="color: #2196f3;"></i>Use <code style="background: #f5f5f5; padding: 2px 5px; border-radius: 3px;">enable_shorthand</code> judiciously
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <div style="background: #fff3e0; border-radius: 10px; padding: 20px; border-left: 4px solid #ff9800;">
-                        <h5 style="font-weight: 700; color: #e65100;"><i class="fa fa-font mr-2"></i>Naming Conventions</h5>
-                        <ul style="list-style: none; padding: 0; margin-top: 10px;">
-                            <li style="padding: 6px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-check mr-2" style="color: #4caf50;"></i>Use clear, business-oriented term names (e.g., <code style="background: #f5f5f5; padding: 2px 5px; border-radius: 3px;">EuShoeSize</code> not <code style="background: #f5f5f5; padding: 2px 5px; border-radius: 3px;">eu_size_attr</code>)
-                            </li>
-                            <li style="padding: 6px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-check mr-2" style="color: #4caf50;"></i>Keep aliases short but descriptive (e.g., <code style="background: #f5f5f5; padding: 2px 5px; border-radius: 3px;">spu</code> for standard product unit)
-                            </li>
-                            <li style="padding: 6px 0; color: #555; font-size: 0.95rem;">
-                                <i class="fa fa-check mr-2" style="color: #4caf50;"></i>Document term meanings for team reference
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Advanced Features -->
-    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
-        <div class="col-12">
-            <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-cogs mr-2"></i>Advanced Features</h3>
-            
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-clock-o mr-2"></i>Lazy Loading</h5>
-                        <p class="text-muted">OQL uses lazy loading for term metadata to minimize startup overhead. Terms are loaded on first use, then cached for subsequent queries.</p>
-                    </div>
-                </div>
-                
-                <div class="col-md-6 mb-3">
-                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-exclamation-triangle mr-2"></i>Error Handling</h5>
-                        <p class="text-muted">Clear error messages when:</p>
-                        <ul style="list-style: none; padding: 0; font-size: 0.9rem;">
-                            <li style="padding: 4px 0; color: #666;"><i class="fa fa-circle mr-2" style="font-size: 6px; vertical-align: middle; color: #4caf50;"></i>A term is not found</li>
-                            <li style="padding: 4px 0; color: #666;"><i class="fa fa-circle mr-2" style="font-size: 6px; vertical-align: middle; color: #4caf50;"></i>An alias is ambiguous</li>
-                            <li style="padding: 4px 0; color: #666;"><i class="fa fa-circle mr-2" style="font-size: 6px; vertical-align: middle; color: #4caf50;"></i>A field path does not exist</li>
-                            <li style="padding: 4px 0; color: #666;"><i class="fa fa-circle mr-2" style="font-size: 6px; vertical-align: middle; color: #4caf50;"></i>Type mismatches occur</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Migration Guide -->
-    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
-        <div class="col-12">
-            <h3 class="text-center mb-4" style="font-weight: 700; color: #4caf50;"><i class="fa fa-exchange mr-2"></i>Migration from Domains</h3>
-            
-            <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 25px;">
-                <p style="color: #555; margin-bottom: 20px;">Converting existing domain queries to OQL is straightforward:</p>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <h6 style="font-weight: 700; color: #c62828;"><i class="fa fa-times-circle mr-2"></i>Before (Domain)</h6>
-                        <div style="background-color: #ffebee; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #ffcdd2;">
-                            <pre style="margin: 0; color: #b71c1c; font-size: 0.85rem;">domain = [
-    '&amp;',
-    ('categ_id.name', '=', 'Boot'),
-    ('tag_ids.name', '=like', 'Waterproof%')
-]</pre>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <h6 style="font-weight: 700; color: #2e7d32;"><i class="fa fa-check-circle mr-2"></i>After (OQL)</h6>
-                        <div style="background-color: #e8f5e9; border-radius: 8px; padding: 15px; overflow-x: auto; border: 1px solid #a5d6a7;">
-                            <pre style="margin: 0; color: #1b5e20; font-size: 0.85rem;">query = "CatgS = 'Boot' and Waterproof"</pre>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
-                    <h6 style="font-weight: 700; color: #0d47a1; margin-bottom: 10px;"><i class="fa fa-list-ol mr-2"></i>Conversion Steps</h6>
-                    <ol style="margin: 0; padding-left: 20px; color: #555;">
-                        <li style="padding: 5px 0;">Identify business concepts in your domain (these become Terms)</li>
-                        <li style="padding: 5px 0;">Map field paths to shorter aliases where appropriate</li>
-                        <li style="padding: 5px 0;">Replace technical field references with business terms</li>
-                        <li style="padding: 5px 0;">Test thoroughly to ensure equivalent results</li>
-                    </ol>
-                </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <p style="color: #2e7d32; font-size: 1.1rem; font-weight: 600;">
+                    <i class="fa fa-check-circle mr-1" style="color: #4caf50;"></i> That's it! Start writing business-focused queries your team can understand.
+                </p>
             </div>
         </div>
     </div>
@@ -668,8 +300,8 @@ results = env['product.product'].oql(
     <div class="row oe_spaced mt-5 py-4 text-center">
         <div class="col-12">
             <div style="background: white; border: 2px solid #4caf50; color: #2e7d32; padding: 30px; border-radius: 15px;">
-                <h3 style="margin: 0 0 10px 0; font-size: 24px; color: #2e7d32;">Ready to Simplify Your Odoo Queries?</h3>
-                <p style="margin: 0 0 20px 0; font-size: 16px; color: #2e7d32;">Install OQL and start writing business-focused queries that everyone can understand!</p>
+                <h3 style="margin: 0 0 10px 0; font-size: 24px;">Ready to Simplify Your Odoo Queries?</h3>
+                <p style="margin: 0 0 20px 0; font-size: 16px;">Install OQL and write queries that reflect what you actually mean.</p>
                 <a href="https://github.com/chrisking94/odoo_addons/tree/main/oql" target="_blank" class="btn btn-primary btn-lg px-5" style="border-radius: 50px; font-weight: 700; background-color: #4caf50; border-color: #4caf50; color: #ffffff;">
                     <i class="fa fa-github mr-2"></i> View on GitHub
                 </a>

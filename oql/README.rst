@@ -1,445 +1,183 @@
 OQL - Odoo Query Language
 =========================
 
-Query Odoo ORM models with intuitive, business-focused syntax instead of complex technical domains.
+Query Odoo ORM models with **intuitive, business-focused syntax**.
+Write *what* you mean — not *how* to find it.
 
 .. image:: static/description/workbench.png
    :alt: OQL Workbench - Query Odoo with business-focused syntax
    :align: center
    :width: 100%
 
-Overview
---------
+-------------------------------------------------------------------------------
+Simple Usage
+-------------------------------------------------------------------------------
 
-OQL (Odoo Query Language) transforms how you query data in Odoo. Instead of constructing verbose, nested domain expressions, you write queries that reflect business requirements directly.
+Get started with OQL in minutes. No configuration required — you can query any
+model immediately using field names, aliases, or pre-configured terms.
 
-The Problem
-~~~~~~~~~~~
+Quick Start
+-----------
 
-How many lines of code does it take to find waterproof Danner boots in EU sizes 40-40.5?
------------------------------------------------------------------------------------------
+**1. Install**
 
-**❌ Traditional Odoo Domain Approach (Complex & Verbose)**
+Place the ``oql`` module in your addons path and install it from the Odoo Apps menu.
+No dependencies beyond ``base``.
 
-With traditional Odoo domains, you need **4 preparatory searches + 1 complex domain**:
+**2. Query**
+
+Use ``searcho()`` instead of ``search()``, or ``oql()`` for full queries::
+
+    # Simple search (WHERE clause only) — returns recordset
+    products = env['product.product'].searcho("name like 'Boot' and list_price > 50")
+
+    # Full query with SELECT, LIMIT, OFFSET — returns List[dict]
+    results = env['product.product'].oql(
+        "from product.product select name, list_price, partner_id.name "
+        "where active = true order by list_price desc limit 10 offset 20"
+    )
+
+That's it! Start writing queries immediately. For terms, aliases, ACL, and
+operator overloading, see :ref:`advanced-usage` below.
+
+The Problem — And the OQL Solution
+----------------------------------
+
+How many lines of code does it take to find waterproof Danner boots in EU sizes
+40-40.5?
+
+**Traditional Odoo Domain — 30+ lines, 4 preparatory searches**
 
 .. code-block:: python
 
     # Step 1: Find category records (2 searches)
     boot_catg = env['product.category'].search([
-        ('name', '=', 'Boot'),
-        ('level', '=', 'CatgS')
+        ('name', '=', 'Boot'), ('level', '=', 'CatgS')
     ])
     danner_brand = env['product.category'].search([
-        ('name', '=', 'Danner'),
-        ('level', '=', 'Brand'),
+        ('name', '=', 'Danner'), ('level', '=', 'Brand'),
         ('parent_id', 'child_of', boot_catg.ids)
     ])
 
     # Step 2: Find attribute values (1 search)
     size_values = env['product.attribute.value'].search([
-        ('attribute_id.name', 'like', 'EU Shoe Size'),
+        ('attribute_id.name', '=like', 'EU Shoe Size'),
         ('name', 'in', ['40', '40.5'])
     ])
 
-    # Step 3: Find waterproof tags (1 search)
+    # Step 3: Find tags (1 search)
     waterproof_tags = env['product.template.tag'].search([
-        ('name', 'like', 'Waterproof')
+        ('name', '=like', 'Waterproof')
     ])
 
-    # Step 4: Construct and execute the domain
-    domain = [
+    # Step 4: Build domain and execute
+    products = env['product.product'].search([
         ('categ_id', 'child_of', danner_brand.ids),
-        ('product_template_attribute_value_ids.product_attribute_value_id', 'in', size_values.ids),
+        ('product_template_attribute_value_ids.product_attribute_value_id',
+         'in', size_values.ids),
         ('tag_ids', 'in', waterproof_tags.ids)
-    ]
-    products = env['product.product'].search(domain)
+    ])
 
-.. attention::
-
-   **Problems with this approach:**
-
-   - 30+ lines of code for a simple business requirement
-   - Requires deep knowledge of Odoo's internal data structure
-   - Multiple database queries just to build the domain
-   - Business users cannot read, write, or verify the logic
-   - Fragile: breaks when data model changes
-
-**✅ OQL Solution (Simple & Intuitive)**
-
-**The same query in 1 line:**
+**OQL — 1 line, zero prep**
 
 .. code-block:: python
 
     products = env['product.product'].searcho(
-        "CatgS = 'Boot' and Brand = 'Danner' and EuShoeSize in ('40', '40.5') and Waterproof"
+        "CatgS = 'Boot' and Brand = 'Danner'"
+        " and EuShoeSize in ('40', '40.5')"
+        " and Waterproof"
     )
 
-.. important::
+.. tip::
 
-   **Benefits:**
+   - **Business-focused** — uses terms like "Waterproof" instead of field paths
+   - **Readable** — reads like natural language; business users can verify logic
+   - **Maintainable** — one line; trivial to modify
+   - **Efficient** — no preparatory searches; OQL resolves everything internally
 
-   - ✅ **Business-focused**: Uses terms like "Waterproof" instead of field paths
-   - ✅ **Intuitive**: Reads like natural language requirements
-   - ✅ **Maintainable**: One line, easy to modify and understand
-   - ✅ **Accessible**: Business analysts can write and review queries
-   - ✅ **Efficient**: No preparatory searches needed
-
-Live Demo
----------
-
-See OQL in action! The following demo shows how to search for products using OQL:
-
-.. image:: static/description/preview.gif
-   :alt: OQL Search Demo - Writing business-focused queries in Odoo
-   :align: center
-   :width: 100%
-
-Quick Start
------------
-
-Get started with OQL in 3 steps:
-
-**1. Install**
-
-Install the OQL module in your Odoo instance.
-
-**2. Configure Terms**
-
-Navigate to **Settings > Technical > OQL > Terms** and create your first term (e.g., "Waterproof"). Add domain rules or link it to records via the UI.
-
-**3. Query**
-
-Use ``searcho()`` instead of ``search()``, or ``oql()`` for full queries::
-
-    # Simple search (WHERE clause only)
-    products = env['product.product'].searcho("Waterproof and Size = '40'")
-
-    # Full query with SELECT, LIMIT, OFFSET
-    results = env['product.product'].oql(
-        "from product.product select name, default_code where Waterproof limit 10 offset 20"
-    )
-
-That's it! Start writing business-focused queries immediately.
-
-For detailed configuration options and advanced features, see Core Concepts below.
-
-.. note::
-   This documentation is currently being improved. More examples and detailed guides are coming soon.
-
-Core Concepts
+API Reference
 -------------
 
-OQL simplifies queries through two fundamental concepts: **Terms** and **Aliases**. These abstractions let you write queries in business language rather than technical field paths.
+Three methods are added to every Odoo model:
 
-1. Terms - Business Terminology Abstraction
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``searcho(where: str) -> Model``
+    Shortcut for recordset search. Accepts a **WHERE clause only**.
 
-Terms map business concepts to actual database records. Instead of writing complex domain filters, you define meaningful names that represent specific record sets.
+    ::
 
-For example, instead of filtering tags with ``('name', '=like', 'Waterproof%')``, you simply use the term ``Waterproof`` in your query.
+        env['product.product'].searcho("active = true and list_price > 100")
 
-Defining Terms via UI
-*********************
+``searcho_ids(where: str) -> List[int]``
+    Same as ``searcho()`` but returns only record IDs.
 
-**Method 1: Domain-Based Configuration**
+    ::
 
-Create terms and configure their selection rules directly through the Odoo interface:
+        env['product.product'].searcho_ids("list_price = null")
 
-1. Navigate to **Settings > Technical > OQL > Terms** menu
-2. Create a new term (e.g., "Waterproof")
-3. Add domain rules to specify which records this term selects
+``oql(query: str) -> List[dict]``
+    Full query with SELECT, FROM, WHERE, ORDER BY, LIMIT, OFFSET.
+    Returns a list of dictionaries.
 
-.. image:: static/description/term_config.png
-   :alt: Term configuration with domain rules
-   :align: center
-   :width: 800px
+    ::
 
-Each term can have multiple domain rules for different models. When you use the term in a query, OQL automatically applies the appropriate domain to filter records.
+        env['product.product'].oql(
+            "from product.product"
+            " select name, list_price, partner_id.name"
+            " where active = true"
+            " order by name asc"
+            " limit 50 offset 0"
+        )
 
-**Method 2: Relationship Field Association**
+.. note::
 
-For more flexible term assignment, add a Many2many field to your business models:
-
-.. code-block:: python
-
-    class ProductAttribute(models.Model):
-        _inherit = 'product.attribute'
-        
-        term_ids = fields.Many2many('oql.term', string='Terms')
-
-Note: Expose this field in the form view so users can associate terms with records through the UI.
-
-Now when you query ``EuShoeSize``, OQL finds all attributes that have been tagged with the "EuShoeSize" term through the interface.
-
-Using Terms in Queries
-**********************
-
-Once configured, use terms directly in your queries:
-
-.. code-block:: python
-
-    # Find products with EU Size 40
-    products = env['product.product'].searcho("EuShoeSize = '40'")
-
-    # Find products with multiple size options
-    products = env['product.product'].searcho("EuShoeSize in ('40', '40.5')")
-
-    # Find products tagged as waterproof
-    products = env['product.product'].searcho("Waterproof")
-
-The term automatically resolves to the underlying records based on your configuration.
-
-2. Aliases - Path Simplification
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Aliases shorten long field paths into concise, memorable names.
-
-Configuring Aliases via UI
-**************************
-
-Navigate to **Settings > Technical > OQL > Aliases** and add alias rules for your models.
-
-.. image:: static/description/alias_config.png
-   :alt: Alias configuration interface
-   :align: center
-   :width: 800px
-
-**Three Path Modes:**
-
-1. **Field mode**: Simple dot notation path
-   
-   ``partner_id.name`` → use as ``partner_name``
-
-2. **JMESPath mode**: JSON query expression for complex data transformation
-   
-   .. code-block:: json
-   
-       {name: rec.partner_id.name, email: rec.partner_id.email}
-   
-   Supports array projections: ``rec.order_lines[].{product: product_id.name, qty: quantity}``
-
-3. **Jinja2 mode**: Template string for formatted output (uses ``rec`` context variable)
-   
-   ``Name is {{ rec.partner_id.name }}``
-   
-   Supports loops: ``{% for line in rec.order_lines %}{{ line.product_id.name }}{% endfor %}``
-
-**Shorthand Notation**
-
-Enable "Enable Shorthand" to let OQL auto-resolve field paths by value type. Each model can have one shorthand path per type.
-
-Using Aliases in Queries
-************************
-
-.. code-block:: python
-
-    # Without alias
-    products = env['product.product'].searcho("product_tmpl_id.default_code = 'BOOT-001'")
-
-    # With alias 'spu'
-    products = env['product.product'].searcho("spu = 'BOOT-001'")
-
-3. Operator Overloading - Custom Query Logic
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For advanced scenarios, you can customize how operator behave in queries by implementing the ``__oql_bin__`` method on your models.
-
-Implementing __oql_bin__
-************************
-
-Add the ``__oql_bin__`` method to your model:
-
-.. code-block:: python
-
-    class ProductAttribute(models.Model):
-        _inherit = 'product.attribute'
-        
-        def __oql_bin__(self, domain, opr, value, value_domain):
-            """Custom logic for term-based binary operations.
-            e.g. term           opr     value
-                 EuShoeSize     =       '40'
-            
-            Args:
-                self: Records pre-selected with `domain`. It will be empty records when `domain` is None.
-                domain: Domain for left operand `self`.
-                opr: Odoo operator (=, !=, in, etc.)
-                value: Right operand, could be scalar or list or RecordSet or RecordSets.
-                value_domain: Domain of the right operand, available only when right operand is RecordSet.
-            """
-            if domain.name == 'self.term_ids':
-                # Search attribute values matching the criteria
-                return self.value_ids.search([
-                    ('id', 'in', self.value_ids.ids),
-                    ('name', opr, value)
-                ])
-            raise NotImplementedError()
-
-This implementation allows ``EuShoeSize in ('40', '40.5')`` to:
-
-1. Find attributes tagged with the "EuShoeSize" term
-2. Search their ``value_ids`` for values matching '40' or '40.5'
-3. Return the matching ``product.attribute.value`` records
-4. Use these records to filter products
-
-When to Use Operator Overloading
-********************************
-
-Use ``__oql_bin__`` when:
-
-- Terms are linked to parent records but you need to query child records
-- You need custom filtering logic beyond simple domain matching
-- The default term resolution doesn't match your business requirements
-
-Example Use Cases
-*****************
-
-**Case 1: Attribute to Value Resolution**
-
-As shown above, resolve from attributes to their values for size/colour queries.
-
-
-4. Access Control - Field-Level Security
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-OQL provides **field-level access control (ACL)** that restricts which fields can be accessed through OQL queries. This integrates with Odoo's security system to provide granular control over OQL field access.
-
-.. important::
-   OQL ACL only affects OQL query execution (``searcho()`` and ``oql()`` methods). It does NOT affect standard Odoo ORM operations like ``read()``, ``search()``, etc.
-
-Configuration
-*************
-
-Navigate to **Settings > Technical > Security > Access Rights**:
-
-1. **Set default permissions**: Configure ``Default Read Access`` and ``Default Write Access`` for all fields
-2. **Configure field-specific permissions**: Add individual field rules in the "OQL Field Access" section
-
-.. image:: static/description/oql_settings.png
-   :alt: OQL Field Access Control configuration
-   :align: center
-   :width: 800px
-
-Example
-*******
-
-Restrict sales users to query product names but not internal codes via OQL:
-
-1. Create access rule for ``product.product``
-2. Set ``Default Read Access = False``
-3. Grant read access to ``name`` and ``list_price`` fields only
-
-Now OQL queries automatically enforce these restrictions in both WHERE and SELECT clauses:
-
-.. code-block:: python
-
-    # WHERE clause - uses 'name' field which is accessible
-    products = env['product.product'].searcho("Waterproof")  # ✓ Works
-    
-    # SELECT clause - tries to access 'default_code' which is blocked
-    results = env['product.product'].oql(
-        "from product.product select default_code where Waterproof"
-    )  # ✗ AccessError!
-    
-    # Note: Standard Odoo read() is NOT affected by OQL ACL
-    products.read(['default_code'])  # Still works if user has model-level access
-
-Path Validation
-***************
-
-OQL validates permissions for dot-notation paths in both WHERE and SELECT clauses:
-
-.. code-block:: python
-
-    # Checks permissions in WHERE clause
-    products = env['product.product'].searcho("partner_id.country_id.name = 'US'")
-    
-    # Checks permissions in SELECT clause
-    results = env['product.product'].oql(
-        "from product.product select partner_id.country_id.name"
-    )
-
-If any field in the path lacks OQL read permission, the query is blocked.
-
-Related Field Rules
-*******************
-
-OQL ACL handles related fields with two simple rules:
-
-**1. Self-defined access**: A related field can have its own permission, independent of the target field.
-
-.. code-block:: python
-
-    tmpl_name = fields.Char(related='product_tmpl_id.name')
-
-If ``tmpl_name`` is granted read access, users can read it even without access to ``product_tmpl_id`` or ``product.template``.
-
-**2. Inherited access**: A related field automatically inherits permission if the complete target path is accessible.
-
-If both ``product_tmpl_id`` and ``product.template.name`` are readable, then ``tmpl_name`` becomes readable automatically.
+   ``searcho()`` and ``searcho_ids()`` internally call ``oql()`` by prepending
+   ``FROM <model> SELECT id WHERE`` before your WHERE clause.
 
 Query Syntax
 ------------
 
-OQL supports familiar SQL-like syntax for building complex queries.
-
-Basic Structure
-~~~~~~~~~~~~~~~
-
 An OQL query follows this structure::
 
-    FROM <model> SELECT <fields> [AS <alias>] WHERE <conditions> [ORDER BY <field> [ASC|DESC], ...] [LIMIT n] [OFFSET n]
+    FROM <model>
+    SELECT <field> [AS <alias>], ...
+    [WHERE <conditions>]
+    [ORDER BY <field> [ASC|DESC], ...]
+    [LIMIT <n>]
+    [OFFSET <n>]
 
-Example::
+Key differences from SQL: **clause order is FROM → SELECT → WHERE** (not
+SELECT → FROM → WHERE), and all keywords are case-insensitive.
 
-    results = env['product.product'].oql(
-        "from product.product select name, list_price where active = true limit 10"
-    )
+Operators
+~~~~~~~~~
 
-Key Differences from SQL
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-+------------------+---------------------+------------------------------------------+
-| Feature          | SQL                 | OQL                                      |
-+==================+=====================+==========================================+
-| Clause Order     | SELECT FROM WHERE   | FROM SELECT WHERE                        |
-+------------------+---------------------+------------------------------------------+
-| Operators        | LIKE, ILIKE         | like, ilike, =like, =ilike (Odoo style)  |
-+------------------+---------------------+------------------------------------------+
-| Field Access     | partner_id          | dot notation: partner_id.name               |
-+------------------+---------------------+------------------------------------------+
-| Business Terms   | Not available       | Use terms directly: Waterproof           |
-+------------------+---------------------+------------------------------------------+
-| Aliases          | Not available       | Configured via UI, auto-resolved         |
-+------------------+---------------------+------------------------------------------+
++-------------+----------------------------------------------------+-----------------------------------+
+| Category    | Operators                                          | Example                           |
++=============+====================================================+===================================+
+| Comparison  | ``=``, ``!=``, ``<>``, ``>``, ``>=``, ``<``,      | ``price > 100``                   |
+|             | ``<=``                                             |                                   |
++-------------+----------------------------------------------------+-----------------------------------+
+| Pattern     | ``like``, ``ilike``, ``not like``,                 | ``name like 'Boot'``              |
+|             | ``not ilike``                                      | (auto-wraps ``%`` — no need to    |
+|             |                                                    | add wildcards)                    |
++-------------+----------------------------------------------------+-----------------------------------+
+| Set         | ``in``, ``not in``                                 | ``Size in ('40', '40.5')``        |
++-------------+----------------------------------------------------+-----------------------------------+
+| Hierarchy   | ``child_of``, ``parent_of``                        | ``categ_id child_of root``        |
++-------------+----------------------------------------------------+-----------------------------------+
+| Null        | ``is null``, ``is not null``                       | ``partner_id is null``            |
++-------------+----------------------------------------------------+-----------------------------------+
+| Unset       | ``=?``                                             | ``partner_id =? partner_id``      |
++-------------+----------------------------------------------------+-----------------------------------+
 
 .. note::
-   - ``searcho()`` accepts only WHERE clause for quick searches
-   - ``oql()`` accepts full query syntax with FROM, SELECT, WHERE, ORDER BY, LIMIT, OFFSET
 
-Comparison Operators
-~~~~~~~~~~~~~~~~~~~~
+   ``like`` / ``ilike`` automatically wrap the value with ``%`` (equivalent to
+   Odoo's ``=like`` / ``=ilike`` domain operators). Use ``=like`` or ``=ilike``
+   for Odoo-native behaviour if you need explicit ``%`` placement.
 
-::
-
-    # Equality
-    searcho("name = 'Cold Boot'")
-
-    # Inequality
-    searcho("name != 'Hot Boot'")
-
-    # Greater/Less Than
-    searcho("age > 18")
-    searcho("price <= 100")
-
-    # LIKE patterns
-    searcho("name like 'Boot%'")
-
-    # IN clause
-    searcho("Size in ('40', '40.5', '41')")
-
-Logical Operators
-~~~~~~~~~~~~~~~~~
+Logical Operators & Grouping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
@@ -449,40 +187,406 @@ Logical Operators
     # OR
     searcho("Size = '40' or Size = '40.5'")
 
-    # Combined
-    searcho("Brand = 'Danner' and (Size = '40' or Size = '40.5')")
+    # NOT
+    searcho("not Waterproof")
 
-Parentheses for Grouping
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-::
-
-    # Group conditions explicitly
+    # Parentheses for grouping
     searcho("(Brand = 'Danner' or Brand = 'Merrell') and Waterproof")
-
-    # Complex nesting
     searcho("(Size in ('40', '40.5') and Waterproof) or (Size = '42' and Breathable)")
 
-Unary Expressions
-~~~~~~~~~~~~~~~~~
+Unary Expressions (Existence Checks)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Check for existence without specifying values::
+Use a bare field or term to check for existence — no operator or value needed::
 
     # Products that have any tags
     searcho("tag_ids")
 
-    # Products that have attribute values
-    searcho("attribute_value_ids")
+    # Active products
+    searcho("active")
 
-    # Products with the tags carrying `Waterproof` term
+    # Products tagged with a term
     searcho("Waterproof")
 
-Installation
+Dot Notation
+~~~~~~~~~~~~
+
+Access related fields with dot paths in both WHERE and SELECT clauses::
+
+    # WHERE — filter by related field
+    searcho("partner_id.country_id.name = 'US'")
+
+    # SELECT — read related field with AS alias
+    env['product.product'].oql(
+        "from product.product"
+        " select name, partner_id.name as partner_name"
+        " where active = true"
+    )
+
+Values
+~~~~~~
+
++-------------------+-----------------------------------+
+| Type              | Syntax                            |
++===================+===================================+
+| String            | ``'Boot'`` (single-quoted,        |
+|                   | ``''`` escapes to ``'``)          |
++-------------------+-----------------------------------+
+| Integer           | ``42``, ``-5``                    |
++-------------------+-----------------------------------+
+| Float             | ``99.99``, ``-0.5``               |
++-------------------+-----------------------------------+
+| Boolean           | ``true``, ``false``               |
++-------------------+-----------------------------------+
+| Null              | ``null``                          |
++-------------------+-----------------------------------+
+| Array (for IN)    | ``('40', '40.5', '41')``          |
++-------------------+-----------------------------------+
+
+-------------------------------------------------------------------------------
+.. _advanced-usage:
+
+Advanced Usage
+-------------------------------------------------------------------------------
+
+This section covers configuration-driven features that unlock OQL's full power:
+Terms, Aliases, Operator Overloading, and Access Control.
+
+.. note::
+
+   These features require setup via **Settings → Technical → OQL**.
+   Once configured, they are available to all users of the model.
+
+1. Terms — Business Terminology
+-------------------------------
+
+Terms map **business words** to **record sets**. Instead of writing complex
+domain expressions, you define meaningful names and use them directly in queries.
+
+How Terms Work
+~~~~~~~~~~~~~~
+
+When OQL encounters a word in a query that isn't a field name or alias, it
+tries to resolve it as a Term. Terms resolve via two strategies:
+
+**Strategy 1 — Domain rules** (configured via UI)
+
+Navigate to **Settings → Technical → OQL → Terms**, create a term, and add
+domain rules that define which records the term matches.
+
+For example, a "Waterproof" term could have a domain rule on
+``product.template.tag``: ``[('name', '=like', 'Waterproof')]``.
+
+.. image:: static/description/term_config.png
+   :alt: Term configuration with domain rules
+   :align: center
+   :width: 800px
+
+Each term can have multiple domain rules for different target models.
+
+**Strategy 2 — Many2many references** (auto-discovered)
+
+OQL automatically discovers which records are "tagged" with a term by scanning
+all Many2one/Many2many fields whose ``relation`` is ``oql.term``.
+
+To use this, add a ``term_ids`` field to your business models:
+
+.. code-block:: python
+
+    from odoo import models, fields
+
+    class ProductAttribute(models.Model):
+        _inherit = 'product.attribute'
+
+        term_ids = fields.Many2many('oql.term', string='Terms')
+
+Then associate terms with records through the form view. When you use the term
+in a query, OQL finds all records linked to that term and uses their IDs to
+build the domain.
+
+.. tip::
+
+   Domain rules and Many2many references are **cumulative** — if a term has
+   both, their results are merged with AND logic.
+
+Using Terms in Queries
+~~~~~~~~~~~~~~~~~~~~~~
+
+Once configured, use terms directly::
+
+    # Bare term — existence check
+    env['product.product'].searcho("Waterproof")
+
+    # Term with value — triggers __oql_bin__ (see Operator Overloading)
+    env['product.product'].searcho("EuShoeSize = '40'")
+
+    # Term with IN clause
+    env['product.product'].searcho("EuShoeSize in ('40', '40.5')")
+
+.. note::
+
+   When a term appears with an operator and value (e.g. ``EuShoeSize = '40'``),
+   OQL does **not** use domain rules directly. Instead, it calls the model's
+   ``__oql_bin__()`` method. See :ref:`operator-overloading` below.
+
+2. Aliases — Path Simplification
+---------------------------------
+
+Aliases **shorten long field paths** into concise, memorable names.
+
+Replace ``product_tmpl_id.default_code`` with ``spu``, or
+``partner_id.country_id.name`` with ``country``.
+
+Configuring Aliases
+~~~~~~~~~~~~~~~~~~~
+
+Navigate to **Settings → Technical → OQL → Aliases** and add alias rules for
+your models.
+
+.. image:: static/description/alias_config.png
+   :alt: Alias configuration interface
+   :align: center
+   :width: 800px
+
+Three Path Modes
+~~~~~~~~~~~~~~~~
+
+**Field mode** — Simple dot-notation field path (default).
+
+::
+
+    # Alias: spu → product_tmpl_id.default_code
+    searcho("spu = 'BOOT-001'")
+
+**JMESPath mode** — JSON query expressions for data transformation. Useful for
+extracting nested data or reshaping complex structures.
+
+.. code-block:: json
+
+    {name: rec.partner_id.name, email: rec.partner_id.email}
+
+Supports array projections::
+
+    rec.order_lines[].{product: product_id.name, qty: quantity}
+
+**Jinja2 mode** — Template strings for formatted output. Uses ``rec`` as the
+context variable.
+
+.. code-block:: jinja
+
+    {{ rec.partner_id.name }}
+
+    {% for line in rec.order_lines %}
+    {{ line.product_id.name }} × {{ line.quantity }}
+    {% endfor %}
+
+Shorthand Auto-Resolution
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Enable "Shorthand" on an alias line to let OQL automatically select the correct
+field path by matching the **value type**.
+
+For example, if a model has:
+- ``attribute_value_ids`` (relates to ``product.attribute.value``)
+- ``name`` (a Char field)
+
+You can enable shorthand on both. When OQL encounters ``@ = 'Boot'``, it matches
+the value type ``str`` and uses the ``name`` path. When it encounters
+``@ = attribute_value_record`` (a RecordSet), it matches the model
+``product.attribute.value`` and uses ``attribute_value_ids``.
+
+.. important::
+
+   At most **one** shorthand per value type per model. This prevents ambiguity.
+
+Complex vs Simple Aliases
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **Simple aliases** (Field mode) can appear anywhere in a field path and can
+  be used in WHERE clauses for searching.
+- **Complex aliases** (JMESPath, Jinja2) can only appear at the **tail** of a
+  field path and cannot be used in WHERE clauses (only SELECT).
+
+Using Aliases in Queries
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    # Without alias — verbose
+    searcho("product_tmpl_id.default_code = 'BOOT-001'")
+
+    # With alias — clean
+    searcho("spu = 'BOOT-001'")
+
+    # Aliases in SELECT with AS
+    oql("from product.product"
+        " select spu as sku, partner_id.name as partner"
+        " where active = true")
+
+.. _operator-overloading:
+
+3. Operator Overloading (``__oql_bin__``)
+   --------------------------------------
+
+When a **Term** appears with an operator and value (e.g. ``EuShoeSize = '40'``),
+OQL calls the target model's ``__oql_bin__()`` method to resolve the operation.
+
+This is essential for terms that map to parent records but need to filter by
+child records — for example, resolving "EuShoeSize" (a product attribute) to
+specific sizes (product attribute values).
+
+.. code-block:: python
+
+    class ProductAttribute(models.Model):
+        _inherit = 'product.attribute'
+
+        def __oql_bin__(self, domain, opr, value, value_domain):
+            """
+            Custom logic for term-based binary operations.
+
+            :param self: Records pre-filtered by ``domain`` (empty if none).
+            :param domain: OqlDomain for the left operand (the term's domain).
+            :param opr: Odoo domain operator (=, !=, in, like, ...).
+            :param value: Right operand (scalar, list, or RecordSet).
+            :param value_domain: Domain of the right operand when it's a RecordSet.
+            :return: A recordset (must not be None).
+            """
+            if domain.name == 'self.term_ids':
+                # Search child attribute values matching the operator
+                return self.value_ids.search(
+                    [('name', opr, value)]
+                )
+            raise NotImplementedError()
+
+With this implementation, ``EuShoeSize = '40'`` works as follows:
+
+1. OQL finds attribute records tagged with the "EuShoeSize" term
+2. Calls ``__oql_bin__`` on the pre-filtered attribute records
+3. The method searches ``value_ids`` (child records) for ``name = '40'``
+4. Returns matching ``product.attribute.value`` records
+5. OQL uses these records to filter the parent model
+
+.. warning::
+
+   ``__oql_bin__`` must return a recordset (``models.Model`` instance).
+   Returning ``None`` raises ``NotImplementedError``.
+
+4. Access Control (OQL ACL)
+----------------------------
+
+OQL provides **its own field-level access control layer**, completely separate
+from Odoo's standard ACL. OQL ACL controls which fields and aliases can be
+accessed through ``searcho()`` and ``oql()`` queries.
+
+.. important::
+
+   OQL ACL **only** affects OQL queries. Standard Odoo ORM operations
+   (``read()``, ``search()``, ``write()``) are **not** restricted by OQL ACL.
+   Internally, OQL uses ``sudo()`` to bypass Odoo's ACL and enforces its own.
+
+Configuration
+~~~~~~~~~~~~~
+
+Navigate to **Settings → Technical → Security → Access Rights**, open any
+``ir.model.access`` record, and you'll find OQL-specific tabs:
+
+.. image:: static/description/oql_settings.png
+   :alt: OQL Field Access Control configuration
+   :align: center
+   :width: 800px
+
+- **Default Read Access** / **Default Write Access** — controls if fields are
+  readable/writable by default (defaults to ``True``)
+- **OQL Field Access** tab — per-field read/write overrides
+- **OQL Alias Access** tab — per-alias read/write overrides
+
+How ACL Is Enforced
+~~~~~~~~~~~~~~~~~~~
+
+**Field-level:** Each field path in WHERE and SELECT is checked. If any field
+in the path lacks read access, the query is blocked with an ``AccessError``.
+
+**Alias-level:** Each alias is checked against the user's alias permissions.
+
+**Alias field inheritance:** An alias is accessible if **either**:
+
+1. It has its own explicit alias-level permission, **or**
+2. **All** fields it references are individually accessible
+
+**Related field inheritance:** A related field (e.g. ``tmpl_name`` pointing to
+``product_tmpl_id.name``) is accessible if **either**:
+
+1. It has its own explicit field-level permission, **or**
+2. The complete target path (both the relational field and the target field) is
+   accessible
+
+**Record rules (ir.rule):** Odoo's standard record rules are still applied.
+On every query, ``ir.rule._compute_domain()`` is AND‑merged with the query's
+domain, ensuring users only see records their groups permit.
+
+Example
+~~~~~~~
+
+Restrict users to query only ``name`` and ``list_price`` via OQL::
+
+    # Default Read Access = False
+    # Grant read to: name, list_price
+
+    # ✓ Works — name is accessible
+    searcho("name like 'Boot'")
+
+    # ✗ AccessError — default_code is blocked
+    oql("from product.product select default_code where active = true")
+
+    # Note: standard read() is unaffected
+    products.read(['default_code'])  # ✓ Still works
+
+Architecture
 ------------
 
-1. Install the OQL module in your Odoo instance
+Query Execution Pipeline
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-2. Configure terms and aliases for your models
+::
+
+    OQL String
+        │
+        ▼
+    Lark Parser (LALR)
+        │  oql.lark grammar
+        ▼
+    Parse Tree
+        │
+        ▼
+    OqlTransformer.transform()
+        │  ┌─── FROM clause: ACL check, sudo() model
+        │  ├─── SELECT clause: resolve * → all permitted fields
+        │  ├─── WHERE clause: evaluate expression tree
+        │  │      ├── Field path?   → traditional Odoo domain tuple
+        │  │      ├── Term + value? → __oql_bin__()
+        │  │      ├── Bare term?    → pre_domain (term's domain)
+        │  │      ├── Alias?        → expand to field path
+        │  │      └── OR/AND?       → merge RecordSets
+        │  ├─── ORDER BY: validate stored fields only
+        │  ├─── LIMIT/OFFSET: pass through
+        │  └─── Build final domain, apply ir.rule
+        ▼
+    Odoo ORM (search + read)
+        │
+        ▼
+    List[dict]  (oql)  /  Model (searcho)
+
+Lazy Loading & Caching
+~~~~~~~~~~~~~~~~~~~~~~
+
+OQL uses a **lazy-loading** metadata store (``OqlMeta``) backed by
+``KeyPassingDefaultDict`` — a dictionary whose default factory receives the
+missing key as an argument. This means:
+
+- Terms are loaded on first use, then cached
+- Aliases are loaded per model on first access, then cached
+- After the first full term load (triggered by any term access), the cache
+  is locked — new terms won't appear until server restart
 
 Best Practices
 --------------
@@ -493,74 +597,58 @@ When to Use OQL
 - Complex queries involving multiple related models
 - User-facing search features where readability matters
 - Business rules that change frequently
-- Scenarios where non-developers need to understand queries
+- Scenarios where non-developers need to understand or verify queries
 
 When to Use Traditional Domains
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Simple, single-model queries
-- Performance-critical operations where domain optimization matters
-- Cases requiring very specific Odoo ORM features
+- Simple, single-model queries with no related fields
+- Performance-critical hot paths (OQL adds parsing overhead)
+- Cases requiring very specific Odoo ORM features not expressible in OQL
 
-Performance Considerations
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Performance
+~~~~~~~~~~~
 
-- OQL adds a parsing and resolution layer; for simple queries, traditional domains may be faster
-- Term lookups are cached after first load
-- Complex alias chains may impact performance; monitor query execution times
-- Use ``enable_shorthand`` judiciously; it adds type-checking overhead
+- Term and alias metadata is cached after first load
+- Complex alias chains add per-record overhead (limit their use in large
+  result sets)
+- Use ``enable_shorthand`` judiciously — it adds type-checking overhead during
+  resolution
+- For bulk data exports, use ``oql()`` with ``limit`` and ``offset`` for
+  pagination
 
 Naming Conventions
 ~~~~~~~~~~~~~~~~~~
 
-- Use clear, business-oriented term names (e.g., ``EuShoeSize`` not ``eu_size_attr``)
-- Keep aliases short but descriptive (e.g., ``spu`` for standard product unit)
-- Document term meanings for team reference
+- **Terms:** Use clear, business-oriented names (``EuShoeSize``, not
+  ``eu_size_attr``)
+- **Aliases:** Keep them short but descriptive (``spu`` for standard product
+  unit, ``country`` for ``partner_id.country_id.name``)
+- Document term and alias meanings for team reference
 
-Advanced Features
------------------
+-------------------------------------------------------------------------------
 
-Lazy Loading
-~~~~~~~~~~~~
+Installation
+------------
 
-OQL uses lazy loading for term metadata to minimize startup overhead. Terms are loaded on first use, then cached.
+1. Place the ``oql`` module in your Odoo addons path
+2. Update the app list and install "OQL - Odoo Query Language" from the Apps menu
+3. No additional dependencies beyond ``base``
 
-Error Handling
-~~~~~~~~~~~~~~
+Live Demo
+---------
 
-OQL provides clear error messages when:
+See OQL in action:
 
-- A term is not found
-- An alias is ambiguous
-- A field path does not exist
-- Type mismatches occur in shorthand resolution
-
-Migration from Domains
-----------------------
-
-Converting existing domain queries to OQL:
-
-1. Identify business concepts in your domain (these become Terms)
-2. Map field paths to shorter aliases where appropriate
-3. Replace technical field references with business terms
-4. Test thoroughly to ensure equivalent results
-
-Example conversion::
-
-    # Before (Domain)
-    domain = [
-        '&',
-        ('categ_id.name', '=', 'Boot'),
-        ('tag_ids.name', '=like', 'Waterproof%')
-    ]
-
-    # After (OQL)
-    query = "CatgS = 'Boot' and Waterproof"
+.. image:: static/description/preview.gif
+   :alt: OQL Search Demo - Writing business-focused queries in Odoo
+   :align: center
+   :width: 100%
 
 Support and Contribution
 ------------------------
 
-For issues, feature requests, or contributions, visit:
+For issues, feature requests, or contributions:
 https://github.com/chrisking94/odoo_addons/tree/main/oql
 
 License
