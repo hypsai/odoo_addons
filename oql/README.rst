@@ -3,6 +3,11 @@ OQL - Odoo Query Language
 
 Query Odoo ORM models with intuitive, business-focused syntax instead of complex technical domains.
 
+.. image:: static/description/workbench.png
+   :alt: OQL Workbench - Query Odoo with business-focused syntax
+   :align: center
+   :width: 100%
+
 Overview
 --------
 
