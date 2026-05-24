@@ -2,43 +2,38 @@ name: Test Odoo Addons
 
 on:
   push:
-    branches: ['13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
+    branches: ['main', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
   pull_request:
-    branches: [main, '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
+    branches: ['main', '13.0', '14.0', '15.0', '16.0', '17.0', '18.0', '19.0']
 
 jobs:
-  # Detect which modules were changed
+  # Detect which modules changed, and generate a dynamic test matrix
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
       modules: ${{ steps.detect.outputs.modules }}
-    
+      matrix: ${{ steps.gen-matrix.outputs.matrix }}
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      
+
       - name: Detect changed modules
         id: detect
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # For PR, compare with base branch
             CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
           else
-            # For push, compare with previous commit
             CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
           fi
-          
+
           echo "Changed files:"
           echo "$CHANGED_FILES"
-          
-          # Extract module names from changed files
+
           MODULES=""
           for file in $CHANGED_FILES; do
-            # Get the top-level directory (module name)
             MODULE=$(echo "$file" | cut -d'/' -f1)
-            
-            # Check if it's a valid module directory
             if [ -d "$MODULE" ] && [ -f "$MODULE/__manifest__.py" ]; then
               if [[ ! "$MODULES" =~ "$MODULE" ]]; then
                 if [ -z "$MODULES" ]; then
@@ -49,68 +44,81 @@ jobs:
               fi
             fi
           done
-          
-          # If no modules detected, test all modules for this branch
-          if [ -z "$MODULES" ]; then
-            echo "No specific modules detected, will test all modules for this branch"
-            # Read from catalog.json
-            BRANCH="${{ github.ref_name }}"
-            MODULES=$(python3 -c "
-          import json
-          with open('catalog.json') as f:
-              config = json.load(f)
-          modules = [m for m, info in config['modules'].items() if '$BRANCH' in info['supported_versions']]
-          print(','.join(modules))
-          ")
-          fi
-          
-          echo "Modules to test: $MODULES"
+
+          echo "Changed modules: $MODULES"
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
-  # Dynamic test matrix - tests only changed modules
+      - name: Generate test matrix
+        id: gen-matrix
+        run: |
+          python3 -c "
+          import json
+
+          with open('catalog.json') as f:
+              config = json.load(f)
+
+          modules_str = '${{ steps.detect.outputs.modules }}'
+          branch = '${{ github.ref_name }}'
+
+          postgres_map = {
+              '13.0': '12', '14.0': '12',
+              '15.0': '15', '16.0': '15', '17.0': '15',
+              '18.0': '15', '19.0': '15',
+          }
+
+          matrix_entries = []
+
+          if modules_str:
+              changed = modules_str.split(',')
+          else:
+              changed = []
+
+          for m in changed:
+              if m in config['modules']:
+                  for ver in config['modules'][m]['supported_versions']:
+                      # On a version branch, only test the matching Odoo version
+                      if branch == 'main' or branch == ver:
+                          matrix_entries.append({
+                              'module': m,
+                              'odoo_version': ver,
+                              'postgres_version': postgres_map.get(ver, '15'),
+                              'test_db': 'test_' + ver.replace('.', '')
+                          })
+
+          # Fallback: if no modules detected on a version branch push,
+          # test all modules that support this version
+          if not matrix_entries and branch != 'main':
+              for m, info in config['modules'].items():
+                  if branch in info['supported_versions']:
+                      matrix_entries.append({
+                          'module': m,
+                          'odoo_version': branch,
+                          'postgres_version': postgres_map.get(branch, '15'),
+                          'test_db': 'test_' + branch.replace('.', '')
+                      })
+
+          if matrix_entries:
+              result = json.dumps({'include': matrix_entries})
+              print(f'Matrix: {result}')
+              with open('/tmp/matrix.txt', 'w') as f:
+                  f.write(f'matrix={result}')
+          else:
+              print('Matrix: (no entries — test job will be skipped)')
+          "
+
+          if [ -f /tmp/matrix.txt ]; then
+            cat /tmp/matrix.txt >> $GITHUB_OUTPUT
+          fi
+
+  # Test each module on each Odoo version (dynamic matrix from detect-changes)
   test:
     needs: detect-changes
     runs-on: ubuntu-latest
-    if: ${{ needs.detect-changes.outputs.modules != '' }}
+    if: needs.detect-changes.outputs.matrix != ''
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # Odoo 13.0
-          - odoo_version: '13.0'
-            postgres_version: '12'
-            test_db: 'test_13'
-            
-          # Odoo 14.0
-          - odoo_version: '14.0'
-            postgres_version: '12'
-            test_db: 'test_14'
-            
-          # Odoo 15.0
-          - odoo_version: '15.0'
-            postgres_version: '15'
-            test_db: 'test_15'
-            
-          # Odoo 16.0
-          - odoo_version: '16.0'
-            postgres_version: '15'
-            test_db: 'test_16'
-            
-          # Odoo 17.0
-          - odoo_version: '17.0'
-            postgres_version: '15'
-            test_db: 'test_17'
-            
-          # Odoo 18.0
-          - odoo_version: '18.0'
-            postgres_version: '15'
-            test_db: 'test_18'
-            
-          # Odoo 19.0
-          - odoo_version: '19.0'
-            postgres_version: '15'
-            test_db: 'test_19'
-    
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+
     services:
       postgres:
         image: postgres:${{ matrix.postgres_version }}
@@ -128,34 +136,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Filter modules for this branch
-        id: filter
-        run: |
-          BRANCH="${{ matrix.odoo_version }}"
-          ALL_MODULES="${{ needs.detect-changes.outputs.modules }}"
-          
-          # Filter modules that support this Odoo version
-          FILTERED_MODULES=$(python3 -c "
-          import json
-          
-          with open('catalog.json') as f:
-              config = json.load(f)
-          
-          all_modules = '$ALL_MODULES'.split(',')
-          filtered = [m for m in all_modules if '$BRANCH' in config['modules'][m]['supported_versions']]
-          print(','.join(filtered))
-          ")
-          
-          echo "Filtered modules for $BRANCH: $FILTERED_MODULES"
-          echo "modules=$FILTERED_MODULES" >> $GITHUB_OUTPUT
-      
-      - name: Skip if no modules for this version
-        if: ${{ steps.filter.outputs.modules == '' }}
-        run: echo "No modules to test for this Odoo version"
-      
+
       - name: Wait for PostgreSQL
-        if: ${{ steps.filter.outputs.modules != '' }}
         run: |
           echo "Waiting for PostgreSQL to be ready..."
           for i in {1..30}; do
@@ -166,26 +148,22 @@ jobs:
             echo "Waiting... ($i/30)"
             sleep 2
           done
-      
-      - name: Run tests with Odoo ${{ matrix.odoo_version }}
-        if: ${{ steps.filter.outputs.modules != '' }}
+
+      - name: Run tests for ${{ matrix.module }} on Odoo ${{ matrix.odoo_version }}
         run: |
-          MODULES="${{ steps.filter.outputs.modules }}"
-          
-          echo "Testing modules: $MODULES"
-          echo "Odoo version: ${{ matrix.odoo_version }}"
-          
-          # Convert comma-separated to space-separated for -i parameter
-          MODULES_SPACE=$(echo "$MODULES" | tr ',' ' ')
-          
-          # Convert comma-separated to tag format for --test-tags parameter
-          # e.g., "oql,oql_web" becomes "/oql,/oql_web"
-          TEST_TAGS=$(echo "$MODULES" | sed 's/,/\//g' | sed 's/^/\//' )
-          
-          echo "Test tags: $TEST_TAGS"
-          
-          # Run tests and capture exit code
-          set +e  # Don't exit on error, we'll check the exit code manually
+          MODULE="${{ matrix.module }}"
+          ODOO_VERSION="${{ matrix.odoo_version }}"
+          TEST_DB="${{ matrix.test_db }}"
+
+          echo "Testing module: $MODULE"
+          echo "Odoo version: $ODOO_VERSION"
+
+          # Convert module name to test tag (e.g. "oql" → "/oql")
+          TEST_TAG="/$MODULE"
+
+          echo "Test tag: $TEST_TAG"
+
+          set +e
           docker run --rm \
             --network host \
             -v $(pwd):/mnt/extra-addons \
@@ -193,35 +171,33 @@ jobs:
             -e PORT=5432 \
             -e USER=odoo \
             -e PASSWORD=odoo \
-            odoo:${{ matrix.odoo_version }} \
-            odoo -i $MODULES_SPACE \
+            odoo:$ODOO_VERSION \
+            odoo -i $MODULE \
                  --test-enable \
-                 --test-tags $TEST_TAGS \
+                 --test-tags $TEST_TAG \
                  --stop-after-init \
-                 -d ${{ matrix.test_db }} \
+                 -d $TEST_DB \
                  --db_host=localhost \
                  --db_port=5432 \
                  --db_user=odoo \
                  --db_password=odoo \
                  --log-level=warn 2>&1 | tee /tmp/odoo_output.log
-          
+
           EXIT_CODE=${PIPESTATUS[0]}
-          set -e  # Re-enable exit on error
-          
+          set -e
+
           echo "Docker exit code: $EXIT_CODE"
-          
-          # Check for test failures in the log
+
           if grep -q "ERROR\|FAIL" /tmp/odoo_output.log; then
             echo "❌ Tests failed!"
             exit 1
           fi
-          
-          # Also check docker exit code
+
           if [ $EXIT_CODE -ne 0 ]; then
             echo "❌ Docker command failed with exit code $EXIT_CODE"
             exit 1
           fi
-          
+
           echo "✅ All tests passed!"
         env:
           PGPASSWORD: odoo
@@ -230,7 +206,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: odoo-logs-${{ matrix.odoo_version }}
+          name: odoo-logs-${{ matrix.module }}-${{ matrix.odoo_version }}
           path: /tmp/odoo_output.log
           retention-days: 7
 

@@ -275,7 +275,7 @@ def main():
             if has_cleanup:
                 run_command(f"git add -A")
             
-            commit_msg = f"Release {module} v{new_version} for Odoo {branch}"
+            commit_msg = f"Release {module} v{new_version} for Odoo {branch} [skip ci]"
             try:
                 run_command(f'git commit -m "{commit_msg}"')
                 print(f"✅ Changes committed: {commit_msg}")
