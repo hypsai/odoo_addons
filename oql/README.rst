@@ -700,27 +700,25 @@ Related Addons
 
 OQL is part of a family of modules that work together:
 
-+----------------+--------------------------------------------------+
-| Module         | Description                                       |
-+================+==================================================+
-| **oql_web**    | Graphical UI tools — **OQL Workbench** (full IDE  |
-|                | at ``/oql`` with multi-tab editing and model      |
-|                | browser), **search bar integration** (CodeMirror- |
-|                | powered syntax highlighting with native/OQL mode  |
-|                | toggle), and **OQL Editor** with search history,  |
-|                | auto-save, and cross-page state persistence.      |
-+----------------+--------------------------------------------------+
-| **oql_pro**    | **Smart code completion** — provides context-     |
-|                | aware auto-complete hints and intelligent         |
-|                | suggestions to help users write valid OQL queries |
-|                | faster. Available on the Odoo App Store.          |
-+----------------+--------------------------------------------------+
-| **oql_mcp**    | **MCP server for AI agents** — exposes            |
-|                | ``search_reado`` and ``get_oql_hints`` as MCP     |
-|                | tools so AI assistants like Claude, ChatGPT, and  |
-|                | Cursor can query your Odoo models using OQL       |
-|                | syntax (e.g. ``"Waterproof and Size = '40'"``).   |
-+----------------+--------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+
+   * - Module
+     - Description
+   * - **oql_web**
+     - Graphical UI tools — **OQL Workbench** (full IDE at ``/oql`` with multi-tab
+       editing and model browser), **search bar integration** (CodeMirror-powered
+       syntax highlighting with native/OQL mode toggle), and **OQL Editor** with
+       search history, auto-save, and cross-page state persistence.
+   * - **oql_pro**
+     - **Smart code completion** — provides context-aware auto-complete hints
+       and intelligent suggestions to help users write valid OQL queries faster.
+       Available on the Odoo App Store.
+   * - **oql_mcp**
+     - **MCP server for AI agents** — exposes ``search_reado`` and
+       ``get_oql_hints`` as MCP tools so AI assistants like Claude, ChatGPT,
+       and Cursor can query your Odoo models using OQL syntax
+       (e.g. ``"Waterproof and Size = '40'"``).
 
 .. note::
 
