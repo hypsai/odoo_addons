@@ -2,6 +2,8 @@
 from odoo import http
 from odoo.http import request
 
+from odoo.addons.oql.compatible import jsonrpc
+
 
 class OQLWebController(http.Controller):
 
@@ -20,7 +22,7 @@ class OQLWebController(http.Controller):
         """
         return request.render('oql_web.oql_workbench_template')
     
-    @http.route('/oql/user', type='json', auth='user')
+    @http.route('/oql/user', type=jsonrpc, auth='user')
     def oql_get_user(self):
         """
         Get current user information.
@@ -37,7 +39,7 @@ class OQLWebController(http.Controller):
             }
         }
     
-    @http.route('/oql/preferences/save', type='json', auth='user')
+    @http.route('/oql/preferences/save', type=jsonrpc, auth='user')
     def oql_save_preferences(self, preferences):
         """
         Save user preferences (tabs, queries, etc.) to localStorage via RPC.
@@ -49,7 +51,7 @@ class OQLWebController(http.Controller):
         # For now, we'll just acknowledge the save
         return {'success': True}
     
-    @http.route('/oql/preferences/load', type='json', auth='user')
+    @http.route('/oql/preferences/load', type=jsonrpc, auth='user')
     def oql_load_preferences(self):
         """
         Load user preferences.
@@ -59,7 +61,7 @@ class OQLWebController(http.Controller):
         # Return empty preferences - actual storage will be in localStorage
         return {'success': True, 'preferences': {}}
     
-    @http.route('/oql/state/save', type='json', auth='user')
+    @http.route('/oql/state/save', type=jsonrpc, auth='user')
     def oql_save_state(self, state):
         """
         Save workbench state for current user (auto-save).
@@ -76,7 +78,7 @@ class OQLWebController(http.Controller):
                 'error': str(e)
             }
     
-    @http.route('/oql/state/load', type='json', auth='user')
+    @http.route('/oql/state/load', type=jsonrpc, auth='user')
     def oql_load_state(self):
         """
         Load workbench state for current user.
@@ -96,7 +98,7 @@ class OQLWebController(http.Controller):
                 'state': {}
             }
     
-    @http.route('/oql/state/save', type='json', auth='user')
+    @http.route('/oql/state/save', type=jsonrpc, auth='user')
     def oql_save_state(self, state):
         """
         Save workbench state for current user (auto-save).
@@ -113,7 +115,7 @@ class OQLWebController(http.Controller):
                 'error': str(e)
             }
     
-    @http.route('/oql/state/load', type='json', auth='user')
+    @http.route('/oql/state/load', type=jsonrpc, auth='user')
     def oql_load_state(self):
         """
         Load workbench state for current user.

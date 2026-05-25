@@ -8,8 +8,12 @@ from odoo.release import version_info
 ODOO_VERSION = version_info[0]
 PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 
+# In Odoo 19+, @route(type='json') is deprecated in favor of @route(type='jsonrpc')
+jsonrpc = 'jsonrpc' if ODOO_VERSION >= 19 else 'json'
+
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain",
-           "res_users_data", "res_users_groups_id", "sql_constraints"]
+           "res_users_data", "res_users_groups_id", "sql_constraints",
+           "jsonrpc"]
 
 if ODOO_VERSION >= 19:
     from odoo.fields import Domain
