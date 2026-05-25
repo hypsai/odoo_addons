@@ -56,12 +56,12 @@ def get_manifest_path(module):
     return Path(f'{module}/__manifest__.py')
 
 
-def run_command(cmd, cwd=None):
-    """Run command and return result"""
+def run_command(cmd, cwd=None, env=None):
+    """Run command and return result. Optional ``env`` overrides environment."""
     print(f"→ {cmd}")
     result = subprocess.run(
         cmd, shell=True, cwd=cwd,
-        capture_output=True, text=True
+        capture_output=True, text=True, env=env,
     )
     if result.returncode != 0:
         print(f"❌ Error: {result.stderr}")
@@ -439,11 +439,22 @@ def main():
             except ImportError:
                 print(f"   → Installing odoo-module-migrator...")
                 proxy = get_proxy()
-                proxy_flag = f' --proxy {proxy}' if proxy else ''
+                env = os.environ.copy()
+                if proxy:
+                    # pip uses --proxy, git uses http_proxy/https_proxy env vars.
+                    # Both must be set because pip delegates git+https:// to git clone.
+                    env['HTTP_PROXY'] = proxy
+                    env['HTTPS_PROXY'] = proxy
+                    env['http_proxy'] = proxy
+                    env['https_proxy'] = proxy
+                    proxy_flag = f' --proxy {proxy}'
+                else:
+                    proxy_flag = ''
                 run_command(
                     f'"{sys.executable}" -m pip install --no-cache-dir '
                     f'--force-reinstall{proxy_flag} '
-                    f'git+https://github.com/OCA/odoo-module-migrator.git@main'
+                    f'git+https://github.com/OCA/odoo-module-migrator.git@main',
+                    env=env,
                 )
                 from odoo_module_migrate.migration import Migration
 
