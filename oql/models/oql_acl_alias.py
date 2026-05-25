@@ -6,6 +6,8 @@ from typing import Literal, Set
 
 from odoo import fields, models, api
 
+from ..compatible import model_flush
+
 
 class OqlAclAlias(models.Model):
     """
@@ -35,8 +37,8 @@ class OqlAclAlias(models.Model):
             # User root have all accesses
             return set(self.env["oql.alias.line"].search([("model_id.model", "=", model)]).mapped("alias"))
 
-        self.env["ir.model.access"].flush()
-        self.flush(self._fields)
+        model_flush(self.env["ir.model.access"])
+        model_flush(self, self._fields)
 
         sql = f"""
         SELECT d.alias
