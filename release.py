@@ -377,6 +377,19 @@ def main():
         has_migrated = False
         oldest = MODULE_VERSIONS[module][0]
         if oldest != branch:
+            # Monkey-patch migrator's file I/O to force UTF-8 on Windows
+            import odoo_module_migrate.tools as _mig_tools
+            _read_orig = _mig_tools._read_content
+            _write_orig = _mig_tools._write_content
+            def _read_content(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            def _write_content(path, content):
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+            _mig_tools._read_content = _read_content
+            _mig_tools._write_content = _write_content
+
             try:
                 from odoo_module_migrate.migration import Migration
             except ImportError:
