@@ -9,7 +9,7 @@ ODOO_VERSION = version_info[0]
 PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain",
-           "res_users_data", "res_users_groups_id", "make_sql_constraint"]
+           "res_users_data", "res_users_groups_id", "sql_constraints"]
 
 if ODOO_VERSION >= 19:
     from odoo.fields import Domain
@@ -94,18 +94,37 @@ def res_users_groups_id(record):
     return record.groups_id
 
 
-def make_sql_constraint(name, definition, message):
-    """Create a cross-version SQL constraint definition.
+def sql_constraints(*constraints):
+    """Class decorator for version-compatible SQL constraints.
 
-    In Odoo 19+, ``_sql_constraints`` uses ``models.Constraint`` objects.
-    In older versions, it uses (name, definition, message) tuples.
+    In Odoo 19+, ``_sql_constraints`` is no longer supported; each constraint
+    must be defined as a separate class attribute::
 
-    :param name: constraint name (used only in Odoo < 19)
-    :param definition: SQL constraint definition, e.g. ``"unique(field)"``
-    :param message: human-readable error message
+        _name_unique = models.Constraint('unique(name)', 'Error message')
+
+    In older Odoo versions, constraints are defined as tuples inside the
+    ``_sql_constraints`` list attribute.
+
+    This decorator accepts (name, definition, message) tuples and applies
+    the appropriate format based on the running Odoo version.
+
+    Usage::
+
+        @sql_constraints(
+            ("name_unique", "unique(name)", "Term name must be unique."),
+            ("code_uniq", "unique(code)", "Code must be unique."),
+        )
+        class OqlTerm(models.Model):
+            ...
     """
     if ODOO_VERSION >= 19:
         from odoo.models import Constraint
-        return Constraint(definition, message)
+        def decorator(cls):
+            for name, definition, message in constraints:
+                setattr(cls, f'_{name}', Constraint(definition, message))
+            return cls
     else:
-        return name, definition, message
+        def decorator(cls):
+            cls._sql_constraints = list(constraints)
+            return cls
+    return decorator

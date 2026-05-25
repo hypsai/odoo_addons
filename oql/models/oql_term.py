@@ -1,8 +1,11 @@
 from odoo import fields, models
 
-from ..compatible import make_sql_constraint
+from ..compatible import sql_constraints
 
 
+@sql_constraints(
+    ("name_unique", "unique(name)", "Term name must be unique."),
+)
 class OqlTerm(models.Model):
     _name = "oql.term"
     _description = "OQL terms which are used to form query."
@@ -12,5 +15,3 @@ class OqlTerm(models.Model):
     description = fields.Text("Description")
     domain_ids = fields.One2many("oql.term.domain", "term_id", "Domains",
                                  help="The domains used to filter model records. They are allied in `or` logic.")
-
-    _sql_constraints = [make_sql_constraint("name_unique", "unique(name)", "Term name must be unique.")]

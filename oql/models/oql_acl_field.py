@@ -6,9 +6,13 @@ from typing import Literal, Set
 
 from odoo import fields, models, api
 
-from ..compatible import model_flush, make_sql_constraint
+from ..compatible import model_flush, sql_constraints
 
 
+@sql_constraints(
+    ("mac_field_unique", "unique(mac_id, field_id)",
+     "Field must be unique in a model's field access collection."),
+)
 class OqlAclField(models.Model):
     """
     OQL field ACL follows different rules from Odoo's ACL.
@@ -33,8 +37,6 @@ class OqlAclField(models.Model):
 
     # Aux
     model_id = fields.Many2one(related="mac_id.model_id")
-
-    _sql_constraints = [make_sql_constraint("mac_field_unique", "unique(mac_id, field_id)", "Field must be unique in a model's field access collection.")]
 
     @api.model
     def perm_fields(self, model: str, mode: Literal["read", "write"]) -> Set[str]:
