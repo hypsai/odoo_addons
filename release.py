@@ -395,7 +395,7 @@ def main():
                 from odoo_module_migrate.migration import Migration
             except ImportError:
                 print(f"   → Installing odoo-module-migrator...")
-                run_command(f'"{sys.executable}" -m pip install git+https://github.com/OCA/odoo-module-migrator.git@32eb96e534727ad4ea482828a2ae0568cbae8319')
+                run_command(f'"{sys.executable}" -m pip install --no-cache-dir --force-reinstall git+https://github.com/OCA/odoo-module-migrator.git@main')
                 from odoo_module_migrate.migration import Migration
 
             migration = Migration(
