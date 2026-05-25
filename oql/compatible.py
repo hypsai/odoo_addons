@@ -11,7 +11,13 @@ PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain"]
 
 if ODOO_VERSION >= 19:
-    from odoo.fields import AND, OR, normalize_domain
+    from odoo.fields import Domain
+    AND = Domain.AND
+    OR = Domain.OR
+
+    def normalize_domain(domain):
+        return list(Domain(domain))
+
 else:
     from odoo.osv.expression import AND, OR, normalize_domain
 
