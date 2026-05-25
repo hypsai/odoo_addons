@@ -9,7 +9,7 @@ ODOO_VERSION = version_info[0]
 PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain",
-           "res_users_data", "res_users_group_id"]
+           "res_users_data", "res_users_groups_id"]
 
 if ODOO_VERSION >= 19:
     from odoo.fields import Domain
@@ -92,7 +92,7 @@ def res_users_data(data: dict):
     return data
 
 
-def res_users_group_id(record):
+def res_users_groups_id(record):
     if ODOO_VERSION >= 19:
         return record.group_ids
     return record.groups_id
