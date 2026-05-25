@@ -2,7 +2,7 @@
 {
     'name': 'Web Widget Pill Icon (Conditional Icons & Colors)',
     'summary': 'Transform any field into a stylish pill/badge with dynamic FontAwesome icons and CSS classes based on value mapping.',
-    'version': '15.0.1.0.0',
+    'version': '1.0.0',
     'category': 'Web',
     'author': 'Chris',
     'website': 'https://github.com/chrisking94/odoo_addons/tree/main/web_widget_pill_icon',

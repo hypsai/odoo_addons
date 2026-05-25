@@ -266,9 +266,10 @@ def main():
         print(f"Available modules: {', '.join(MODULE_VERSIONS.keys())}")
         sys.exit(1)
 
-    # Determine version
+    # Determine version (always use bare version on main, Odoo prefix is
+    # added per-branch by get_branch_version() — main is the single source of truth)
     if args.version:
-        new_version = args.version
+        new_version = strip_odoo_prefix(args.version)
         bump_desc = ''
     else:
         current = get_current_version(module)
@@ -276,8 +277,9 @@ def main():
             print(f"❌ Error: Cannot find current version for '{module}'")
             sys.exit(1)
         bump_type = 'major' if args.major else ('minor' if args.minor else 'patch')
-        new_version = bump_version(current, bump_type)
-        bump_desc = f' (auto {bump_type}: {current} → {new_version})'
+        current_bare = strip_odoo_prefix(current)
+        new_version = bump_version(current_bare, bump_type)
+        bump_desc = f' (auto {bump_type}: {current_bare} → {new_version})'
 
     print(f"\n🚀 Starting release {module} v{new_version}{bump_desc}\n")
 

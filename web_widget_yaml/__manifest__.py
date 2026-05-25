@@ -1,7 +1,7 @@
 {
     'name': 'Web Widget YAML',
     'summary': 'Adds a YAML code editor widget to form views using Ace Editor',
-    'version': '15.0.1.0.0',
+    'version': '1.0.0',
     'category': 'Web',
     'author': 'Chris',
     'website': 'https://github.com/chrisking94/odoo_addons/tree/main/web_widget_yaml',
