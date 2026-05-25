@@ -337,6 +337,36 @@ def main():
     else:
         target_branches = all_branches
 
+    # Prepare: ensure odoo-module-migrator is available before processing branches
+    oldest = MODULE_VERSIONS[module][0]
+    needs_migrator = any(b != oldest for b in target_branches)
+    if needs_migrator:
+        print("\n📋 Prepare: Checking odoo-module-migrator...")
+        try:
+            from odoo_module_migrate.migration import Migration  # noqa: F401
+            print("   ✅ odoo-module-migrator already installed")
+        except ImportError:
+            print("   → Installing odoo-module-migrator...")
+            proxy = get_proxy()
+            env = os.environ.copy()
+            if proxy:
+                # pip uses --proxy, git uses http_proxy/https_proxy env vars.
+                # Both must be set because pip delegates git+https:// to git clone.
+                env['HTTP_PROXY'] = proxy
+                env['HTTPS_PROXY'] = proxy
+                env['http_proxy'] = proxy
+                env['https_proxy'] = proxy
+                proxy_flag = f' --proxy {proxy}'
+            else:
+                proxy_flag = ''
+            run_command(
+                f'"{sys.executable}" -m pip install --no-cache-dir '
+                f'--force-reinstall{proxy_flag} '
+                f'git+https://github.com/OCA/odoo-module-migrator.git@main',
+                env=env,
+            )
+            print("   ✅ odoo-module-migrator installed successfully")
+
     # 0. Check workspace status
     print("📋 Step 0: Checking workspace status")
     status = run_command("git status --porcelain")
@@ -432,31 +462,8 @@ def main():
         # Apply Odoo-version compatibility transforms via OCA odoo-module-migrate
         print(f"→ Running OCA module migrator for Odoo {branch}")
         has_migrated = False
-        oldest = MODULE_VERSIONS[module][0]
         if oldest != branch:
-            try:
-                from odoo_module_migrate.migration import Migration
-            except ImportError:
-                print(f"   → Installing odoo-module-migrator...")
-                proxy = get_proxy()
-                env = os.environ.copy()
-                if proxy:
-                    # pip uses --proxy, git uses http_proxy/https_proxy env vars.
-                    # Both must be set because pip delegates git+https:// to git clone.
-                    env['HTTP_PROXY'] = proxy
-                    env['HTTPS_PROXY'] = proxy
-                    env['http_proxy'] = proxy
-                    env['https_proxy'] = proxy
-                    proxy_flag = f' --proxy {proxy}'
-                else:
-                    proxy_flag = ''
-                run_command(
-                    f'"{sys.executable}" -m pip install --no-cache-dir '
-                    f'--force-reinstall{proxy_flag} '
-                    f'git+https://github.com/OCA/odoo-module-migrator.git@main',
-                    env=env,
-                )
-                from odoo_module_migrate.migration import Migration
+            from odoo_module_migrate.migration import Migration
 
             migration = Migration(
                 str(Path(__file__).parent),   # directory
