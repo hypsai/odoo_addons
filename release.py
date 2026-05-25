@@ -19,6 +19,8 @@ Examples:
   python release.py -l oql
 """
 import argparse
+import os
+import platform
 import subprocess
 import sys
 import re
@@ -65,6 +67,45 @@ def run_command(cmd, cwd=None):
         print(f"❌ Error: {result.stderr}")
         sys.exit(1)
     return result.stdout.strip()
+
+
+def get_proxy():
+    """Detect system proxy settings.
+
+    Checks (in order):
+      1. Environment variables: HTTPS_PROXY, https_proxy, HTTP_PROXY, http_proxy
+      2. On Windows, Internet Options system proxy (via registry)
+
+    Returns the proxy URL string (e.g. 'http://127.0.0.1:10809') or None.
+    """
+    # 1. Environment variables (most common)
+    for var in ('HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'):
+        proxy = os.environ.get(var)
+        if proxy:
+            return proxy
+
+    # 2. Windows system proxy (Internet Options / IE proxy)
+    if platform.system() == 'Windows':
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r'Software\Microsoft\Windows\CurrentVersion\Internet Settings',
+            )
+            try:
+                enabled, _ = winreg.QueryValueEx(key, 'ProxyEnable')
+                if enabled:
+                    server, _ = winreg.QueryValueEx(key, 'ProxyServer')
+                    # ProxyServer might be '127.0.0.1:10809' without protocol
+                    if server and '://' not in server:
+                        server = f'http://{server}'
+                    return server
+            finally:
+                winreg.CloseKey(key)
+        except Exception:
+            pass
+
+    return None
 
 
 def update_manifest_version(module, version):
@@ -397,7 +438,13 @@ def main():
                 from odoo_module_migrate.migration import Migration
             except ImportError:
                 print(f"   → Installing odoo-module-migrator...")
-                run_command(f'"{sys.executable}" -m pip install --no-cache-dir --force-reinstall git+https://github.com/OCA/odoo-module-migrator.git@main')
+                proxy = get_proxy()
+                proxy_flag = f' --proxy {proxy}' if proxy else ''
+                run_command(
+                    f'"{sys.executable}" -m pip install --no-cache-dir '
+                    f'--force-reinstall{proxy_flag} '
+                    f'git+https://github.com/OCA/odoo-module-migrator.git@main'
+                )
                 from odoo_module_migrate.migration import Migration
 
             migration = Migration(
