@@ -362,7 +362,7 @@ def main():
             run_command(
                 f'"{sys.executable}" -m pip install --no-cache-dir '
                 f'--force-reinstall{proxy_flag} '
-                f'git+https://github.com/OCA/odoo-module-migrator.git@main',
+                f'git+https://github.com/OCA/odoo-module-migrator.git@master',
                 env=env,
             )
             print("   ✅ odoo-module-migrator installed successfully")
