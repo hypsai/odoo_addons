@@ -8,7 +8,12 @@ from odoo.release import version_info
 ODOO_VERSION = version_info[0]
 PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 
-__all__ = ["model_flush", "zip_c"]
+__all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain"]
+
+if ODOO_VERSION >= 19:
+    from odoo.fields import AND, OR, normalize_domain
+else:
+    from odoo.osv.expression import AND, OR, normalize_domain
 
 
 def model_flush(model, fields=None):

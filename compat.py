@@ -31,6 +31,11 @@ _TREE_REPLACE_MIN_MAJOR = 18
 _TREE_OPEN_RE = re.compile(r'<tree\b')
 _TREE_CLOSE_RE = re.compile(r'</tree>')
 
+# In Odoo 18+, ``view_mode`` (e.g. ``view_mode="tree,form"``) must also
+# use ``list`` instead of ``tree``.  Replace ``tree`` word *inside* the
+# quoted value, covering patterns like ``tree``, ``tree,form``, ``form,tree``.
+_VIEW_MODE_TREE_RE = re.compile(r'(view_mode="[^"]*)tree([^"]*")')
+
 # Marker printed to stdout so the caller can detect whether files changed.
 _CHANGED_MARKER = 'COMPAT_CHANGED'
 _UNCHANGED_MARKER = 'COMPAT_UNCHANGED'
@@ -55,11 +60,14 @@ def process_module(module_path, odoo_version):
     changed = False
     for xml_file in Path(module_path).rglob('*.xml'):
         content = xml_file.read_text(encoding='utf-8')
-        if '<tree' not in content and '</tree>' not in content:
+        has_tree_tag = '<tree' in content or '</tree>' in content
+        has_tree_view_mode = 'view_mode' in content and 'tree' in content
+        if not has_tree_tag and not has_tree_view_mode:
             continue
 
         new = _TREE_OPEN_RE.sub('<list', content)
         new = _TREE_CLOSE_RE.sub('</list>', new)
+        new = _VIEW_MODE_TREE_RE.sub(r'\1list\2', new)
 
         if new != content:
             xml_file.write_text(new, encoding='utf-8')

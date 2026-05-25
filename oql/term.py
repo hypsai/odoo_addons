@@ -4,7 +4,7 @@
 # @Description  :
 from typing import ClassVar, List, Iterable
 
-from odoo.osv.expression import normalize_domain, AND, OR
+from .compatible import normalize_domain, AND, OR
 
 
 class Term(str):

@@ -8,8 +8,8 @@ from typing import Dict, Union, List, Set, Literal, Iterable, Tuple
 
 from odoo import models, _, fields
 from odoo.exceptions import AccessError
-from odoo.osv.expression import AND
 
+from .compatible import AND
 from .alias import AliasNode
 from .util import KeyPassingDefaultDict
 
