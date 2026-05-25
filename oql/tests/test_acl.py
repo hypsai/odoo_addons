@@ -1160,8 +1160,6 @@ class TestOqlRecordRule(TransactionCase):
     @tagged("record_rule.read_only")
     def test_record_rule_perm_records_direct(self):
         """Directly test perm_records method with an ir.rule in place."""
-        from ..acl import OqlAcl
-
         self._grant_model_access(self.metaProduct)
         self._create_ir_rule(
             self.metaProduct,
