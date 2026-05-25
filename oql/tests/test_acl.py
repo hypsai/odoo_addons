@@ -124,7 +124,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Create access with default deny
         temp_access = env["ir.model.access"].create({
@@ -197,7 +197,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Create access record
         temp_access = env["ir.model.access"].create({
@@ -240,7 +240,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Create access for product model
         product_access = env["ir.model.access"].create({
@@ -289,7 +289,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Create access with default deny
         temp_access = env["ir.model.access"].create({
@@ -377,7 +377,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Create model access for the test user's group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
         self.assertTrue(user_group.exists())
 
         # Create access record granting read but not write
@@ -415,7 +415,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Create access with default deny for read
         temp_access = env["ir.model.access"].create({
@@ -524,7 +524,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Create temporary model access with restrictive defaults
         temp_access = env["ir.model.access"].create({
@@ -581,7 +581,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Create model access with default deny
         temp_access = env["ir.model.access"].create({
@@ -678,7 +678,7 @@ class TestOqlAcl(TransactionCase):
         env = self.env
 
         # Get user group
-        user_group = res_users_groups_id(self.test_user).filtered(lambda g: g.name == 'Internal User')
+        user_group = res_users_groups_id(self.test_user)[0]
 
         # Get template model metadata
         metaTemplate = env["ir.model"].search([("model", "=", "test.oql.template")], limit=1)
