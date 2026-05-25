@@ -345,29 +345,30 @@ def main():
     needs_migrator = any(b != oldest for b in target_branches)
     if needs_migrator:
         print("\n📋 Prepare: Checking odoo-module-migrator...")
-        try:
-            from odoo_module_migrate.migration import Migration  # noqa: F401
-            print("   ✅ odoo-module-migrator already installed")
-        except ImportError:
-            print("   → Installing odoo-module-migrator (forked, patched)...")
-            proxy = get_proxy()
-            env = os.environ.copy()
-            if proxy:
-                env['HTTP_PROXY'] = proxy
-                env['HTTPS_PROXY'] = proxy
-                env['http_proxy'] = proxy
-                env['https_proxy'] = proxy
-                proxy_flag = f' --proxy {proxy}'
-            else:
-                proxy_flag = ''
+        proxy = get_proxy()
+        env = os.environ.copy()
+        proxy_flag = ''
+        if proxy:
+            env['HTTP_PROXY'] = proxy
+            env['HTTPS_PROXY'] = proxy
+            env['http_proxy'] = proxy
+            env['https_proxy'] = proxy
+            proxy_flag = f' --proxy {proxy}'
 
-            run_command(
-                f'"{sys.executable}" -m pip install --no-cache-dir '
-                f'--force-reinstall{proxy_flag} '
-                f'git+https://github.com/chrisking94/odoo-module-migrator.git@master',
-                env=env,
-            )
-            print("   ✅ odoo-module-migrator installed successfully")
+        # pip --upgrade on a git URL compares the installed commit hash with
+        # the remote HEAD.  Reinstalls only when there are new commits, skips
+        # with "already satisfied" otherwise.  Also handles first-time install.
+        print("   → Ensuring odoo-module-migrator is up to date...")
+        output = run_command(
+            f'"{sys.executable}" -m pip install --upgrade --no-cache-dir'
+            f'{proxy_flag} '
+            f'git+https://github.com/chrisking94/odoo-module-migrator.git@master',
+            env=env,
+        )
+        if 'already satisfied' in output.lower():
+            print("   ✅ Already up to date")
+        else:
+            print("   ✅ odoo-module-migrator updated")
 
     # 0. Check workspace status
     print("📋 Step 0: Checking workspace status")
