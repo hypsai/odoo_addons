@@ -336,6 +336,20 @@ def main():
     if not target_branches:
         print("\n⚠️ No version branches to process")
 
+    # Monkey-patch builtins.open to force UTF-8 on Windows for the migrator.
+    # The migrator has bare open() calls across multiple files without
+    # encoding=, and on Chinese Windows the default GBK breaks on
+    # non-ASCII characters.
+    import builtins as _bi
+    _open_orig = _bi.open
+    def _open_utf8(file, mode='r', buffering=-1, encoding=None,
+                   errors=None, newline=None, closefd=True, opener=None):
+        if encoding is None and 'b' not in mode:
+            encoding = 'utf-8'
+        return _open_orig(file, mode, buffering, encoding,
+                          errors, newline, closefd, opener)
+    _bi.open = _open_utf8
+
     for branch in target_branches:
         branch_version = get_branch_version(branch, new_version)
         print(f"\n{'='*60}")
@@ -377,20 +391,6 @@ def main():
         has_migrated = False
         oldest = MODULE_VERSIONS[module][0]
         if oldest != branch:
-            # Monkey-patch builtins.open to force UTF-8 on Windows.
-            # The migrator has bare open() calls across multiple files without
-            # encoding=, and on Chinese Windows the default GBK breaks on
-            # non-ASCII characters (even Odoo field labels/descriptions).
-            import builtins as _bi
-            _open_orig = _bi.open
-            def _open_utf8(file, mode='r', buffering=-1, encoding=None,
-                           errors=None, newline=None, closefd=True, opener=None):
-                if encoding is None and 'b' not in mode:
-                    encoding = 'utf-8'
-                return _open_orig(file, mode, buffering, encoding,
-                                  errors, newline, closefd, opener)
-            _bi.open = _open_utf8
-
             try:
                 from odoo_module_migrate.migration import Migration
             except ImportError:
