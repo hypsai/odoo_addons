@@ -374,24 +374,39 @@ def main():
         if has_cleanup:
             run_command(f"git add -A")
 
-        # Apply Odoo-version compatibility transforms (e.g. tree→list for 18+)
-        print(f"→ Applying compatibility transforms for Odoo {branch}")
-        compat_script = Path(__file__).parent / 'compat.py'
-        has_compat = False
-        if compat_script.exists():
-            output = run_command(f'python {compat_script} {module} {branch}')
-            has_compat = 'COMPAT_CHANGED' in output
+        # Apply Odoo-version compatibility transforms via OCA odoo-module-migrate
+        print(f"→ Running OCA module migrator for Odoo {branch}")
+        has_migrated = False
+        oldest = MODULE_VERSIONS[module][0]
+        if oldest != branch:
+            try:
+                from odoo_module_migrate.migration import Migration
+                migration = Migration(
+                    str(Path(__file__).parent),   # directory
+                    oldest,                        # init_version_name
+                    branch,                        # target_version_name
+                    module_names=[module],
+                    format_patch=False,
+                    commit_enabled=False,           # release.py handles commits
+                    pre_commit=False,
+                    remove_migration_folder=False,
+                )
+                migration.run()
+                has_migrated = True
+                print(f"   ✅ Migration {oldest}→{branch} completed")
+            except ImportError:
+                print(f"   ⚠️ odoo-module-migrator not installed, skipping transforms")
         else:
-            print(f"   ⚠️ compat.py not found, skipping transforms")
+            print(f"   ℹ️ No migration needed ({oldest} == {branch})")
 
         # Update version to branch format
         print(f"→ Updating version to {branch_version}")
         branch_version_updated = update_manifest_version(module, branch_version)
 
-        if branch_version_updated or has_cleanup or has_compat:
+        if branch_version_updated or has_cleanup or has_migrated:
             # Commit all changes together with meaningful message
             run_command(f"git add {manifest_path}")
-            if has_cleanup or has_compat:
+            if has_cleanup or has_migrated:
                 run_command(f"git add -A")
 
             commit_msg = f"Release {module} v{new_version} for Odoo {branch} [skip ci]"

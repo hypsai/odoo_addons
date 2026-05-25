@@ -12,8 +12,7 @@ PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 jsonrpc = 'jsonrpc' if ODOO_VERSION >= 19 else 'json'
 
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain",
-           "res_users_data", "res_users_groups_id", "sql_constraints",
-           "jsonrpc"]
+           "res_users_data", "res_users_groups_id", "jsonrpc"]
 
 if ODOO_VERSION >= 19:
     from odoo.fields import Domain
@@ -98,37 +97,5 @@ def res_users_groups_id(record):
     return record.groups_id
 
 
-def sql_constraints(*constraints):
-    """Class decorator for version-compatible SQL constraints.
 
-    In Odoo 19+, ``_sql_constraints`` is no longer supported; each constraint
-    must be defined as a separate class attribute::
 
-        _name_unique = models.Constraint('unique(name)', 'Error message')
-
-    In older Odoo versions, constraints are defined as tuples inside the
-    ``_sql_constraints`` list attribute.
-
-    This decorator accepts (name, definition, message) tuples and applies
-    the appropriate format based on the running Odoo version.
-
-    Usage::
-
-        @sql_constraints(
-            ("name_unique", "unique(name)", "Term name must be unique."),
-            ("code_uniq", "unique(code)", "Code must be unique."),
-        )
-        class OqlTerm(models.Model):
-            ...
-    """
-    if ODOO_VERSION >= 19:
-        from odoo.models import Constraint
-        def decorator(cls):
-            for name, definition, message in constraints:
-                setattr(cls, f'_{name}', Constraint(definition, message))
-            return cls
-    else:
-        def decorator(cls):
-            cls._sql_constraints = list(constraints)
-            return cls
-    return decorator

@@ -1,12 +1,6 @@
 from odoo import fields, models
 
-from ..compatible import sql_constraints
 
-
-@sql_constraints(
-    ("term_id_model_id_name_unique", "unique(term_id, model_id, name)",
-     "Term domain for each model should be unique."),
-)
 class OqlTermDomain(models.Model):
     _name = "oql.term.domain"
     _description = "Domain defined for a term, which is used to retrieve related records from ORM."
@@ -24,3 +18,6 @@ class OqlTermDomain(models.Model):
     model_id = fields.Many2one("ir.model", "Model", help="Target model this term domain applied to.",
                                required=True, ondelete="cascade", index=True)
     domain = fields.Text("Domain", required=True, help="The domain used to filter model records.")
+
+    _sql_constraints = [("term_id_model_id_name_unique", "unique(term_id, model_id, name)",
+                         "Term domain for each model should be unique.")]

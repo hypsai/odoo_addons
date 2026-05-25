@@ -6,13 +6,7 @@ from typing import Literal, Set
 
 from odoo import fields, models, api
 
-from ..compatible import sql_constraints
 
-
-@sql_constraints(
-    ("mac_alias_unique", "unique(mac_id, alias_id)",
-     "Alias must be unique in a model's alias access collection."),
-)
 class OqlAclAlias(models.Model):
     """
     OQL Alias ACL can penetrate Odoo ACL. Which means if the alias's access right is defined by the ACL of itself.
@@ -30,6 +24,9 @@ class OqlAclAlias(models.Model):
 
     # Aux
     model_id = fields.Many2one(related="mac_id.model_id")
+
+    _sql_constraints = [("mac_alias_unique", "unique(mac_id, alias_id)",
+                         "Alias must be unique in a model's alias access collection.")]
 
     @api.model
     def perm_aliases(self, model: str, mode: Literal["read", "write"]) -> Set[str]:
