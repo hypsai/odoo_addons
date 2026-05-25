@@ -379,21 +379,24 @@ def main():
         if oldest != branch:
             try:
                 from odoo_module_migrate.migration import Migration
-                migration = Migration(
-                    str(Path(__file__).parent),   # directory
-                    oldest,                        # init_version_name
-                    branch,                        # target_version_name
-                    module_names=[module],
-                    format_patch=False,
-                    commit_enabled=False,           # release.py handles commits
-                    pre_commit=False,
-                    remove_migration_folder=False,
-                )
-                migration.run()
-                has_migrated = True
-                print(f"   ✅ Migration {oldest}→{branch} completed")
             except ImportError:
-                print(f"   ⚠️ odoo-module-migrator not installed, skipping transforms")
+                print(f"   → Installing odoo-module-migrator...")
+                run_command(f'"{sys.executable}" -m pip install git+https://github.com/OCA/odoo-module-migrator.git@32eb96e534727ad4ea482828a2ae0568cbae8319')
+                from odoo_module_migrate.migration import Migration
+
+            migration = Migration(
+                str(Path(__file__).parent),   # directory
+                oldest,                        # init_version_name
+                branch,                        # target_version_name
+                module_names=[module],
+                format_patch=False,
+                commit_enabled=False,           # release.py handles commits
+                pre_commit=False,
+                remove_migration_folder=False,
+            )
+            migration.run()
+            has_migrated = True
+            print(f"   ✅ Migration {oldest}→{branch} completed")
         else:
             print(f"   ℹ️ No migration needed ({oldest} == {branch})")
 
