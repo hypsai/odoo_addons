@@ -58,7 +58,7 @@ class OqlAclField(models.Model):
         GROUP BY d.id
         HAVING BOOL_OR(b.perm_{mode} AND COALESCE(e.perm_{mode}, b.perm_oql_fac_default_{mode}, FALSE))
         """
-        self._cr.execute(sql, (self._uid, model))
+        self._cr.execute(sql, (self.env.uid, model))
         field_names = {row[0] for row in self._cr.fetchall()}
 
         if mode == "read" and "id" not in field_names:
