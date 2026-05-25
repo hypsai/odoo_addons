@@ -6,6 +6,8 @@ from typing import Literal, Set
 
 from odoo import fields, models, api
 
+from ..compatible import make_sql_constraint
+
 
 class OqlAclAlias(models.Model):
     """
@@ -25,8 +27,7 @@ class OqlAclAlias(models.Model):
     # Aux
     model_id = fields.Many2one(related="mac_id.model_id")
 
-    _sql_constraints = [("mac_alias_unique", "unique(mac_id, alias_id)",
-                         "Alias must be unique in a model's alias access collection.")]
+    _sql_constraints = [make_sql_constraint("mac_alias_unique", "unique(mac_id, alias_id)", "Alias must be unique in a model's alias access collection.")]
 
     @api.model
     def perm_aliases(self, model: str, mode: Literal["read", "write"]) -> Set[str]:

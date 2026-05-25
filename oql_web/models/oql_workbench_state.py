@@ -2,6 +2,8 @@
 import json
 from odoo import models, fields, api
 
+from odoo.addons.oql.compatible import make_sql_constraint
+
 
 class OQLWorkbenchState(models.Model):
     _name = 'oql.workbench.state'
@@ -26,7 +28,7 @@ class OQLWorkbenchState(models.Model):
     )
     
     _sql_constraints = [
-        ('user_unique', 'UNIQUE(user_id)', 'Each user can only have one workbench state')
+        make_sql_constraint('user_unique', 'UNIQUE(user_id)', 'Each user can only have one workbench state')
     ]
     
     def save_state(self, state_data):

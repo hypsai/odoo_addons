@@ -1,5 +1,7 @@
 from odoo import fields, models
 
+from ..compatible import make_sql_constraint
+
 
 class OqlTermDomain(models.Model):
     _name = "oql.term.domain"
@@ -19,5 +21,4 @@ class OqlTermDomain(models.Model):
                                required=True, ondelete="cascade", index=True)
     domain = fields.Text("Domain", required=True, help="The domain used to filter model records.")
 
-    _sql_constraints = [("term_id_model_id_name_unique", "unique(term_id, model_id, name)",
-                         "Term domain for each model should be unique.")]
+    _sql_constraints = [make_sql_constraint("term_id_model_id_name_unique", "unique(term_id, model_id, name)", "Term domain for each model should be unique.")]

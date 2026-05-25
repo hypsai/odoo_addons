@@ -3,6 +3,7 @@ from odoo.exceptions import UserError, ValidationError
 
 from ..util import get_field_def, get_field_type
 from ..alias import AliasNode
+from ..compatible import make_sql_constraint
 
 
 class OqlAliasLine(models.Model):
@@ -22,7 +23,7 @@ class OqlAliasLine(models.Model):
                                            "Every value type should have at most one shorthand.")
     help = fields.Text("Help Text")
 
-    _sql_constraints = [("rule_id_alias_unique", "unique(rule_id, alias)", "Alias in each field path set must be unique.")]
+    _sql_constraints = [make_sql_constraint("rule_id_alias_unique", "unique(rule_id, alias)", "Alias in each field path set must be unique.")]
 
     @api.constrains("path")
     def _constrains_path(self):

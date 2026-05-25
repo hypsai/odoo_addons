@@ -9,7 +9,7 @@ ODOO_VERSION = version_info[0]
 PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain",
-           "res_users_data", "res_users_groups_id"]
+           "res_users_data", "res_users_groups_id", "make_sql_constraint"]
 
 if ODOO_VERSION >= 19:
     from odoo.fields import Domain
@@ -92,3 +92,20 @@ def res_users_groups_id(record):
     if ODOO_VERSION >= 19:
         return record.group_ids
     return record.groups_id
+
+
+def make_sql_constraint(name, definition, message):
+    """Create a cross-version SQL constraint definition.
+
+    In Odoo 19+, ``_sql_constraints`` uses ``models.Constraint`` objects.
+    In older versions, it uses (name, definition, message) tuples.
+
+    :param name: constraint name (used only in Odoo < 19)
+    :param definition: SQL constraint definition, e.g. ``"unique(field)"``
+    :param message: human-readable error message
+    """
+    if ODOO_VERSION >= 19:
+        from odoo.models import Constraint
+        return Constraint(definition, message)
+    else:
+        return name, definition, message
