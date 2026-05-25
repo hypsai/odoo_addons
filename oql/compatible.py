@@ -16,11 +16,7 @@ if ODOO_VERSION >= 19:
 
     AND = Domain.AND
     OR = Domain.OR
-
-
-    def normalize_domain(domain):
-        return list(Domain(domain))
-
+    normalize_domain = Domain
 else:
     from odoo.osv.expression import AND, OR, normalize_domain
 

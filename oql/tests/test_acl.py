@@ -1175,6 +1175,7 @@ class TestOqlRecordRule(TransactionCase):
 
         # perm_records should merge the rule domain via AND
         result_domain = product_acl.perm_records([('id', '>', 0)], "read")
+        result_domain = list(result_domain)  # V19 will produce `class Domain` object.
 
         # Should produce a combined AND domain
         self.assertIsInstance(result_domain, list)

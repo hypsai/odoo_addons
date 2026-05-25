@@ -58,8 +58,8 @@ class OqlAclField(models.Model):
         GROUP BY d.id
         HAVING BOOL_OR(b.perm_{mode} AND COALESCE(e.perm_{mode}, b.perm_oql_fac_default_{mode}, FALSE))
         """
-        self._cr.execute(sql, (self.env.uid, model))
-        field_names = {row[0] for row in self._cr.fetchall()}
+        self.env.cr.execute(sql, (self.env.uid, model))
+        field_names = {row[0] for row in self.env.cr.fetchall()}
 
         if mode == "read" and "id" not in field_names:
             field_names.add("id")  # ID is always readable.
