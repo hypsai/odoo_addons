@@ -103,16 +103,36 @@ def update_manifest_version(module, version):
     return True
 
 
+def strip_odoo_prefix(version):
+    """Strip detected Odoo major.minor prefix (e.g. '19.0') from version.
+
+    Returns the bare version without Odoo prefix, or the original if no
+    prefix is detected.  Safe: ``'1.5.13'`` stays ``'1.5.13'``.
+    """
+    parts = version.split('.')
+    if len(parts) >= 3 and parts[0].isdigit() and parts[1].isdigit():
+        major = int(parts[0])
+        if 8 <= major <= 99:  # plausible Odoo major version
+            return '.'.join(parts[2:])
+    return version
+
+
 def get_branch_version(branch, main_version):
     """Get version for a specific branch
-    
-    Format: {branch}.{main_version}
-    Example: branch='15.0', main_version='1.1.0' -> '15.0.1.1.0'
-    For main branch, return main_version as-is
+
+    ``main_version`` is expected to be a *bare* version (e.g. ``'1.5.13'``).
+    If an Odoo prefix accidentally slips in, it is stripped automatically.
+
+    Format: ``{branch}.{main_version}``
+
+    Example: branch='15.0', main_version='1.5.13' -> '15.0.1.5.13'
+
+    For main branch, return main_version as-is.
     """
     if branch == 'main':
         return main_version
-    return f"{branch}.{main_version}"
+    bare = strip_odoo_prefix(main_version)
+    return f"{branch}.{bare}"
 
 
 def get_current_version(module):
