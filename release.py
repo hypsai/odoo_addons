@@ -325,7 +325,7 @@ def main():
     else:
         print("⚠️ Main branch version unchanged, skipping commit")
 
-    # 5. Merge to version branches and update versions
+    # 5. Overwrite version branches with main + migrator transforms
     # Get the commit hash for this module's release
     if version_updated:
         release_commit = run_command("git rev-parse HEAD")
@@ -345,11 +345,9 @@ def main():
         # Switch to branch
         run_command(f"git checkout {branch}")
 
-        # Pull latest code
-        run_command(f"git pull origin {branch}")
-
-        # Force sync with main branch (main takes full precedence)
-        print(f"→ Syncing {branch} with main (main takes full precedence)")
+        # Overwrite with main branch code (main is the single source of truth)
+        # No pull from remote version branch — code merging only happens on main
+        print(f"→ Overwriting {branch} with main branch code")
         run_command(f"git reset --hard main")
 
         # Clean up modules not supported in this branch BEFORE updating version
