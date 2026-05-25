@@ -28,8 +28,10 @@ import shutil
 import json
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).parent
+
 # Load module configuration from JSON file
-CONFIG_FILE = Path(__file__).parent / 'catalog.json'
+CONFIG_FILE = REPO_ROOT / 'catalog.json'
 
 def load_module_config():
     """Load module configuration from modules_config.json"""
@@ -106,6 +108,7 @@ def get_proxy():
             pass
 
     return None
+
 
 
 def update_manifest_version(module, version):
@@ -346,12 +349,10 @@ def main():
             from odoo_module_migrate.migration import Migration  # noqa: F401
             print("   ✅ odoo-module-migrator already installed")
         except ImportError:
-            print("   → Installing odoo-module-migrator...")
+            print("   → Installing odoo-module-migrator (forked, patched)...")
             proxy = get_proxy()
             env = os.environ.copy()
             if proxy:
-                # pip uses --proxy, git uses http_proxy/https_proxy env vars.
-                # Both must be set because pip delegates git+https:// to git clone.
                 env['HTTP_PROXY'] = proxy
                 env['HTTPS_PROXY'] = proxy
                 env['http_proxy'] = proxy
@@ -359,10 +360,11 @@ def main():
                 proxy_flag = f' --proxy {proxy}'
             else:
                 proxy_flag = ''
+
             run_command(
                 f'"{sys.executable}" -m pip install --no-cache-dir '
                 f'--force-reinstall{proxy_flag} '
-                f'git+https://github.com/OCA/odoo-module-migrator.git@master',
+                f'git+https://github.com/chrisking94/odoo-module-migrator.git@master',
                 env=env,
             )
             print("   ✅ odoo-module-migrator installed successfully")
