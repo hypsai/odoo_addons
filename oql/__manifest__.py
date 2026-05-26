@@ -33,6 +33,14 @@ Menu: Settings > Technical > OQL
         "views/oql_menu.xml",
         "views/oql_workbench.xml",
     ],
+
+    "assets": {
+        "web.assets_backend": [
+            "oql/static/src/css/oql_navbar_button.css",
+            "oql/static/src/js/oql_navbar_button.js",
+        ],
+    },
+
     "demo": [],
     "installable": True,
     "application": False,

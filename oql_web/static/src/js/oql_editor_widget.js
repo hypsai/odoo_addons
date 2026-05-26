@@ -34,7 +34,7 @@ odoo.define('oql.oql_editor_widget', function (require) {
 
         _initEditor: function () {
             var self = this;
-            
+
             // Create OQL Editor Core instance
             this.oqlEditor = new window.OQLEditorCore({
                 container: this.$el,
@@ -47,17 +47,17 @@ odoo.define('oql.oql_editor_widget', function (require) {
                     self._notifyChanges();
                 }
             });
-            
+
             // Set initial value
             if (this.value) {
                 this.oqlEditor.setValue(this.value);
             }
-            
+
             // Start the editor
             return this.oqlEditor.start();
         },
 
-        
+
 
         _onKeydown: function (e) {
             if (this.isReadonly) {

@@ -17,10 +17,8 @@
             "oql_web/static/src/xml/*",
             "oql_web/static/src/css/oql_editor_widget.css",
             "oql_web/static/src/css/oql_search.css",
-            "oql_web/static/src/css/oql_navbar_button.css",
             "oql_web/static/src/js/oql_editor_widget.js",
             "oql_web/static/src/js/oql_search_bar.js",
-            "oql_web/static/src/js/oql_navbar_button.js",
         ],
     },
 
