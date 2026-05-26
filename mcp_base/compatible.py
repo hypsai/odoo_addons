@@ -51,3 +51,25 @@ def is_api_model(method):
     else:
         odoo_api = getattr(method, "_api", None)
         return odoo_api == "model" or odoo_api == "model_create"
+
+
+def session_authenticate(request_, username, password):
+    """
+    Authenticate user via request.session.authenticate() with version-compatible
+    argument handling.
+
+    Odoo < 18:   authenticate(dbname, login, password)
+    Odoo >= 18:  authenticate(env, credential) where credential = {login, password, type}
+    """
+    if ODOO_VERSION >= 18:
+        credential = {
+            'login': username,
+            'password': password,
+            'type': 'password',
+        }
+        uid = request_.session.authenticate(request_.env, credential)
+    else:
+        uid = request_.session.authenticate(
+            request_.env.cr.dbname, username, password
+        )
+    return uid

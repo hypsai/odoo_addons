@@ -13,7 +13,7 @@ from odoo.exceptions import AccessDenied
 from odoo.http import request
 from werkzeug.wrappers import Response as WerkzeugResponse
 
-from ..compatible import request_update_env, root_patch_get_request, is_api_model
+from ..compatible import request_update_env, root_patch_get_request, is_api_model, session_authenticate
 from ..mcputil import build_tool_info
 from ..typeutil import OdooMro
 from .. import jsonutil
@@ -145,9 +145,7 @@ class McpController(http.Controller):
     def _authenticate_with_credentials(self, username, password):
         """Authenticate with username/password and set request uid."""
         try:
-            uid = request.session.authenticate(
-                request.env.cr.dbname, username, password
-            )
+            uid = session_authenticate(request, username, password)
             if not uid:
                 raise AccessDenied("Invalid username or password")
 
