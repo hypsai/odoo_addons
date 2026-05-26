@@ -101,8 +101,8 @@ def res_users_groups_id(record):
 def set_model_translation(record, field, lang, src, value):
     """Set a translated value for a model field.
 
-    Odoo 13-16: uses ir.translation model.
-    Odoo 17+  : ir.translation was removed, use with_context().write() instead.
+    Odoo 13-15: uses ir.translation model.
+    Odoo 16+  : ir.translation was removed, use with_context().write() instead.
     """
     if ODOO_VERSION >= 16:
         record.with_context(lang=lang).write({field: value})
@@ -122,8 +122,8 @@ def set_model_translation(record, field, lang, src, value):
 def flush_translations(env):
     """Flush the translation subsystem.
 
-    Odoo 13-16: flush ir.translation + res.lang.
-    Odoo 17+  : ir.translation doesn't exist, only flush res.lang.
+    Odoo 13-15: flush ir.translation + res.lang.
+    Odoo 16+  : ir.translation doesn't exist, only flush res.lang.
     """
     if ODOO_VERSION < 16:
         model_flush(env['ir.translation'])
