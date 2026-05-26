@@ -13,6 +13,15 @@ def request_update_env(req, uid: int):
     else:
         req.uid = uid
         req._env = None
+    # Inject user preferences (lang, tz, ...) that session-based auth
+    # normally provides but non-session auth (API key) bypasses.
+    context_overrides = req.env.user.context_get()
+    if hasattr(req, 'update_context'):
+        req.update_context(**context_overrides)
+    else:
+        req._env = req.env(
+            context=dict(req.env.context, **context_overrides),
+        )
 
 
 def root_patch_get_request():

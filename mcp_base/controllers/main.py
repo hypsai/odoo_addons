@@ -97,6 +97,7 @@ class McpController(http.Controller):
                 try:
                     ir_http._auth_method_api_key()
                     _logger.debug(f"MCP authenticated via API key for user ID: {request.uid}")
+                    request_update_env(request, request.uid)
                     return None  # Success
                 except AccessDenied:
                     error_msg = (
