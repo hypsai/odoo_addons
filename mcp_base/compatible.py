@@ -68,6 +68,13 @@ def session_authenticate(request_, username, password):
             'type': 'password',
         }
         uid = request_.session.authenticate(request_.env, credential)["uid"]
+    elif ODOO_VERSION == 18:
+        credential = {
+            'login': username,
+            'password': password,
+            'type': 'password',
+        }
+        uid = request_.session.authenticate(request_.env.cr.dbname, credential)["uid"]
     else:
         uid = request_.session.authenticate(
             request_.env.cr.dbname, username, password
