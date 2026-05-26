@@ -442,15 +442,19 @@ class OqlTransformer(lark.Transformer):
         self.recs = None
         self._meta = OqlMeta(env)
 
-    def query(self, from_: models.Model, select: SelectClause, where: WhereClause, orderby, limit, offset):
+    def query(self, from_: models.Model, select: SelectClause, where: Optional[WhereClause], orderby, limit, offset):
         # 1 Ensure `id` is in result.
         if not any(f.path == "id" for f in select.fas):
             select.fas = [FieldAccess(from_, ["id"], self._meta)] + select.fas
 
         # 2 Search records.
-        domain = where.rec_set.domain.domain if where else []
-        domain = self._meta.acl[self.model_name].perm_records(domain, "read")  # Record level ACL
-        where_model = from_.with_context(lang=self.env.user.lang if where.translate else None)
+        if where:
+            domain = where.rec_set.domain.domain
+            domain = self._meta.acl[self.model_name].perm_records(domain, "read")  # Record level ACL
+            where_model = from_.with_context(lang=self.env.user.lang if where.translate else None)
+        else:
+            domain = []
+            where_model = from_
         select_recs = where_model.search(domain, offset, limit, orderby)
 
         # 3 Read fields.
