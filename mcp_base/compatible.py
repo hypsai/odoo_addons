@@ -42,3 +42,12 @@ def root_patch_get_request():
 
         Root.get_request = _patched_get_request
     # ---- Monkey Patch End ---
+
+
+def is_api_model(method):
+    """Check whether `method` is decorated with `api.model` or `api.create_multi`"""
+    if ODOO_VERSION >= 19:
+        return getattr(method, "_api_model", False)
+    else:
+        odoo_api = getattr(method, "_api", None)
+        return odoo_api != "model" or odoo_api != "model_create"

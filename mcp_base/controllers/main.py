@@ -12,7 +12,7 @@ from odoo.exceptions import AccessDenied
 from odoo.http import request
 from werkzeug.wrappers import Response as WerkzeugResponse
 
-from ..compatible import request_update_env, root_patch_get_request
+from ..compatible import request_update_env, root_patch_get_request, is_api_model
 from ..mcputil import build_tool_info
 from ..typeutil import OdooMro
 from .. import jsonutil
@@ -320,8 +320,7 @@ class McpController(http.Controller):
         properties = schema.get("properties", {}).copy()
 
         # Add `_search_` parameter for recordset level method with all search() options.
-        odoo_api = getattr(method, "_api", None)
-        if odoo_api != "model" and odoo_api != "model_create":
+        if not is_api_model(method):
             properties['_search_'] = {
                 "type": "object",
                 "description": "Parameters for Odoo ORM model's `search` method. "
