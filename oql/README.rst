@@ -65,6 +65,21 @@ Use ``searcho()`` instead of ``search()``, or ``oql()`` for full queries::
         "where active = true order by list_price desc limit 10 offset 20"
     )
 
+**3. OQL Workbench** — try it out right away
+
+After installation, you can access the built-in OQL Workbench in two ways:
+
+- Open ``https://your-odoo-server/oql`` in your browser
+- Click the **OQL** button in Odoo's top navigation bar
+
+.. image:: static/description/workbench_navbar.png
+   :alt: OQL Workbench navbar button
+   :align: center
+   :width: 400px
+
+The Workbench is a full-featured query IDE with multi-tab editing, syntax
+highlighting, auto-complete, and persistent history — no configuration needed.
+
 That's it! Start writing queries immediately. For terms, aliases, ACL, and
 operator overloading, see :ref:`advanced-usage` below.
 
