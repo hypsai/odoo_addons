@@ -104,7 +104,7 @@ def set_model_translation(record, field, lang, src, value):
     Odoo 13-16: uses ir.translation model.
     Odoo 17+  : ir.translation was removed, use with_context().write() instead.
     """
-    if ODOO_VERSION >= 17:
+    if ODOO_VERSION >= 16:
         record.with_context(lang=lang).write({field: value})
     else:
         env = record.env
@@ -125,6 +125,6 @@ def flush_translations(env):
     Odoo 13-16: flush ir.translation + res.lang.
     Odoo 17+  : ir.translation doesn't exist, only flush res.lang.
     """
-    if ODOO_VERSION < 17:
+    if ODOO_VERSION < 16:
         model_flush(env['ir.translation'])
     model_flush(env['res.lang'])
