@@ -413,6 +413,18 @@ class FieldAccess:
         return str(self)
 
 
+class SelectClause:
+    def __init__(self, translate: bool, fas: List[FieldAccess]):
+        self.translate = translate
+        self.fas = fas
+
+
+class WhereClause:
+    def __init__(self, translate: bool, rec_sets: RecordSets):
+        self.translate = translate
+        self.rec_set = rec_sets[0]
+
+
 @lark.v_args(inline=True)
 class OqlTransformer(lark.Transformer):
 
@@ -420,41 +432,32 @@ class OqlTransformer(lark.Transformer):
     INT = int
     FLOAT = float
 
-    def __init__(self, env):
+    def __init__(self, env: odoo.api.Environment):
         super().__init__(True)
+        env = env(
+            context={**env.context, "lang": None}  # Default no translation.
+        )
         self.env = env
         self.model_name = None
         self.recs = None
         self._meta = OqlMeta(env)
 
-    def query(self, from_: models.Model, select: List[FieldAccess], where: RecordSets, orderby, limit, offset):
+    def query(self, from_: models.Model, select: SelectClause, where: WhereClause, orderby, limit, offset):
         # 1 Ensure `id` is in result.
-        if not any(f.path == "id" for f in select):
-            select = [FieldAccess(from_, ["id"], self._meta)] + select
+        if not any(f.path == "id" for f in select.fas):
+            select.fas = [FieldAccess(from_, ["id"], self._meta)] + select.fas
 
-        # 2 Categorize field access into plain and dot fields.
-        complex_fas: List[FieldAccess] = []
-        plain_fas: List[FieldAccess] = []
-        for fa in select:
-            if fa.is_field:
-                plain_fas.append(fa)
-            else:
-                complex_fas.append(fa)
-
-        # 3 Read data.
-        domain = where[0].domain.domain if where else []
+        # 2 Search records.
+        domain = where.rec_set.domain.domain if where else []
         domain = self._meta.acl[self.model_name].perm_records(domain, "read")  # Record level ACL
-        recs = from_.search(domain, offset, limit, orderby)
-        # 3.1 Read plain fields.
-        plain_fields = [x.names[0] for x in plain_fas]
-        rows = recs.read(plain_fields)
-        rows = [{f.as_: row[f.names[0]] for f in plain_fas} for row in rows]  # Align field names with SELECT clause.
-        # 3.2 Read complex fields.
-        for fa in complex_fas:
-            for row, val in zip_c(rows, fa.read(recs), strict=True):
-                row[fa.as_] = val
-        # 3.3 Sort field order to align with SELECT clause.
-        rows = [{f.as_: row[f.as_] for f in select} for row in rows]
+        where_model = from_.with_context(lang=self.env.user.lang if where.translate else None)
+        select_recs = where_model.search(domain, offset, limit, orderby)
+
+        # 3 Read fields.
+        select_recs = select_recs.with_context(lang=self.env.user.lang if select.translate else None)
+        rows = [{
+            f.as_: val for f, val in zip_c(select.fas, val_row, strict=True)
+        } for val_row in zip_c(*(f.read(select_recs) for f in select.fas), strict=True)]
 
         return rows
 
@@ -465,14 +468,14 @@ class OqlTransformer(lark.Transformer):
         self.recs = self.env[model].sudo()  # OQL ACL is fully controlled by OQL, so use sudo() here to pass Odoo ACL.
         return self.recs
 
-    def select_clause(self, fields="*"):
+    def select_clause(self, translate: Optional[str], fields="*"):
         if fields == "*":
             fields = self._meta.acl[self.model_name].perm_fields("read")
             fields = [FieldAccess(self.recs, [x], self._meta) for x in fields]
-        return fields
+        return SelectClause(bool(translate), fields)
 
-    def where_clause(self, expr):
-        return expr
+    def where_clause(self, translate: Optional[str], rec_sets: RecordSets):
+        return WhereClause(bool(translate), rec_sets)
 
     def orderby_clause(self, __, fields):
         # Check.

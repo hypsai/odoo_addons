@@ -35,7 +35,7 @@ class TestOqlTemplate(models.Model):
     _name = "test.oql.template"
     _description = "Test OQL Product Template"
 
-    name = fields.Char("Name")
+    name = fields.Char("Name", translate=True)
     tag_ids = fields.One2many("test.oql.tag", "tmpl_id")
 
 
@@ -68,7 +68,7 @@ class TestOqlProduct(models.Model):
 
     def _compute_name_no_store(self):
         for rec in self:
-            rec.name_no_store = self.name
+            rec.name_no_store = rec.name
 
 
 class TestOqlAttribute(models.Model):

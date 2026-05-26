@@ -65,6 +65,33 @@ class TestOql(TransactionCase):
         line2 = env["oql.alias.line"].create({"alias": "tag_records", "rule_id": rule1.id, "path": "tag_ids", 'enable_shorthand': True})
         line3 = env["oql.alias.line"].create({"alias": "tags", "rule_id": rule1.id, "path": "tag_ids.name", 'enable_shorthand': False})
 
+        # 5 Translation setup
+        lang_fr = env['res.lang'].with_context(active_test=False).search([('code', '=', 'fr_FR')], limit=1)
+        if not lang_fr:
+            # Install language from scratch
+            install_wiz = env['base.language.install'].create({'lang': 'fr_FR', 'overwrite': False})
+            install_wiz.lang_install()
+            lang_fr = env['res.lang'].with_context(active_test=False).search([('code', '=', 'fr_FR')], limit=1)
+        if not lang_fr.active:
+            lang_fr.active = True
+        # Flush so ir.translation.lang selection sees the active language
+        env['ir.translation'].flush()
+        env['res.lang'].flush()
+
+        for tmpl, src, value in [
+            (prod_cold.tmpl_id, 'Cold Boot', 'Botte Froide'),
+            (prod_hot.tmpl_id, 'Hot Boot', 'Botte Chaude'),
+        ]:
+            env['ir.translation'].create({
+                'name': 'test.oql.template,name',
+                'type': 'model',
+                'lang': 'fr_FR',
+                'res_id': tmpl.id,
+                'src': src,
+                'value': value,
+                'state': 'translated',
+            })
+
     def _create(self, model: str, data: dict, key_field: str = None):
         Model = self.env[model]
         if key_field:
@@ -423,6 +450,90 @@ class TestOql(TransactionCase):
             self.env["test.oql.product"].oql(
                 "from test.oql.product select spu_name where name_no_store = 'Cold Boot' and Waterproof"
             )
+
+    @tagged("oql.translate")
+    def test_translate_grammar_parse(self):
+        """Test TRANSLATE keyword parsing in various positions."""
+        # SELECT TRANSLATE
+        parsed = reader.query("from test.oql.product select translate tmpl_id.name where tag_ids",
+                              self._get_transformer())
+        self.assertIsNotNone(parsed)
+
+        # WHERE TRANSLATE
+        parsed = reader.query("from test.oql.product select id where translate tag_ids",
+                              self._get_transformer())
+        self.assertIsNotNone(parsed)
+
+        # Both TRANSLATE
+        parsed = reader.query(
+            "from test.oql.product select translate tmpl_id.name where translate tag_ids",
+            self._get_transformer())
+        self.assertIsNotNone(parsed)
+
+        # TRANSLATE with star
+        parsed = reader.query("from test.oql.product select translate * where tag_ids",
+                              self._get_transformer())
+        self.assertIsNotNone(parsed)
+
+    @tagged("oql.translate")
+    def test_select_translate(self):
+        """Test SELECT TRANSLATE returns translated field values."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select translate tmpl_id.name where spu_name = 'Cold Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['tmpl_id.name'], 'Botte Froide')
+
+    @tagged("oql.translate")
+    def test_select_no_translate(self):
+        """Test without TRANSLATE, SELECT returns original (untranslated) field values."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select tmpl_id.name where spu_name = 'Cold Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['tmpl_id.name'], 'Cold Boot')
+
+    @tagged("oql.translate")
+    def test_where_translate(self):
+        """Test WHERE TRANSLATE matches against translated field values."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where translate tmpl_id.name = 'Botte Froide'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['spu_name'], 'Cold Boot')
+
+    @tagged("oql.translate")
+    def test_where_no_translate(self):
+        """Test without WHERE TRANSLATE, search uses original (untranslated) field values."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where tmpl_id.name = 'Botte Froide'"
+        )
+        self.assertEqual(len(res), 0)
+
+    @tagged("oql.translate")
+    def test_translate_case_insensitive(self):
+        """Test TRANSLATE keyword is case-insensitive."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product SELECT Translate tmpl_id.name where spu_name = 'Cold Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['tmpl_id.name'], 'Botte Froide')
+
+    @tagged("oql.translate")
+    def test_translate_select_where_both(self):
+        """Test combining SELECT TRANSLATE with WHERE TRANSLATE."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select translate tmpl_id.name "
+            "where translate tmpl_id.name = 'Botte Froide'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['tmpl_id.name'], 'Botte Froide')
 
     def _get_transformer(self):
         return OqlTransformer(self.env)

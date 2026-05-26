@@ -2,9 +2,9 @@
 
 query: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
 
-select_clause: "select"i ("*" | fields)
 from_clause: "from"i model
-where_clause: "where"i expr
+select_clause: "select"i [TRANSLATE] ("*" | fields)
+where_clause: "where"i [TRANSLATE] expr
 limit_clause: "limit"i INT
 offset_clause: "offset"i INT
 orderby_clause: ORDER_BY orderby_fields
@@ -88,6 +88,7 @@ NULL: "null"i
 ORDER_BY: /order\s+by/i
 ASC: "asc"i
 DESC: "desc"i
+TRANSLATE: "translate"i
 
 // Imports
 %import common.LETTER

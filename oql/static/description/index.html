@@ -250,8 +250,8 @@ env['product.product'].<strong>searcho</strong>(
 # Full SQL-like syntax</span>
 env['product.product'].<strong>oql</strong>(
     "from product.product
-     select name, list_price, partner_id.name
-     where active = true
+     select translate name, list_price, partner_id.name
+     where translate active = true and name = 'Chaussures'"
      order by list_price desc
      limit 10 offset 20"
 )</pre>

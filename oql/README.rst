@@ -173,14 +173,18 @@ Query Syntax
 An OQL query follows this structure::
 
     FROM <model>
-    SELECT <field> [AS <alias>], ...
-    [WHERE <conditions>]
+    SELECT [TRANSLATE] <field> [AS <alias>], ...
+    [WHERE [TRANSLATE] <conditions>]
     [ORDER BY <field> [ASC|DESC], ...]
     [LIMIT <n>]
     [OFFSET <n>]
 
 Key differences from SQL: **clause order is FROM → SELECT → WHERE** (not
 SELECT → FROM → WHERE), and all keywords are case-insensitive.
+
+The optional ``translate`` keyword enables translated field lookups in
+``SELECT`` (returns translated values) and/or ``WHERE`` (searches against
+translated values). It has no effect on non-translatable fields.
 
 Operators
 ~~~~~~~~~
