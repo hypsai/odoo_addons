@@ -1,6 +1,6 @@
 {
     'name': 'Odoo MCP Framework',
-    'version':'1.1.4',
+    'version':'1.1.5',
     'summary': 'Native Model Context Protocol (MCP) Server for Odoo - Connect AI Agents to Your ERP',
     'description': """
         Transform your Odoo into an AI-ready MCP Server with just one decorator!
