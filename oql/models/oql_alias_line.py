@@ -3,6 +3,8 @@ from odoo.exceptions import UserError, ValidationError
 
 from ..util import get_field_def, get_field_type
 from ..alias import AliasNode
+
+
 class OqlAliasLine(models.Model):
     _name = "oql.alias.line"
     _description = "Alias rule for field path."
