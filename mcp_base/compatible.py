@@ -46,7 +46,7 @@ def root_patch_get_request():
 
 def is_api_model(method):
     """Check whether `method` is decorated with `api.model` or `api.create_multi`"""
-    if ODOO_VERSION >= 18:
+    if ODOO_VERSION >= 19:
         return getattr(method, "_api_model", False)
     else:
         odoo_api = getattr(method, "_api", None)
@@ -67,7 +67,7 @@ def session_authenticate(request_, username, password):
             'password': password,
             'type': 'password',
         }
-        uid = request_.session.authenticate(request_.env, credential)
+        uid = request_.session.authenticate(request_.env, credential)["uid"]
     else:
         uid = request_.session.authenticate(
             request_.env.cr.dbname, username, password
