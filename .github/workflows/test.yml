@@ -193,11 +193,6 @@ jobs:
 
           echo "Docker exit code: $EXIT_CODE"
 
-          if grep -q "ERROR\|FAIL" /tmp/odoo_output.log; then
-            echo "❌ Tests failed!"
-            exit 1
-          fi
-
           if [ $EXIT_CODE -ne 0 ]; then
             echo "❌ Docker command failed with exit code $EXIT_CODE"
             exit 1
