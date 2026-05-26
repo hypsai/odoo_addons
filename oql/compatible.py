@@ -12,7 +12,8 @@ PYTHON_VERSION = sys.version_info[:2]  # (major, minor)
 jsonrpc = 'jsonrpc' if ODOO_VERSION >= 19 else 'json'
 
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain",
-           "res_users_data", "res_users_groups_id", "jsonrpc"]
+           "res_users_data", "res_users_groups_id", "jsonrpc",
+           "set_model_translation", "flush_translations"]
 
 if ODOO_VERSION >= 19:
     from odoo.fields import Domain
@@ -97,5 +98,33 @@ def res_users_groups_id(record):
     return record.groups_id
 
 
+def set_model_translation(record, field, lang, src, value):
+    """Set a translated value for a model field.
+
+    Odoo 13-16: uses ir.translation model.
+    Odoo 17+  : ir.translation was removed, use with_context().write() instead.
+    """
+    if ODOO_VERSION >= 17:
+        record.with_context(lang=lang).write({field: value})
+    else:
+        env = record.env
+        env['ir.translation'].create({
+            'name': '{},{}'.format(record._name, field),
+            'type': 'model',
+            'lang': lang,
+            'res_id': record.id,
+            'src': src,
+            'value': value,
+            'state': 'translated',
+        })
 
 
+def flush_translations(env):
+    """Flush the translation subsystem.
+
+    Odoo 13-16: flush ir.translation + res.lang.
+    Odoo 17+  : ir.translation doesn't exist, only flush res.lang.
+    """
+    if ODOO_VERSION < 17:
+        model_flush(env['ir.translation'])
+    model_flush(env['res.lang'])

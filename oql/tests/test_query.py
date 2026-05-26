@@ -1,6 +1,7 @@
 from odoo import Command
 from odoo.tests import tagged, TransactionCase
 from ..oql import reader, OqlTransformer
+from ..compatible import set_model_translation, flush_translations
 from .test_model_defs import ensure_model_meta
 
 
@@ -74,23 +75,13 @@ class TestOql(TransactionCase):
             lang_fr = env['res.lang'].with_context(active_test=False).search([('code', '=', 'fr_FR')], limit=1)
         if not lang_fr.active:
             lang_fr.active = True
-        # Flush so ir.translation.lang selection sees the active language
-        env['ir.translation'].flush()
-        env['res.lang'].flush()
+        flush_translations(env)
 
         for tmpl, src, value in [
             (prod_cold.tmpl_id, 'Cold Boot', 'Botte Froide'),
             (prod_hot.tmpl_id, 'Hot Boot', 'Botte Chaude'),
         ]:
-            env['ir.translation'].create({
-                'name': 'test.oql.template,name',
-                'type': 'model',
-                'lang': 'fr_FR',
-                'res_id': tmpl.id,
-                'src': src,
-                'value': value,
-                'state': 'translated',
-            })
+            set_model_translation(tmpl, 'name', 'fr_FR', src, value)
 
     def _create(self, model: str, data: dict, key_field: str = None):
         Model = self.env[model]
