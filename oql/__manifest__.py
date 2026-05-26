@@ -26,10 +26,12 @@ Menu: Settings > Technical > OQL
     'images': ['static/description/banner.png'],
     "data": [
         "security/ir.model.access.csv",
+        "security/oql_workbench_security.xml",
         "views/oql_term_views.xml",
         "views/oql_alias_views.xml",
         "views/ir_model_access_views.xml",
         "views/oql_menu.xml",
+        "views/oql_workbench.xml",
     ],
     "demo": [],
     "installable": True,

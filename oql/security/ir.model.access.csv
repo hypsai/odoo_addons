@@ -11,3 +11,4 @@ access_oql_acl_field_admin,oql.acl.field,model_oql_acl_field,base.group_system,1
 access_oql_acl_field_user,oql.acl.field,model_oql_acl_field,base.group_user,1,0,0,0
 access_oql_acl_alias_admin,oql.acl.alias,model_oql_acl_alias,base.group_system,1,1,1,1
 access_oql_acl_alias_user,oql.acl.alias,model_oql_acl_alias,base.group_user,1,0,0,0
+access_oql_workbench_state_user,oql.workbench.state user,model_oql_workbench_state,base.group_user,1,1,1,0

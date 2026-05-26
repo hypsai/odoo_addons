@@ -6,6 +6,7 @@ from . import oql_alias_line
 from . import oql_acl_field
 from . import oql_acl_alias
 from . import ir_model_access
+from . import oql_workbench_state
 
 from odoo.tools import config
 
