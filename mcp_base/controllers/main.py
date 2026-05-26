@@ -5,6 +5,7 @@
 import json
 import logging
 import traceback
+from typing import Tuple, Optional
 
 from odoo import http
 from odoo.exceptions import AccessDenied
@@ -17,12 +18,7 @@ from ..typeutil import OdooMro
 from .. import jsonutil
 
 _logger = logging.getLogger(__name__)
-# Cache: id(registry) → list of tool_info dicts.  The Registry object is not
-# hashable, so we use its id().  When the registry is rebuilt (on module
-# install/upgrade) a new Registry instance is created, so id() changes and the
-# cache naturally invalidates.  Compatible with Odoo 13–19.
-_tools_cache = {}
-# MCP method → handler method name
+_tools_cache: Optional[Tuple[int, list]] = None  # (cache_key, tools) or None
 _MCP_HANDLERS = {
     'initialize': '_handle_initialize',
     'tools/list': '_handle_list_tools',
@@ -237,12 +233,13 @@ class McpController(http.Controller):
 
     def _handle_list_tools(self, params):
         """Handle tools/list request."""
+        global _tools_cache
         registry = request.env.registry
         cache_key = id(registry)
-        cached = _tools_cache.get(cache_key)
-        if cached is not None:
-            _logger.debug(f"MCP found {len(cached)} tools (cached)")
-            return {"tools": cached}
+
+        if _tools_cache is not None and _tools_cache[0] == cache_key:
+            _logger.debug(f"MCP found {len(_tools_cache[1])} tools (cached)")
+            return {"tools": _tools_cache[1]}
 
         tools = []
         for model_name, model_cls in registry.models.items():
@@ -271,7 +268,7 @@ class McpController(http.Controller):
 
                         tools.append(tool_info)
 
-        _tools_cache[cache_key] = tools
+        _tools_cache = (cache_key, tools)
         _logger.debug(f"MCP found {len(tools)} tools")
         return {"tools": tools}
     

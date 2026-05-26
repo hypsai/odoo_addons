@@ -649,6 +649,223 @@ class TestMCPController(common.HttpCase):
         # Should have custom description from inherited class
         self.assertIn('enhanced', target_tool['description'].lower())
 
+    # ── NEW tests ────────────────────────────────────────────────────────
+
+    def test_mcp_model_method_no_search_param(self):
+        """@api.model methods should NOT get _search_ in schema."""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 25,
+            "method": "tools/list",
+            "params": {},
+        }
+        response = self.url_open(
+            '/mcp', timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'},
+        )
+        self.assertEqual(response.status_code, 200)
+        tools = response.json()['result']['tools']
+
+        target = None
+        for t in tools:
+            if 'get_customers' in t['name']:
+                target = t
+                break
+        self.assertIsNotNone(target, "Tool 'get_customers' should exist")
+        self.assertNotIn(
+            '_search_', target['inputSchema'].get('properties', {}),
+            "@api.model method should NOT have _search_ parameter",
+        )
+
+    def test_mcp_call_model_method(self):
+        """Call an @api.model tool (get_customers) via tools/call."""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 26,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:get_customers",
+                "arguments": {},
+            },
+        }
+        response = self.url_open(
+            '/mcp', timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'},
+        )
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertFalse(result['result'].get('isError', False))
+        content = result['result']['content'][0]['text']
+        data = json.loads(content)
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 3)
+
+    def test_mcp_tool_name_no_colon(self):
+        """Tool name without colon should return isError."""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 27,
+            "method": "tools/call",
+            "params": {
+                "name": "invalidtoolname",
+                "arguments": {},
+            },
+        }
+        response = self.url_open(
+            '/mcp', timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'},
+        )
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertTrue(result['result'].get('isError', False))
+
+    def test_mcp_tool_model_exists_method_does_not(self):
+        """Model exists but method doesn't → isError."""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 28,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:does_not_exist",
+                "arguments": {},
+            },
+        }
+        response = self.url_open(
+            '/mcp', timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'},
+        )
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertTrue(result['result'].get('isError', False))
+
+    def test_mcp_string_result_not_double_encoded(self):
+        """String tool result should NOT be wrapped in an extra JSON layer."""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 29,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:greet_customer",
+                "arguments": {"name": "World"},
+            },
+        }
+        response = self.url_open(
+            '/mcp', timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'},
+        )
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        text = result['result']['content'][0]['text']
+        # greet_customer returns a plain str, so the content should be the
+        # raw string, not a JSON-encoded string (no leading quote).
+        self.assertEqual(text, "Hello, World! Welcome back.")
+        self.assertFalse(text.startswith('"'), "String result appears to be double-encoded")
+
+    def test_mcp_search_does_not_mutate_arguments(self):
+        """_search_ pop() must not mutate the original arguments dict."""
+        arguments = {
+            "name": "Mary",
+            "_search_": {"args": [], "limit": 1},
+        }
+        original_keys = set(arguments.keys())
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 30,
+            "method": "tools/call",
+            "params": {
+                "name": "test.mcp.base.tool:get_customer_detail",
+                "arguments": arguments,
+            },
+        }
+        response = self.url_open(
+            '/mcp', timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # After the call, the original dict must still contain _search_
+        self.assertEqual(
+            set(arguments.keys()), original_keys,
+            "Original arguments dict was mutated during tool call",
+        )
+
+    def test_mcp_unknown_notification_no_crash(self):
+        """Unknown notification should not crash the server (202 accepted)."""
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "notifications/some_unknown_event",
+            "params": {"foo": "bar"},
+        }
+        response = self.url_open(
+            '/mcp', timeout=20,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'},
+        )
+        self.assertEqual(response.status_code, 202)
+
+    def test_mcp_tools_list_cache(self):
+        """First tools/list populates the cache, second call hits it."""
+        # Ensure cache starts cold for this test
+        from ..controllers import main as main_mod
+        main_mod._tools_cache = None
+
+        def _list_tools(req_id):
+            return self.url_open(
+                '/mcp', timeout=20,
+                data=json.dumps({
+                    "jsonrpc": "2.0", "id": req_id,
+                    "method": "tools/list", "params": {},
+                }),
+                headers={'Content-Type': 'application/json'},
+            )
+
+        # First call: cache should be empty before, populated after
+        self.assertIsNone(main_mod._tools_cache, "Cache should be cold before first call")
+        resp1 = _list_tools(31)
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIsNotNone(main_mod._tools_cache, "Cache should be populated after first call")
+        cache_key_after_first = main_mod._tools_cache[0]
+
+        # Second call: same registry, should hit cache (key unchanged)
+        resp2 = _list_tools(32)
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(
+            main_mod._tools_cache[0], cache_key_after_first,
+            "Cache key should remain unchanged (same registry)",
+        )
+
+    def test_mcp_tool_call_idempotent_same_result(self):
+        """Same tool + same arguments → same result (no side-effects)."""
+        def _call(req_id):
+            return self.url_open(
+                '/mcp', timeout=20,
+                data=json.dumps({
+                    "jsonrpc": "2.0", "id": req_id,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "test.mcp.base.tool:get_customer_detail",
+                        "arguments": {"name": "Mary"},
+                    },
+                }),
+                headers={'Content-Type': 'application/json'},
+            )
+
+        r1 = _call(33)
+        r2 = _call(34)
+        self.assertEqual(r1.status_code, 200)
+        self.assertEqual(r2.status_code, 200)
+
+        content1 = r1.json()['result']['content'][0]['text']
+        content2 = r2.json()['result']['content'][0]['text']
+        self.assertEqual(content1, content2)
+
 
 @tagged('post_install', '-at_install')
 class TestMCPIntegration(common.TransactionCase):
@@ -656,7 +873,7 @@ class TestMCPIntegration(common.TransactionCase):
     
     def test_mcp_tool_registration(self):
         """Test that MCP tools can be discovered in registry"""
-
+        
         # Check that we can iterate over models
         tools_found = 0
         for model_name, model_obj in self.env.registry.models.items():
