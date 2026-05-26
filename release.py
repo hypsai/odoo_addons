@@ -355,20 +355,57 @@ def main():
             env['https_proxy'] = proxy
             proxy_flag = f' --proxy {proxy}'
 
-        # pip --upgrade on a git URL compares the installed commit hash with
-        # the remote HEAD.  Reinstalls only when there are new commits, skips
-        # with "already satisfied" otherwise.  Also handles first-time install.
-        print("   → Ensuring odoo-module-migrator is up to date...")
-        output = run_command(
-            f'"{sys.executable}" -m pip install --upgrade --no-cache-dir'
-            f'{proxy_flag} '
-            f'git+https://github.com/chrisking94/odoo-module-migrator.git@master',
-            env=env,
-        )
-        if 'already satisfied' in output.lower():
-            print("   ✅ Already up to date")
+        # Compare installed commit hash with remote master HEAD.
+        # Only reinstall when they differ (or no package is installed).
+        # pip --upgrade only compares version strings (both are "0.5.0"),
+        # so it would skip even when there are new commits.
+        _MIGRATOR_GIT_URL = 'https://github.com/chrisking94/odoo-module-migrator.git'
+
+        def _get_installed_commit():
+            """Return the installed commit hash, or None if not git-installed."""
+            try:
+                import odoo_module_migrate
+                pkg_path = Path(odoo_module_migrate.__file__).parent.parent
+                for d in pkg_path.iterdir():
+                    if d.name.startswith('odoo_module_migrate-') and d.name.endswith('.dist-info'):
+                        direct_url = d / 'direct_url.json'
+                        if direct_url.exists():
+                            data = json.loads(direct_url.read_text(encoding='utf-8'))
+                            return data.get('vcs_info', {}).get('commit_id')
+                        break
+            except Exception:
+                pass
+            return None
+
+        def _get_remote_commit():
+            """Return the latest master commit hash from remote, or None."""
+            try:
+                result = subprocess.run(
+                    ['git', 'ls-remote', _MIGRATOR_GIT_URL, 'refs/heads/master'],
+                    capture_output=True, text=True,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip().split()[0]
+            except Exception:
+                pass
+            return None
+
+        installed = _get_installed_commit()
+        remote = _get_remote_commit()
+
+        if installed and remote and installed == remote:
+            print(f"   ✅ Already up to date ({installed[:8]})")
         else:
-            print("   ✅ odoo-module-migrator updated")
+            print("   → Installing odoo-module-migrator from latest master...")
+            output = run_command(
+                f'"{sys.executable}" -m pip install --upgrade --force-reinstall --no-cache-dir'
+                f'{proxy_flag} '
+                f'git+{_MIGRATOR_GIT_URL}@master',
+                env=env,
+            )
+            remote_after = _get_remote_commit()
+            print(f"   ✅ odoo-module-migrator installed"
+                  f"{f' ({remote_after[:8]})' if remote_after else ''}")
 
     # 0. Check workspace status
     print("📋 Step 0: Checking workspace status")
