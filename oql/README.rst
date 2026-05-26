@@ -192,7 +192,7 @@ Operators
 |             | ``<=``                                             |                                   |
 +-------------+----------------------------------------------------+-----------------------------------+
 | Pattern     | ``like``, ``ilike``, ``not like``,                 | ``name like 'Boot'``              |
-|             | ``not ilike``                                      | (auto-wraps ``%`` — no need to    |
+|             | ``not ilike``, ``=like``, ``=ilike``               | (auto-wraps ``%`` — no need to    |
 |             |                                                    | add wildcards)                    |
 +-------------+----------------------------------------------------+-----------------------------------+
 | Set         | ``in``, ``not in``                                 | ``Size in ('40', '40.5')``        |
@@ -205,6 +205,10 @@ Operators
 +-------------+----------------------------------------------------+-----------------------------------+
 
 .. note::
+
+   The operator list above is based on Odoo 15. The actual available operators
+   depend on the specific Odoo version — only operators in that version's
+   domain operators are supported.
 
    ``like`` / ``ilike`` automatically wrap the value with ``%`` (equivalent to
    Odoo's ``=like`` / ``=ilike`` domain operators). Use ``=like`` or ``=ilike``

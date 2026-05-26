@@ -7,11 +7,11 @@ import os.path
 from typing import Optional
 
 import odoo.fields
-import lark
-from lark.exceptions import VisitError
 from odoo import models, _
 from odoo.tools.safe_eval import safe_eval
 
+import lark
+from lark.exceptions import VisitError
 from .acl import OqlAcl
 from .alias import AliasRule, AliasNode, AliasField
 from .compatible import zip_c
@@ -288,6 +288,7 @@ class FieldAccess:
         return len(self.names) == 1 and not self._tail_alias and not self.next
 
     def eval_bin(self, opr: str, value):
+        opr = " ".join(opr.split())  # Normalize spaces
         return self._eval(False, opr, value)
 
     def eval_una(self, opr: str):
@@ -499,7 +500,7 @@ class OqlTransformer(lark.Transformer):
         return left and right
 
     def bin_expr(self, left: FieldAccess, opr: str, right):
-        opr = opr.lower()
+        opr = " ".join(opr.lower().split())  # Normalize spaces
         return left.eval_bin(opr, right)
 
     def dot_expr(self, field: FieldAccess):
