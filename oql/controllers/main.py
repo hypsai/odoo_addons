@@ -49,7 +49,7 @@ class OqlController(http.Controller):
     def oql_user(self):
         """Get current user info."""
         try:
-            user = request.env.user.sudo()
+            user = request.env.user
             return {
                 'success': True,
                 'user': {
@@ -72,12 +72,10 @@ class OqlController(http.Controller):
         or ``hinto`` method (pre-transform context, e.g. WHERE clause).
         """
         try:
-            hints = request.env[model].sudo().oql_hint(content, cursor_index,
-                                                        limit=limit, offset=offset)
-            return {'hints': hints}
+            return request.env[model].oql_hint(content, cursor_index, limit=limit, offset=offset)
         except Exception as e:
             _logger.debug("OQL hint error: %s", e)
-            return {'hints': []}
+            return {'hints': [], 'error': f'{type(e).__name__}({e})'}
 
     # ---- Workbench state sync (localStorage + cloud) ----
 
@@ -85,7 +83,7 @@ class OqlController(http.Controller):
     def oql_state_save(self, state):
         """Save workbench state to cloud for current user."""
         try:
-            request.env['oql.workbench.state'].sudo().create_or_update_state(state)
+            request.env['oql.workbench.state'].create_or_update_state(state)
             return {'success': True}
         except Exception as e:
             _logger.warning("OQL state save error: %s", e)
@@ -95,7 +93,7 @@ class OqlController(http.Controller):
     def oql_state_load(self):
         """Load workbench state from cloud for current user."""
         try:
-            state = request.env['oql.workbench.state'].sudo().get_user_state()
+            state = request.env['oql.workbench.state'].get_user_state()
             return {'success': True, 'state': state}
         except Exception as e:
             _logger.warning("OQL state load error: %s", e)
