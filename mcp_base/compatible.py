@@ -61,7 +61,7 @@ def session_authenticate(request_, username, password):
     Odoo < 18:   authenticate(dbname, login, password)
     Odoo >= 18:  authenticate(env, credential) where credential = {login, password, type}
     """
-    if ODOO_VERSION >= 18:
+    if ODOO_VERSION >= 19:
         credential = {
             'login': username,
             'password': password,
