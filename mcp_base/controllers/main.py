@@ -4,6 +4,7 @@
 # @Description  :
 import json
 import logging
+import traceback
 
 from odoo import http
 from odoo.exceptions import AccessDenied
@@ -16,6 +17,17 @@ from ..typeutil import OdooMro
 from .. import jsonutil
 
 _logger = logging.getLogger(__name__)
+# Cache: id(registry) → list of tool_info dicts.  The Registry object is not
+# hashable, so we use its id().  When the registry is rebuilt (on module
+# install/upgrade) a new Registry instance is created, so id() changes and the
+# cache naturally invalidates.  Compatible with Odoo 13–19.
+_tools_cache = {}
+# MCP method → handler method name
+_MCP_HANDLERS = {
+    'initialize': '_handle_initialize',
+    'tools/list': '_handle_list_tools',
+    'tools/call': '_handle_call_tool',
+}
 root_patch_get_request()
 
 
@@ -144,6 +156,7 @@ class McpController(http.Controller):
 
     def _handle_json_rpc(self):
         """Handle POST request - process JSON-RPC messages."""
+        payload = None
         try:
             payload = json.loads(request.httprequest.get_data(as_text=True))
             method = payload.get('method')
@@ -173,12 +186,11 @@ class McpController(http.Controller):
             }, 400)
 
         except Exception as e:
-            import traceback
             _logger.error(f"MCP Error: {e}\n{traceback.format_exc()}")
 
             return self._json_response({
                 "jsonrpc": "2.0",
-                "id": payload.get('id') if 'payload' in locals() else None,
+                "id": payload.get('id') if payload else None,
                 "error": {
                     "code": -32603,
                     "message": f"Internal error: {str(e)}",
@@ -204,17 +216,11 @@ class McpController(http.Controller):
 
     def _process_mcp_method(self, method, params):
         """Route MCP method to handler."""
-        handlers = {
-            'initialize': self._handle_initialize,
-            'tools/list': self._handle_list_tools,
-            'tools/call': self._handle_call_tool,
-        }
-
-        handler = handlers.get(method)
-        if not handler:
+        handler_name = _MCP_HANDLERS.get(method)
+        if not handler_name:
             raise Exception(f"Method not found: {method}")
 
-        return handler(params)
+        return getattr(self, handler_name)(params)
 
     def _handle_initialize(self, params):
         """Handle initialize request."""
@@ -231,26 +237,32 @@ class McpController(http.Controller):
 
     def _handle_list_tools(self, params):
         """Handle tools/list request."""
-        tools = []
+        registry = request.env.registry
+        cache_key = id(registry)
+        cached = _tools_cache.get(cache_key)
+        if cached is not None:
+            _logger.debug(f"MCP found {len(cached)} tools (cached)")
+            return {"tools": cached}
 
-        for model_name, model_cls in request.env.registry.models.items():
+        tools = []
+        for model_name, model_cls in registry.models.items():
             bases = model_cls.__bases__
-            for i, def_cls in enumerate(bases):  # Use definition type.
+            for i, def_cls in enumerate(bases):
                 for attr_name, method in def_cls.__dict__.items():
                     if callable(method) and getattr(method, '_is_mcp_tool', False):
                         tool_info = getattr(method, "_mcp_base_cache_tool_info", None)
 
                         if not tool_info:
-                            # Get stored decorator parameters
                             custom_desc = getattr(method, '_mcp_custom_description', None)
                             inherit_docs = getattr(method, '_mcp_inherit_docs', True)
 
-                            # Build tool info using mcputil
                             mro = OdooMro(attr_name, bases[i:])
-                            tool_info = build_tool_info(mro, custom_desc=custom_desc, inherit_docs=inherit_docs)
+                            tool_info = build_tool_info(
+                                mro, custom_desc=custom_desc,
+                                inherit_docs=inherit_docs,
+                            )
                             tool_info["name"] = f"{model_name}:{attr_name}"
 
-                            # Add built-in properties to schema
                             schema = tool_info['inputSchema']
                             schema = self._add_built_in_properties(method, schema)
                             tool_info["inputSchema"] = schema
@@ -258,45 +270,42 @@ class McpController(http.Controller):
                             method._mcp_base_cache_tool_info = tool_info
 
                         tools.append(tool_info)
-        
+
+        _tools_cache[cache_key] = tools
         _logger.debug(f"MCP found {len(tools)} tools")
         return {"tools": tools}
     
     def _handle_call_tool(self, params):
         """Handle tools/call request."""
         name = params.get('name')
-        arguments = params.get('arguments', {})
-        
+        arguments = dict(params.get('arguments', {}))
+
         _logger.info(f"User[{request.env.user.id}] calling MCP tool: {name} with args: {arguments}")
-        
+
         try:
             model_name, method_name = name.split(':')
-            # Use the already authenticated request.env
             model = request.env[model_name]
-            
+
             # Extract `_search_` parameter if present
             search = arguments.pop('_search_', None)
-            
+
             # If `search` is provided and not empty, filter records
             if search:
-                # For recordset methods, apply search to get filtered recordset
                 recordset = model.search(**search)
                 result = getattr(recordset, method_name)(**arguments)
             else:
-                # No search, call method on model directly (for @api.model or empty recordset)
                 result = getattr(model, method_name)(**arguments)
-            
+
             return {
                 "content": [{
                     "type": "text",
                     "text": jsonutil.dumps(result) if not isinstance(result, str) else result
                 }]
             }
-            
+
         except Exception as e:
-            import traceback
             _logger.error(f"MCP tool execution error: {e}\n{traceback.format_exc()}")
-            
+
             return {
                 "content": [{"type": "text", "text": f"Error: {str(e)}"}],
                 "isError": True
