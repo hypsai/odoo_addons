@@ -50,4 +50,4 @@ def is_api_model(method):
         return getattr(method, "_api_model", False)
     else:
         odoo_api = getattr(method, "_api", None)
-        return odoo_api != "model" or odoo_api != "model_create"
+        return odoo_api == "model" or odoo_api == "model_create"

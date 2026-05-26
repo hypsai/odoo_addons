@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+from base64 import b64encode
 
 from odoo.tests import common, tagged
 from .test_model_defs import ensure_model_meta
@@ -11,13 +12,13 @@ class TestMCPController(common.HttpCase):
 
     def setUp(self):
         super().setUp()
-        
+
         ensure_model_meta(self.env, ["test.mcp.base.tool"])
 
         # Create temporary access rights for test.mcp.base.tool model
         test_model = self.env['ir.model'].search([('model', '=', 'test.mcp.base.tool')], limit=1)
         self.assertIsNotNone(test_model, "Test model 'test.mcp.base.tool' not found")
-        
+
         self.env['ir.model.access'].create({
             'name': 'test.mcp.base.tool user access',
             'model_id': test_model.id,
@@ -27,15 +28,32 @@ class TestMCPController(common.HttpCase):
             'perm_create': True,
             'perm_unlink': True,
         })
+
+        # Default auth: plain text X-User / X-Password headers (easy to configure)
+        self._auth_headers = {
+            'Content-Type': 'application/json',
+            'X-User': 'admin',
+            'X-Password': 'admin',
+        }
+
+        # Also prepare Basic Auth headers for Basic Auth specific tests
+        credentials = b64encode(b"admin:admin").decode('utf-8')
+        self._basic_auth_headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Basic {credentials}',
+        }
     
     def test_mcp_endpoint_exists(self):
         """Test that MCP endpoint is accessible"""
-        response = self.url_open('/mcp', timeout=30)
+        response = self.url_open('/mcp', timeout=30, headers={
+            'X-User': 'admin',
+            'X-Password': 'admin',
+        })
         # GET request should return SSE stream
         self.assertEqual(response.status_code, 200)
         content_type = response.headers.get('Content-Type', '')
         self.assertIn('text/event-stream', content_type)
-    
+
     def test_mcp_initialize_request(self):
         """Test MCP initialize method via POST"""
         payload = {
@@ -47,14 +65,14 @@ class TestMCPController(common.HttpCase):
                 "capabilities": {}
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertEqual(result['jsonrpc'], '2.0')
@@ -62,7 +80,7 @@ class TestMCPController(common.HttpCase):
         self.assertIn('result', result)
         self.assertEqual(result['result']['protocolVersion'], '2025-03-26')
         self.assertIn('serverInfo', result['result'])
-    
+
     def test_mcp_tools_list_request(self):
         """Test MCP tools/list method"""
         payload = {
@@ -71,14 +89,14 @@ class TestMCPController(common.HttpCase):
             "method": "tools/list",
             "params": {}
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertEqual(result['jsonrpc'], '2.0')
@@ -86,7 +104,7 @@ class TestMCPController(common.HttpCase):
         self.assertIn('tools', result['result'])
         self.assertIsInstance(result['result']['tools'], list)
         self.assertGreater(len(result['result']['tools']), 0)
-    
+
     def test_mcp_invalid_method(self):
         """Test handling of invalid MCP method"""
         payload = {
@@ -95,33 +113,33 @@ class TestMCPController(common.HttpCase):
             "method": "invalid/method",
             "params": {}
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 500)
         result = response.json()
         self.assertIn('error', result)
         self.assertEqual(result['error']['code'], -32603)
-    
+
     def test_mcp_invalid_json(self):
         """Test handling of invalid JSON"""
         response = self.url_open(
             '/mcp',
             timeout=20,
             data='invalid json',
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 400)
         result = response.json()
         self.assertIn('error', result)
         self.assertEqual(result['error']['code'], -32700)
-    
+
     def test_mcp_notification_handling(self):
         """Test MCP notification (no id field)"""
         payload = {
@@ -129,17 +147,17 @@ class TestMCPController(common.HttpCase):
             "method": "notifications/initialized",
             "params": {}
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         # Notifications should return 202 Accepted
         self.assertEqual(response.status_code, 202)
-    
+
     def test_mcp_cors_headers(self):
         """Test CORS headers are present"""
         payload = {
@@ -148,14 +166,14 @@ class TestMCPController(common.HttpCase):
             "method": "initialize",
             "params": {}
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get('Access-Control-Allow-Origin'), '*')
     
@@ -168,21 +186,21 @@ class TestMCPController(common.HttpCase):
             "method": "tools/list",
             "params": {}
         }
-        
+
         list_response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(list_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         tools = list_response.json()['result']['tools']
         self.assertGreater(len(tools), 0, "No MCP tools available for testing")
-        
+
         # Try to call the first available tool
         first_tool = tools[0]
         tool_name = first_tool['name']
-        
+
         call_payload = {
             "jsonrpc": "2.0",
             "id": 11,
@@ -192,14 +210,14 @@ class TestMCPController(common.HttpCase):
                 "arguments": {}
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(call_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertEqual(result['jsonrpc'], '2.0')
@@ -216,26 +234,26 @@ class TestMCPController(common.HttpCase):
             "method": "tools/list",
             "params": {}
         }
-        
+
         list_response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(list_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         tools = list_response.json()['result']['tools']
         self.assertGreater(len(tools), 0, "No MCP tools available for testing")
-        
+
         # Find a tool that has _search_ parameter
         tool_with_search = None
         for tool in tools:
             if '_search_' in tool.get('inputSchema', {}).get('properties', {}):
                 tool_with_search = tool
                 break
-        
+
         self.assertIsNotNone(tool_with_search, "No tools with _search_ parameter found")
-        
+
         # Call tool with _search_ parameter
         call_payload = {
             "jsonrpc": "2.0",
@@ -251,14 +269,14 @@ class TestMCPController(common.HttpCase):
                 }
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(call_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertIn('result', result)
@@ -274,14 +292,14 @@ class TestMCPController(common.HttpCase):
                 "arguments": {}
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertIn('result', result)
@@ -306,9 +324,9 @@ class TestMCPController(common.HttpCase):
             '/mcp',
             timeout=20,
             data='{}',
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         # Should return error for missing method
         self.assertEqual(response.status_code, 500)
         result = response.json()
@@ -321,26 +339,29 @@ class TestMCPController(common.HttpCase):
             "jsonrpc": "2.0",
             "id": 15
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 500)
         result = response.json()
         self.assertIn('error', result)
 
     def test_mcp_sse_endpoint_format(self):
         """Test SSE endpoint returns correct format"""
-        response = self.url_open('/mcp', timeout=30)
-        
+        response = self.url_open('/mcp', timeout=30, headers={
+            'X-User': 'admin',
+            'X-Password': 'admin',
+        })
+
         self.assertEqual(response.status_code, 200)
         content_type = response.headers.get('Content-Type', '')
         self.assertIn('text/event-stream', content_type)
-        
+
         # Check SSE headers
         self.assertEqual(response.headers.get('Cache-Control'), 'no-cache')
         # Connection header may contain multiple values
@@ -356,16 +377,16 @@ class TestMCPController(common.HttpCase):
             "method": "tools/list",
             "params": {}
         }
-        
+
         response1 = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload1),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         tools1 = response1.json()['result']['tools']
-        
+
         # Second request
         payload2 = {
             "jsonrpc": "2.0",
@@ -373,51 +394,325 @@ class TestMCPController(common.HttpCase):
             "method": "tools/list",
             "params": {}
         }
-        
+
         response2 = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload2),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         tools2 = response2.json()['result']['tools']
-        
+
         # Both should return same number of tools
         self.assertEqual(len(tools1), len(tools2))
-        
+
         # Tool structures should be identical (cached)
         self.assertGreater(len(tools1), 0, "No tools found for caching test")
         self.assertEqual(tools1[0]['name'], tools2[0]['name'])
         self.assertEqual(tools1[0]['description'], tools2[0]['description'])
 
-    def test_mcp_authentication_without_api_key(self):
-        """Test authentication when auth_api_key module is not installed"""
+    def test_mcp_authentication_without_credentials(self):
+        """Test that requests without credentials are rejected (no dev mode fallback)"""
         # Check if auth_api_key is installed
         auth_api_key_module = self.env['ir.module.module'].search([
             ('name', '=', 'auth_api_key'),
             ('state', '=', 'installed')
         ])
-        
+
         if auth_api_key_module:
-            self.skipTest("auth_api_key module is installed, skipping dev mode test")
-        
-        # Without API key, should still work in dev mode (with admin privileges)
+            self.skipTest("auth_api_key module is installed, skipping basic auth test")
+
+        # Without any Authorization header, should be rejected
         payload = {
             "jsonrpc": "2.0",
             "id": 18,
             "method": "initialize",
             "params": {}
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
             headers={'Content-Type': 'application/json'}
         )
-        
-        # Should succeed with admin user
+
+        # Should return 401 (authentication required)
+        self.assertEqual(response.status_code, 401)
+        result = response.json()
+        self.assertIn('error', result)
+        self.assertEqual(result['error']['code'], -32604)
+
+    def test_mcp_basic_auth_success(self):
+        """Test successful HTTP Basic Auth with valid username/password"""
+        from base64 import b64encode
+
+        # Check if auth_api_key is installed
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping basic auth test")
+
+        # Use admin/admin (default Odoo test credentials)
+        credentials = b64encode(b"admin:admin").decode('utf-8')
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 18,
+            "method": "initialize",
+            "params": {}
+        }
+
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Basic {credentials}',
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertIn('result', result)
+        self.assertEqual(result['result']['protocolVersion'], '2025-03-26')
+
+    def test_mcp_basic_auth_invalid_credentials(self):
+        """Test HTTP Basic Auth with invalid password is rejected"""
+        from base64 import b64encode
+
+        # Check if auth_api_key is installed
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping basic auth test")
+
+        # Invalid password
+        credentials = b64encode(b"admin:wrongpassword").decode('utf-8')
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 18,
+            "method": "initialize",
+            "params": {}
+        }
+
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Basic {credentials}',
+            }
+        )
+
+        self.assertEqual(response.status_code, 401)
+        result = response.json()
+        self.assertIn('error', result)
+        self.assertEqual(result['error']['code'], -32604)
+
+    def test_mcp_basic_auth_invalid_scheme(self):
+        """Test non-Basic auth scheme is rejected"""
+        from base64 import b64encode
+
+        # Check if auth_api_key is installed
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping basic auth test")
+
+        credentials = b64encode(b"admin:admin").decode('utf-8')
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 18,
+            "method": "initialize",
+            "params": {}
+        }
+
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {credentials}',
+            }
+        )
+
+        self.assertEqual(response.status_code, 401)
+        result = response.json()
+        self.assertIn('error', result)
+
+    def test_mcp_basic_auth_malformed_header(self):
+        """Test malformed Basic Auth header (missing colon) is rejected"""
+        from base64 import b64encode
+
+        # Check if auth_api_key is installed
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping basic auth test")
+
+        # No colon → invalid format
+        credentials = b64encode(b"onlyusername").decode('utf-8')
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 18,
+            "method": "initialize",
+            "params": {}
+        }
+
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Basic {credentials}',
+            }
+        )
+
+        self.assertEqual(response.status_code, 401)
+        result = response.json()
+        self.assertIn('error', result)
+    
+    # ── Plain text auth tests (X-User / X-Password) ────────────────────────
+
+    def test_mcp_plain_auth_success(self):
+        """Test plain text X-User/X-Password headers succeed"""
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping plain auth test")
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 35,
+            "method": "initialize",
+            "params": {}
+        }
+
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'X-User': 'admin',
+                'X-Password': 'admin',
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertIn('result', result)
+        self.assertEqual(result['result']['protocolVersion'], '2025-03-26')
+
+    def test_mcp_plain_auth_invalid_password(self):
+        """Test plain text auth with wrong password is rejected"""
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping plain auth test")
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 36,
+            "method": "initialize",
+            "params": {}
+        }
+
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'X-User': 'admin',
+                'X-Password': 'wrongpassword',
+            }
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_mcp_plain_auth_missing_user(self):
+        """Test plain text auth missing X-User header falls back to error"""
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping plain auth test")
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 37,
+            "method": "initialize",
+            "params": {}
+        }
+
+        # Only X-Password, no X-User → falls through to Basic Auth error
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'X-Password': 'admin',
+            }
+        )
+
+        self.assertEqual(response.status_code, 401)
+        result = response.json()
+        self.assertIn('error', result)
+
+    def test_mcp_plain_auth_priority_over_basic(self):
+        """Test X-User/X-Password takes priority over Basic Auth"""
+        auth_api_key_module = self.env['ir.module.module'].search([
+            ('name', '=', 'auth_api_key'),
+            ('state', '=', 'installed')
+        ])
+        if auth_api_key_module:
+            self.skipTest("auth_api_key module is installed, skipping plain auth test")
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 38,
+            "method": "initialize",
+            "params": {}
+        }
+
+        # X-User/X-Password with valid creds + Basic header with invalid creds
+        response = self.url_open(
+            '/mcp',
+            timeout=20,
+            data=json.dumps(payload),
+            headers={
+                'Content-Type': 'application/json',
+                'X-User': 'admin',
+                'X-Password': 'admin',
+                'Authorization': f'Basic {b64encode(b"admin:invalid").decode("utf-8")}',
+            }
+        )
+
+        # Should succeed because X-User/X-Password takes priority
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertIn('result', result)
@@ -430,47 +725,47 @@ class TestMCPController(common.HttpCase):
             "method": "tools/list",
             "params": {}
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         tools = result['result']['tools']
-        
+
         # Find get_customer_detail tool (not marked with @api.model, should have _search_)
         target_tool = None
         for tool in tools:
             if 'get_customer_detail' in tool['name']:
                 target_tool = tool
                 break
-        
+
         # Must find the tool - fail if not found
         self.assertIsNotNone(target_tool, "Tool 'get_customer_detail' not found in tools list")
-        
+
         schema = target_tool.get('inputSchema', {})
         properties = schema.get('properties', {})
-        
+
         # Verify _search_ parameter is present for non-model methods
-        self.assertIn('_search_', properties, 
+        self.assertIn('_search_', properties,
             f"Tool {target_tool['name']} should have _search_ parameter")
-        
+
         # Verify _search_ has correct structure
         search_prop = properties['_search_']
         self.assertEqual(search_prop['type'], 'object')
         self.assertIn('description', search_prop)
-        
+
         # Verify nested properties exist
         search_properties = search_prop.get('properties', {})
         self.assertIn('args', search_properties, "Should have 'args' parameter")
         self.assertIn('offset', search_properties)
         self.assertIn('limit', search_properties)
         self.assertIn('order', search_properties)
-        
+
         # Verify 'args' is required
         required = search_prop.get('required', [])
         self.assertIn('args', required, "'args' should be required")
@@ -488,19 +783,19 @@ class TestMCPController(common.HttpCase):
                 }
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(call_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertIn('result', result)
         self.assertFalse(result['result'].get('isError', False))
-        
+
         # Check content
         content = result['result']['content'][0]['text']
         import json as json_module
@@ -523,30 +818,30 @@ class TestMCPController(common.HttpCase):
                 }
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(call_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertFalse(result['result'].get('isError', False))
-        
+
         content = result['result']['content'][0]['text']
         self.assertIn('Hello, Tom!', content)
-        
+
         # Test with custom greeting
         call_payload['params']['arguments']['greeting'] = 'Hi'
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(call_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         result = response.json()
         content = result['result']['content'][0]['text']
         self.assertIn('Hi, Tom!', content)
@@ -564,21 +859,21 @@ class TestMCPController(common.HttpCase):
                 }
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(call_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        
+
         content = result['result']['content'][0]['text']
         import json as json_module
         data = json_module.loads(content)
-        
+
         # Should have enhanced fields from inheritance
         self.assertIn('premium', data)
         self.assertIn('vip_level', data)
@@ -598,21 +893,21 @@ class TestMCPController(common.HttpCase):
                 }
             }
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(call_payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        
+
         content = result['result']['content'][0]['text']
         import json as json_module
         data = json_module.loads(content)
-        
+
         # Should return error message
         self.assertIn('error', data)
         self.assertIn('NonExistent', data['error'])
@@ -625,27 +920,27 @@ class TestMCPController(common.HttpCase):
             "method": "tools/list",
             "params": {}
         }
-        
+
         response = self.url_open(
             '/mcp',
             timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'}
+            headers=self._auth_headers
         )
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.json()
         tools = result['result']['tools']
-        
+
         # Find get_customer_detail tool
         target_tool = None
         for tool in tools:
             if 'get_customer_detail' in tool['name']:
                 target_tool = tool
                 break
-        
+
         self.assertIsNotNone(target_tool, "Tool 'get_customer_detail' not found for description test")
-        
+
         # Should have custom description from inherited class
         self.assertIn('enhanced', target_tool['description'].lower())
 
@@ -662,7 +957,7 @@ class TestMCPController(common.HttpCase):
         response = self.url_open(
             '/mcp', timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
+            headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 200)
         tools = response.json()['result']['tools']
@@ -692,7 +987,7 @@ class TestMCPController(common.HttpCase):
         response = self.url_open(
             '/mcp', timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
+            headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 200)
         result = response.json()
@@ -716,7 +1011,7 @@ class TestMCPController(common.HttpCase):
         response = self.url_open(
             '/mcp', timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
+            headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 200)
         result = response.json()
@@ -736,7 +1031,7 @@ class TestMCPController(common.HttpCase):
         response = self.url_open(
             '/mcp', timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
+            headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 200)
         result = response.json()
@@ -756,7 +1051,7 @@ class TestMCPController(common.HttpCase):
         response = self.url_open(
             '/mcp', timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
+            headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 200)
         result = response.json()
@@ -786,7 +1081,7 @@ class TestMCPController(common.HttpCase):
         response = self.url_open(
             '/mcp', timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
+            headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 200)
 
@@ -806,7 +1101,7 @@ class TestMCPController(common.HttpCase):
         response = self.url_open(
             '/mcp', timeout=20,
             data=json.dumps(payload),
-            headers={'Content-Type': 'application/json'},
+            headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 202)
 
@@ -823,7 +1118,7 @@ class TestMCPController(common.HttpCase):
                     "jsonrpc": "2.0", "id": req_id,
                     "method": "tools/list", "params": {},
                 }),
-                headers={'Content-Type': 'application/json'},
+                headers=self._auth_headers,
             )
 
         # First call: cache should be empty before, populated after
@@ -854,7 +1149,7 @@ class TestMCPController(common.HttpCase):
                         "arguments": {"name": "Mary"},
                     },
                 }),
-                headers={'Content-Type': 'application/json'},
+                headers=self._auth_headers,
             )
 
         r1 = _call(33)

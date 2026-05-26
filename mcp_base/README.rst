@@ -51,9 +51,9 @@ Quick Start
 3. Connect your MCP client to ``http://your-odoo:8069/mcp``
 
 .. important::
-   **Security Notice**: By default, the MCP server runs with administrator privileges for development convenience.
-   For production use, we **strongly recommend** installing the ``auth_api_key`` module to enable secure API key authentication.
-   See the Security & Authentication section below for details.
+   **Security Notice**: The MCP server requires authentication. Use plain text ``X-User``/``X-Password`` headers or HTTP Basic Auth.
+   For enhanced security, install the ``auth_api_key`` module to enable API key authentication.
+   See the Security &amp; Authentication section below for details.
 
 Usage Examples
 ==============
@@ -263,22 +263,61 @@ Edit ``config.json``:
 Security & Authentication
 =========================
 
-Development Mode (Default)
----------------------------
+Default Authentication (Plain Text Headers)
+-------------------------------------------
 
-Without ``auth_api_key``, the MCP server runs with administrator privileges. Convenient for testing, but **NOT for production**.
+The simplest way to authenticate — just add two headers with your Odoo credentials, no encoding needed.
 
-You'll see a warning in logs:
+.. code-block::
 
-.. code-block:: text
+    X-User: admin
+    X-Password: your-password
 
-    WARNING: MCP Security Warning: Running with sudo() privileges. 
-    For production use, please install 'auth_api_key' module.
+.. image:: /mcp_base/static/description/chatwise_auth_basic.png
+   :alt: ChatWise config with X-User/X-Password
+   :align: center
+   :width: 500px
 
-Production Mode (Recommended)
-------------------------------
+**Claude Desktop example:**
 
-Install ``auth_api_key`` module for secure API key authentication:
+.. code-block:: json
+
+    {
+      "mcpServers": {
+        "odoo": {
+          "url": "http://localhost:8069/mcp",
+          "transport": "streamable-http",
+          "headers": {
+            "X-User": "admin",
+            "X-Password": "your-password"
+          }
+        }
+      }
+    }
+
+HTTP Basic Auth (Alternative)
+-----------------------------
+
+Standard ``Authorization: Basic <base64-credentials>`` is also supported as a fallback:
+
+.. code-block:: json
+
+    {
+      "mcpServers": {
+        "odoo": {
+          "url": "http://localhost:8069/mcp",
+          "transport": "streamable-http",
+          "headers": {
+            "Authorization": "Basic <base64(username:password)>"
+          }
+        }
+      }
+    }
+
+API Key Authentication (Recommended for Production)
+----------------------------------------------------
+
+For enhanced security, install the ``auth_api_key`` module to use API keys instead of passwords:
 
 **Step 1: Install auth_api_key**
 
@@ -287,14 +326,12 @@ Download from `Odoo App Store <https://apps.odoo.com/apps/modules/browse?search=
 **Step 2: Create an API Key**
 
 1. Settings -> Technical -> API Keys -> Create
-2. Set name and select user account
+2. Set name and choose target user
 3. Copy the generated API key
 
 **Step 3: Configure Your Client**
 
 Add header: ``Api-Key: your-api-key-here``
-
-**Claude Desktop example:**
 
 .. code-block:: json
 
@@ -310,8 +347,13 @@ Add header: ``Api-Key: your-api-key-here``
       }
     }
 
-.. warning::
-   **Never run MCP server without auth_api_key in production!** Without authentication, anyone can access your Odoo with full admin privileges.
+.. image:: /mcp_base/static/description/chatwise_auth_api_key.png
+   :alt: ChatWise config with API Key
+   :align: center
+   :width: 500px
+
+.. note::
+   When ``auth_api_key`` is installed, API key authentication takes priority and all other methods are disabled.
 
 Architecture
 ============

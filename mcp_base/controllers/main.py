@@ -5,6 +5,7 @@
 import json
 import logging
 import traceback
+from base64 import b64decode
 from typing import Tuple, Optional
 
 from odoo import http
@@ -39,7 +40,7 @@ class McpController(http.Controller):
 
         Authentication:
         - If auth_api_key is installed: supports API key via 'Api-Key' header
-        - Otherwise: runs with admin privileges (development mode)
+        - Otherwise: uses Odoo built-in HTTP Basic Auth (username + password)
         """
         # Try to authenticate with API key if available
         auth_error = self._try_api_key_auth()
@@ -79,60 +80,86 @@ class McpController(http.Controller):
 
         Security Policy:
         - If auth_api_key is installed: API key is REQUIRED
-        - If auth_api_key is NOT installed: Use admin with security warning (dev mode)
+        - If auth_api_key is NOT installed: Use Odoo built-in HTTP Basic Auth (username + password)
 
         Returns:
             str: Error message if authentication failed, None if successful
         """
-        try:
-            # Check if auth_api_key module provides the authentication method
-            ir_http = request.env['ir.http']
+        # Check if auth_api_key module provides the authentication method
+        ir_http = request.env['ir.http']
+        api_key_header = request.httprequest.environ.get('HTTP_API_KEY')
 
-            if hasattr(ir_http, '_auth_method_api_key'):
-                # Module is installed - API key is MANDATORY
-                api_key_header = request.httprequest.environ.get('HTTP_API_KEY')
+        if api_key_header and hasattr(ir_http, '_auth_method_api_key'):
+            # Module is installed - API key is MANDATORY
 
-                if not api_key_header:
-                    error_msg = (
-                        "API key is required but not provided. "
-                        "Please configure your MCP client to include the 'Api-Key' header. "
-                        "Example: Api-Key: your-api-key-here"
-                    )
-                    _logger.warning(f"MCP authentication failed: {error_msg}")
-                    return error_msg
+            if not api_key_header:
+                error_msg = (
+                    "API key is required but not provided. "
+                    "Please configure your MCP client to include the 'Api-Key' header. "
+                    "Example: Api-Key: your-api-key-here"
+                )
+                _logger.warning(f"MCP authentication failed: {error_msg}")
+                return error_msg
 
-                # Try to authenticate with provided API key
+            # Try to authenticate with provided API key
+            try:
+                ir_http._auth_method_api_key()
+                _logger.debug(f"MCP authenticated via API key for user ID: {request.uid}")
+                request_update_env(request, request.uid)
+                return None  # Success
+            except AccessDenied:
+                error_msg = (
+                    "Invalid API key. Authentication failed. "
+                    "Please check your API key configuration."
+                )
+                _logger.warning(f"MCP authentication failed: Invalid API key provided")
+                return error_msg
+        else:
+            # auth_api_key not installed - try plain text headers first, then Basic Auth
+            user_header = request.httprequest.environ.get('HTTP_X_USER', '')
+            pass_header = request.httprequest.environ.get('HTTP_X_PASSWORD', '')
+
+            if user_header and pass_header:
+                # Plain text credentials via X-User / X-Password headers
+                return self._authenticate_with_credentials(user_header, pass_header)
+
+            # Fall back to standard Basic Auth (base64 encoded)
+            auth_header = request.httprequest.environ.get('HTTP_AUTHORIZATION', '')
+            if auth_header and auth_header.startswith('Basic '):
                 try:
-                    ir_http._auth_method_api_key()
-                    _logger.debug(f"MCP authenticated via API key for user ID: {request.uid}")
-                    request_update_env(request, request.uid)
-                    return None  # Success
-                except AccessDenied:
-                    error_msg = (
-                        "Invalid API key. Authentication failed. "
-                        "Please check your API key configuration."
-                    )
-                    _logger.warning(f"MCP authentication failed: Invalid API key provided")
-                    return error_msg
-            else:
-                # Module not installed - Development mode with warning
-                if not hasattr(request, '_mcp_auth_warning_logged'):
-                    _logger.warning(
-                        "MCP Security Warning: Running with sudo() privileges. "
-                        "For production use, please install 'auth_api_key' module for proper authentication. "
-                        "Install from: https://apps.odoo.com/apps/modules/browse?search=auth_api_key"
-                    )
-                    request._mcp_auth_warning_logged = True
+                    decoded = b64decode(auth_header[6:]).decode('utf-8')
+                    if ':' not in decoded:
+                        return "Invalid credentials format in Basic Auth header."
+                    username, password = decoded.split(':', 1)
+                    return self._authenticate_with_credentials(username, password)
+                except Exception as e:
+                    _logger.error(f"MCP Basic Auth decode error: {e}")
+                    return f"Authentication error: {str(e)}"
 
-                # Set to admin user
-                request_update_env(request, request.env.ref('base.user_admin').id)
+            _logger.debug("MCP: No valid credentials provided")
+            return (
+                "Authentication required. "
+                "Use X-User/X-Password headers or HTTP Basic Auth."
+            )
 
-                return None  # Success (with warning logged)
+    def _authenticate_with_credentials(self, username, password):
+        """Authenticate with username/password and set request uid."""
+        try:
+            uid = request.session.authenticate(
+                request.env.cr.dbname, username, password
+            )
+            if not uid:
+                raise AccessDenied("Invalid username or password")
 
+            _logger.debug(f"MCP authenticated user: {username}")
+            request_update_env(request, uid)
+            return None  # Success
+        except AccessDenied:
+            _logger.warning("MCP authentication failed: Invalid credentials")
+            return "Authentication failed. Invalid username or password."
         except Exception as e:
-            error_msg = f"Authentication error: {str(e)}"
             _logger.error(f"MCP authentication error: {e}")
-            return error_msg
+            return f"Authentication error: {str(e)}"
 
     def _handle_sse_stream(self):
         """Handle GET request - establish SSE stream."""

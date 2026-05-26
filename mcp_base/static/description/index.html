@@ -160,10 +160,16 @@ class ResPartner(models.Model):
                             </p>
                             <code style="background: rgba(0,0,0,0.1); padding: 5px 10px; border-radius: 4px; font-size: 1.1em; display: block; word-break: break-all; margin-bottom: 8px;">http://your-odoo-server:8069/mcp</code>
                             <p style="margin: 0 0 8px 0; font-size: 14px; color: #856404;">
-                                <strong><i class="fa fa-link mr-1"></i>Authentication:</strong>
-                                 If you have <code style="background: rgba(0,0,0,0.1); padding: 2px 5px; border-radius: 3px;">auth_api_key</code> module installed, add HTTP header below to your client configuration.<br>
+                                <strong><i class="fa fa-link mr-1"></i>Authentication (choose one):</strong><br>
                             </p>
-                            <code style="background: rgba(0,0,0,0.1); padding: 5px 10px; border-radius: 4px; font-size: 1.1em; display: block; word-break: break-all; margin-bottom: 8px;">Api-Key: your-api-key-here</code>
+                            <p style="margin: 0 0 4px 0; font-size: 13px; color: #555;">
+                                <strong>Default — plain text, no encoding:</strong>
+                            </p>
+                            <code style="background: rgba(0,0,0,0.1); padding: 5px 10px; border-radius: 4px; font-size: 1.0em; display: block; word-break: break-all; margin-bottom: 8px;">X-User: admin<br>X-Password: your-password</code>
+                            <p style="margin: 0 0 4px 0; font-size: 13px; color: #555;">
+                                <strong>If <code style="background: rgba(0,0,0,0.1); padding: 2px 5px; border-radius: 3px;">auth_api_key</code> is installed:</strong>
+                            </p>
+                            <code style="background: rgba(0,0,0,0.1); padding: 5px 10px; border-radius: 4px; font-size: 1.0em; display: block; word-break: break-all; margin-bottom: 8px;">Api-Key: your-api-key-here</code>
                         </div>
                         <p style="color: #555; margin-bottom: 10px;"><strong>Popular AI Clients:</strong></p>
                         <div class="row">
@@ -202,13 +208,28 @@ class ResPartner(models.Model):
     <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
         <div class="col-12">
             <h3 class="text-center mb-4" style="font-weight: 700; color: #667eea;"><i class="fa fa-shield mr-2"></i>Security &amp; Authentication</h3>
-            <p class="text-center text-muted">Protect your Odoo data with proper authentication. We strongly recommend using API key authentication for production environments.</p>
+            <p class="text-center text-muted">Three authentication options — plain text, Basic Auth, or API keys.</p>
 
-            <div style="background: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <p style="margin: 0; font-size: 15px; color: #856404;"><strong><i class="fa fa-exclamation-triangle mr-1"></i>Important:</strong> If the <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">auth_api_key</code> module is not installed, the MCP server runs with administrator privileges. This is convenient for development but <strong>NOT recommended for production</strong>.</p>
+            <!-- Plain Text Auth -->
+            <h4 style="color: #667eea; margin-top: 20px;">Default: X-User / X-Password (Plain Text)</h4>
+            <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 10px 0; border-left: 4px solid #667eea;">
+                <p style="margin: 0 0 10px 0; color: #555;">
+                    The simplest method — just set two headers with your Odoo username and password. <strong>No base64 encoding required.</strong>
+                </p>
+                <div style="background-color: #f5f5f5; border-radius: 8px; padding: 12px; border: 1px solid #e0e0e0;">
+                    <code style="font-size: 0.95em; display: block;">X-User: admin<br>X-Password: your-password</code>
+                </div>
+                <div class="text-center mt-3">
+                    <img src="/mcp_base/static/description/chatwise_auth_basic.png" alt="ChatWise config with X-User/X-Password" class="img-fluid rounded" style="max-width: 500px; border: 1px solid #dee2e6; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                </div>
+                <p style="margin: 10px 0 0 0; font-size: 0.85em; color: #888;">
+                    <i class="fa fa-lightbulb-o mr-1"></i> Also supports standard HTTP Basic Auth (<code>Authorization: Basic &lt;base64&gt;</code>) as fallback.
+                </p>
             </div>
 
-            <h4 style="color: #667eea; margin-top: 25px;">Production Setup (Strongly Recommended)</h4>
+            <!-- API Key Auth -->
+            <h4 style="color: #667eea; margin-top: 25px;">Recommended: API Key Authentication</h4>
+            <p style="color: #555;">Install <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">auth_api_key</code> for more secure, key-based access. When installed, API keys take priority over all other methods.</p>
 
             <div class="row mt-3">
                 <div class="col-md-4 mb-3">
@@ -229,15 +250,19 @@ class ResPartner(models.Model):
                     <div style="background-color: #f8f9fa; border-radius: 10px; padding: 15px;">
                         <div class="text-center" style="width: 30px; height: 30px; line-height: 30px; border-radius: 50%; font-weight: 700; margin-bottom: 10px; background-color: #667eea; color: #ffffff;">3</div>
                         <h6 style="font-weight: 700;">Configure Client</h6>
-                        <p class="text-muted small">Add Api-Key header to requests</p>
+                        <p class="text-muted small">Add <code style="background: rgba(0,0,0,0.1); padding: 2px 5px; border-radius: 3px; font-size: 0.85em;">Api-Key: &lt;your-key&gt;</code> header</p>
                     </div>
                 </div>
+            </div>
+
+            <div class="text-center mt-3 mb-3">
+                <img src="/mcp_base/static/description/chatwise_auth_api_key.png" alt="ChatWise config with API Key" class="img-fluid rounded" style="max-width: 500px; border: 1px solid #dee2e6; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             </div>
 
             <div style="background-color: #f5f5f5; border-radius: 8px; padding: 15px; margin: 15px 0; border: 1px solid #e0e0e0;">
                 <p style="margin: 0; font-size: 0.9rem; color: #333333;">
                     <i class="fa fa-book mr-1" style="color: #667eea;"></i>
-                    <strong>For detailed API key configuration, please refer to the </strong>
+                    <strong>For detailed API key configuration, see the </strong>
                     <a href="https://apps.odoo.com/apps/modules/15.0/auth_api_key" target="_blank" style="color: #667eea; text-decoration: underline; text-underline-offset: 3px; font-weight: 600;">
                         Auth Api Key module documentation
                     </a>
@@ -245,23 +270,24 @@ class ResPartner(models.Model):
             </div>
 
             <div class="row mt-4">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #27ae60; height: 100%;">
-                        <h5 style="font-weight: 700; color: #27ae60;"><i class="fa fa-check-circle mr-2"></i>With auth_api_key Installed</h5>
-                        <p class="text-muted small">API key required <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> User-level permissions <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> Production-ready <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> Secure</p>
+                        <h5 style="font-weight: 700; color: #27ae60;"><i class="fa fa-key mr-2"></i>API Key</h5>
+                        <p class="text-muted small">Revocable keys <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> User-level permissions <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> Production-ready</p>
                     </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #e74c3c; height: 100%;">
-                        <h5 style="font-weight: 700; color: #e74c3c;"><i class="fa fa-times-circle mr-2"></i>Without auth_api_key</h5>
-                        <p class="text-muted small">No authentication <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> Admin privileges <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> Development only <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> Security risk</p>
+                <div class="col-md-4 mb-3">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #667eea; height: 100%;">
+                        <h5 style="font-weight: 700; color: #667eea;"><i class="fa fa-user mr-2"></i>X-User / X-Password</h5>
+                        <p class="text-muted small">Plain text headers <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> No encoding <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> Easiest setup</p>
                     </div>
                 </div>
-            </div>
-
-            <div style="background: white; color: #856404; padding: 25px; border-radius: 10px; text-align: center; margin-top: 25px;">
-                <h3 style="margin: 0 0 10px 0; font-size: 22px; color: #856404;"><i class="fa fa-lock mr-2"></i>Secure Your MCP Server Today</h3>
-                <p style="margin: 0; font-size: 15px; color: #856404;">Install auth_api_key and protect your Odoo data with enterprise-grade authentication.</p>
+                <div class="col-md-4 mb-3">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #6c757d; height: 100%;">
+                        <h5 style="font-weight: 700; color: #6c757d;"><i class="fa fa-lock mr-2"></i>HTTP Basic Auth</h5>
+                        <p class="text-muted small">Standard protocol <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> base64 encoded <i class="fa fa-circle mx-1" style="font-size: 6px; vertical-align: middle;"></i> RFC 7617</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
