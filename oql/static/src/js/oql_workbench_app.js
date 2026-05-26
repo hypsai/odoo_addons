@@ -638,10 +638,10 @@
                 tabs: this.tabs.map(function(tab) {
                     return {
                         name: tab.name,
-                        query: tab.query
+                        query: tab.query,
+                        active: tab.id === this.activeTabId
                     };
-                }),
-                activeTabId: this.activeTabId,
+                }, this),
                 lastModified: Date.now()
             };
             
@@ -703,9 +703,8 @@
         syncToCloudImmediately: function() {
             var state = {
                 tabs: this.tabs.map(function(tab) {
-                    return { name: tab.name, query: tab.query };
-                }),
-                activeTabId: this.activeTabId
+                    return { name: tab.name, query: tab.query, active: tab.id === this.activeTabId };
+                }, this),
             };
             
             // Synchronous save to localStorage first
@@ -766,6 +765,7 @@
                 state.tabs.forEach(function(tabData) {
                     var promise = new Promise(function(resolve) {
                         var tab = new QueryTab(self, ++self.tabCounter, tabData);
+                        tab.activeOnRestore = tabData.active;  // carry the active flag
                         var rendered = tab.render();
                         
                         self.tabs.push(tab);
@@ -783,10 +783,10 @@
                 });
                 
                 Promise.all(initPromises).then(function() {
-                    if (state.activeTabId) {
-                        setTimeout(function() {
-                            self.switchTab(state.activeTabId);
-                        }, 100);
+                    // Activate the tab marked as active, or the first one
+                    var activeTab = self.tabs.find(function(t) { return t.activeOnRestore; });
+                    if (activeTab) {
+                        self.switchTab(activeTab.id);
                     } else if (self.tabs.length > 0) {
                         self.switchTab(self.tabs[0].id);
                     }
@@ -803,15 +803,36 @@
                     var state = JSON.parse(saved);
                     
                     if (state.tabs && state.tabs.length > 0) {
+                        var initPromises = [];
+                        
                         state.tabs.forEach(function(tabData) {
-                            self.addTab(tabData);
+                            var promise = new Promise(function(resolve) {
+                                var tab = new QueryTab(self, ++self.tabCounter, tabData);
+                                tab.activeOnRestore = tabData.active;
+                                var rendered = tab.render();
+                                
+                                self.tabs.push(tab);
+                                $('#tab-add').before(rendered.$tab);
+                                $('#tabs-content').append(rendered.$content);
+                                
+                                tab.initEditor().then(function() {
+                                    resolve(tab);
+                                }).catch(function() {
+                                    resolve(tab);
+                                });
+                            });
+                            
+                            initPromises.push(promise);
                         });
                         
-                        if (state.activeTabId) {
-                            setTimeout(function() {
-                                self.switchTab(state.activeTabId);
-                            }, 200);
-                        }
+                        Promise.all(initPromises).then(function() {
+                            var activeTab = self.tabs.find(function(t) { return t.activeOnRestore; });
+                            if (activeTab) {
+                                self.switchTab(activeTab.id);
+                            } else if (self.tabs.length > 0) {
+                                self.switchTab(self.tabs[0].id);
+                            }
+                        });
                     }
                 } catch (e) {
                     console.error('[OQL] Failed to restore state:', e);
