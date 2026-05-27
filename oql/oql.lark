@@ -1,6 +1,8 @@
 ?start: query
 
-query: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
+query: select_stmt
+
+select_stmt: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
 
 from_clause: "from"i model
 select_clause: "select"i [TRANSLATE] ("*" | fields)

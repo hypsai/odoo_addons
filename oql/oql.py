@@ -4,6 +4,7 @@
 # @Description  :
 import copy
 import os.path
+from abc import ABC, abstractmethod
 from typing import Optional
 
 import odoo.fields
@@ -433,12 +434,58 @@ class WhereClause:
         self.rec_set = rec_sets[0]
 
 
+class Statement(ABC):
+    meta: OqlMeta  # Injected by transformer.
+
+    """OQL Statement"""
+    @abstractmethod
+    def execute(self):
+        pass
+
+
+class SelectStmt(Statement):
+    def __init__(self, from_: models.Model, select: SelectClause, where: Optional[WhereClause], orderby, limit, offset):
+        self.from_ = from_
+        self.select = select
+        self.where = where
+        self.orderby = orderby
+        self.limit = limit
+        self.offset = offset
+
+    def execute(self):
+        env = self.from_.env
+        model_name = self.from_._name
+        # 1 Ensure `id` is in result.
+        if not any(f.path == "id" for f in self.select.fas):
+            self.select.fas = [FieldAccess(self.from_, ["id"], self.meta)] + self.select.fas
+
+        # 2 Search records.
+        if self.where:
+            domain = self.where.rec_set.domain.domain
+            domain = self.meta.acl[model_name].perm_records(domain, "read")  # Record level ACL
+            where_model = self.from_.with_context(lang=env.user.lang if self.where.translate else None)
+        else:
+            domain = []
+            where_model = self.from_
+        select_recs = where_model.search(domain, self.offset, self.limit, self.orderby)
+
+        # 3 Read fields.
+        select_recs = select_recs.with_context(lang=env.user.lang if self.select.translate else None)
+        rows = [{
+            f.as_: val for f, val in zip_c(self.select.fas, val_row, strict=True)
+        } for val_row in zip_c(*(f.read(select_recs) for f in self.select.fas), strict=True)]
+
+        return rows
+
+
 @lark.v_args(inline=True)
 class OqlTransformer(lark.Transformer):
 
     CNAME = str
     INT = int
     FLOAT = float
+
+    select_stmt = SelectStmt
 
     def __init__(self, env: odoo.api.Environment):
         super().__init__(True)
@@ -450,28 +497,9 @@ class OqlTransformer(lark.Transformer):
         self.recs = None
         self._meta = OqlMeta(env)
 
-    def query(self, from_: models.Model, select: SelectClause, where: Optional[WhereClause], orderby, limit, offset):
-        # 1 Ensure `id` is in result.
-        if not any(f.path == "id" for f in select.fas):
-            select.fas = [FieldAccess(from_, ["id"], self._meta)] + select.fas
-
-        # 2 Search records.
-        if where:
-            domain = where.rec_set.domain.domain
-            domain = self._meta.acl[self.model_name].perm_records(domain, "read")  # Record level ACL
-            where_model = from_.with_context(lang=self.env.user.lang if where.translate else None)
-        else:
-            domain = []
-            where_model = from_
-        select_recs = where_model.search(domain, offset, limit, orderby)
-
-        # 3 Read fields.
-        select_recs = select_recs.with_context(lang=self.env.user.lang if select.translate else None)
-        rows = [{
-            f.as_: val for f, val in zip_c(select.fas, val_row, strict=True)
-        } for val_row in zip_c(*(f.read(select_recs) for f in select.fas), strict=True)]
-
-        return rows
+    def query(self, stmt: Statement):
+        stmt.meta = self._meta
+        return stmt.execute()
 
     def from_clause(self, model: str):
         acl = self._meta.acl
