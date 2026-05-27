@@ -9,10 +9,10 @@ from typing import Optional
 import odoo.fields
 from odoo import models, _
 from odoo.tools.safe_eval import safe_eval
-from odoo.osv.expression import NEGATIVE_TERM_OPERATORS, TERM_OPERATORS_NEGATION
 
 import lark
 from lark.exceptions import VisitError
+from .compatible import NEG2POS_OPR
 from .acl import OqlAcl
 from .alias import AliasRule, AliasNode, AliasField
 from .compatible import zip_c, is_api_model
@@ -20,8 +20,6 @@ from .recs import *
 from .util import KeyPassingDefaultDict, tn, read_object
 
 _logger = logging.getLogger(__name__)
-_NEGATIVE_OPERATORS = NEGATIVE_TERM_OPERATORS
-_NEGATED_OPERATORS = {v: k for k, v in TERM_OPERATORS_NEGATION.items()}
 
 
 class OqlMeta:
@@ -343,8 +341,8 @@ class FieldAccess:
         is_root = self._is_root
         if self.next:  # Branch node
             dot_opr = "in"
-            if is_root and opr in _NEGATIVE_OPERATORS:  # Negative expression.
-                opr = _NEGATED_OPERATORS[opr]  # To positive operator.
+            if is_root and opr in NEG2POS_OPR:  # Negative expression.
+                opr = NEG2POS_OPR[opr]  # To positive operator.
                 dot_opr = "not in"  # Reverse logic at root `has` logic check.
             meta = self.meta
             rear_model = self._rear_model
