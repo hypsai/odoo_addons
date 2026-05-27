@@ -9,7 +9,8 @@ def ensure_model_meta(env):
     """
     Insert model meta into `ir.model` manually.
     """
-    model_names = ['test.oql.template', 'test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value', 'test.oql.tag']
+    model_names = ['test.oql.template', 'test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value',
+                   'test.oql.tag', 'test.oql.supplierinfo', 'test.oql.category']
     for model_name in model_names:
         # Search for existing model record
         meta = env["ir.model"].search([("model", "=", model_name)], limit=1)
@@ -29,6 +30,15 @@ def ensure_model_meta(env):
                 'transient': is_transient,
                 'order': 'id',  # Default ordering
             })
+
+
+class TestOqlCategory(models.Model):
+    _name = "test.oql.category"
+    _description = "Test OQL Category"
+
+    name = fields.Char("Name")
+    parent_id = fields.Many2one("test.oql.category", "Parent Category")
+    child_ids = fields.One2many("test.oql.category", "parent_id", "Child Categories")
 
 
 class TestOqlTemplate(models.Model):
@@ -98,3 +108,11 @@ class TestOqlAttributeValue(models.Model):
     name = fields.Char("Name")
     product_id = fields.Many2one("test.oql.product", "Product")
     attribute_id = fields.Many2one("test.oql.attribute", "Attribute")
+
+
+class TestOqlSupplierinfo(models.Model):
+    _name = "test.oql.supplierinfo"
+    _description = "Test OQL Supplier Information"
+
+    name = fields.Char("Name")
+    product_id = fields.Many2one("test.oql.product", "Product")

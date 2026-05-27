@@ -39,6 +39,9 @@ class TestOql(TransactionCase):
         tag_waterproof = env["test.oql.tag"].create({"name": "Waterproof:GTX", "tmpl_id": prod_cold.tmpl_id.id})
         tag_temperate = env["test.oql.tag"].create({"name": "Weather:Cold", "tmpl_id": prod_cold.tmpl_id.id})
         tag_hot = env["test.oql.tag"].create({"name": "Weather:Hot", "tmpl_id": prod_hot.tmpl_id.id})
+        # 2.5 Supplierinfo
+        env["test.oql.supplierinfo"].create({"name": "Danner Cold Boot", "product_id": prod_cold.id})
+        env["test.oql.supplierinfo"].create({"name": "Danner Hot Boot", "product_id": prod_hot.id})
 
         # 3 Terms
         # 3.1 Attr
@@ -363,7 +366,7 @@ class TestOql(TransactionCase):
             "from test.oql.product select id, spu_name where tag_ids order by id desc"
         )
         self.assertEqual(len(all_res), 2)
-        
+
         # Order by id descending, get first result
         res = self.env["test.oql.product"].oql(
             "from test.oql.product select id, spu_name where tag_ids order by id desc limit 1"
@@ -400,7 +403,7 @@ class TestOql(TransactionCase):
         res3 = self.env["test.oql.product"].oql(
             "from test.oql.product select id where tag_ids Order By id Desc"
         )
-        
+
         ids1 = [row['id'] for row in res1]
         ids2 = [row['id'] for row in res2]
         ids3 = [row['id'] for row in res3]
