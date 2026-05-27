@@ -13,7 +13,7 @@ jsonrpc = 'jsonrpc' if ODOO_VERSION >= 19 else 'json'
 
 __all__ = ["model_flush", "zip_c", "AND", "OR", "normalize_domain",
            "res_users_data", "res_users_groups_id", "jsonrpc",
-           "set_model_translation", "flush_translations"]
+           "set_model_translation", "flush_translations", "is_api_model"]
 
 if ODOO_VERSION >= 19:
     from odoo.fields import Domain
@@ -128,3 +128,12 @@ def flush_translations(env):
     if ODOO_VERSION < 16:
         model_flush(env['ir.translation'])
     model_flush(env['res.lang'])
+
+
+def is_api_model(method):
+    """Check whether `method` is decorated with `api.model` or `api.create_multi`"""
+    if ODOO_VERSION >= 19:
+        return getattr(method, "_api_model", False)
+    else:
+        odoo_api = getattr(method, "_api", None)
+        return odoo_api == "model" or odoo_api == "model_create"

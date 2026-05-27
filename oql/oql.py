@@ -14,7 +14,7 @@ import lark
 from lark.exceptions import VisitError
 from .acl import OqlAcl
 from .alias import AliasRule, AliasNode, AliasField
-from .compatible import zip_c
+from .compatible import zip_c, is_api_model
 from .recs import *
 from .util import KeyPassingDefaultDict, tn, read_object
 
@@ -354,9 +354,7 @@ class FieldAccess:
                 if names:
                     # e.g. WHERE product_id.active
                     fullpath = ".".join(names)
-                    domain = OqlDomain(f"{opr}({fullpath})",
-                                       root.name,
-                                       [(fullpath, "!=", False)])
+                    domain = OqlDomain(f"{opr}({fullpath})", root.name, [(fullpath, "!=", False)])
                     if pre_domain:
                         domain = OqlDomain.and_(pre_domain, domain)
                     return RecordSets([RecordSet(model, domain)])
@@ -366,31 +364,30 @@ class FieldAccess:
             else:
                 raise NotImplementedError(f"Unary operator `{opr}({tn(self.model)})` not implemented.")
         else:
+            # 1 Prepare meta.
             value_domain = None  # Only RecordSet value has domain info.
             if isinstance(value, RecordSet):
                 value_domain = value.domain
                 value = value.get_recs()
-            if names:
-                # Traditional Odoo domain field path.
-                fullpath = ".".join(names)
-                domain = OqlDomain(f"{fullpath} {opr} {value}",
-                                   root.name,
-                                   [(fullpath, opr, value)])
-                if pre_domain:
-                    domain = OqlDomain.and_(pre_domain, domain)
-                return RecordSets([RecordSet(root.model, domain)])
-            else:
-                # Term expression: models.Model (opr) value
-                if pre_domain:
-                    model = self.model.search(self.pre_domain.domain)  # Apply on pre-selected subset.
-                res = model.__oql_bin__(self.pre_domain, None, opr, value, value_domain)
-                if res is None:
-                    raise NotImplementedError(f"Operation `{tn(model)} {opr} {value}` not implemented yet. "
-                                              f"Please implement it in `{tn(model)}.__oql_bin__`.")
+            fullpath = ".".join(names) if names else None
+            # 2 Try customized `__oql_bin__` first.
+            oql_bin = model.__oql_bin__  # noqa
+            if pre_domain and not is_api_model(oql_bin):
+                recs = self.model.search(pre_domain.domain)  # Load record automatically for recordset level method.
+                oql_bin = recs.__oql_bin__
+            res = oql_bin(pre_domain, fullpath, opr, value, value_domain)
+            if res is not None:  # `None` means not implemented.
                 if not isinstance(res, models.Model):
-                    raise Exception(f"`{model._name}.__oql_bin__` returns `{type(res)}` data, expect records.")
+                    raise Exception(f"`{root.name}.__oql_bin__` returns `{type(res)}` data, but recordset expected.")
                 return RecordSets(
-                    [RecordSet(res.browse(), OqlDomain("__oql_bin__", res._name, [("id", "in", res.ids)]))])
+                    [RecordSet(res, OqlDomain("__oql_bin__", res._name, [("id", "in", res.ids)]))])
+            # 3 Try built-in binary logic.
+            if not fullpath:
+                fullpath = self.meta.get_path(root.name, opr, value, True)  # Try finding shorthand.
+            domain = OqlDomain(f"{fullpath} {opr} {value}", root.name, [(fullpath, opr, value)])
+            if pre_domain:
+                domain = OqlDomain.and_(pre_domain, domain)
+            return RecordSets([RecordSet(root.model, domain)])
 
     def flat(self) -> List["FieldAccess"]:
         """Product with `next` field accesses recursively to make a full Cartesian set.
