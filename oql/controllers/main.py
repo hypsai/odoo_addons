@@ -65,13 +65,15 @@ class OqlController(http.Controller):
             }
 
     @http.route('/oql/hint', type=jsonrpc, auth='user', csrf=False)
-    def oql_hint(self, model, content, cursor_index, limit=1000, offset=0):
+    def oql_hint(self, model, content, cursor_index, limit=1000, offset=0, hint_method='oql'):
         """Provide code completion hints for the OQL editor.
-        
-        Delegates to the model's ``oql_hint`` method (post-transform context)
-        or ``hinto`` method (pre-transform context, e.g. WHERE clause).
+
+        :param hint_method: 'oql' for full OQL hints (workbench),
+            'hinto' for WHERE-clause-only hints (search bar).
         """
         try:
+            if hint_method == 'hinto':
+                return request.env[model].hinto(content, cursor_index, limit=limit, offset=offset)
             return request.env[model].oql_hint(content, cursor_index, limit=limit, offset=offset)
         except Exception as e:
             _logger.debug("OQL hint error: %s", e)

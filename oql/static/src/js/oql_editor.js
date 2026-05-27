@@ -20,7 +20,8 @@
         this.onSearch = options.onSearch || null;
         this.onChange = options.onChange || null;
         this.enterMode = options.enterMode || 'newline';  // 'search' for Enter triggers search, 'newline' for Enter creates new line
-        
+        this.hintMethod = options.hintMethod || 'oql';    // 'oql' for full OQL, 'hinto' for WHERE clause only
+
         this.editor = null;
         this.$textarea = null;
         this._cachedHintsGroup = {};
@@ -252,7 +253,8 @@
                                 content: content,
                                 cursor_index: cursorIndex,
                                 limit: limit,
-                                offset: offset
+                                offset: offset,
+                                hint_method: self.hintMethod
                             },
                             id: Math.floor(Math.random() * 1000000)
                         }),
