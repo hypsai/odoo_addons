@@ -89,7 +89,7 @@ class TestOqlAttribute(models.Model):
     value_ids = fields.One2many("test.oql.attribute.value", "attribute_id", "Values")
     term_ids = fields.Many2many("oql.term", string="Terms")
 
-    def __oql_bin__(self, domain, opr, value, value_domain):
+    def __oql_bin__(self, domain, field, opr, value, value_domain):
         if domain.name == "self.term_ids":
             return self.value_ids.search([("id", "in", self.value_ids.ids), ("name", opr, value)])
         raise NotImplementedError()

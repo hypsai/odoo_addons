@@ -383,7 +383,7 @@ class FieldAccess:
                 # Term expression: models.Model (opr) value
                 if pre_domain:
                     model = self.model.search(self.pre_domain.domain)  # Apply on pre-selected subset.
-                res = model.__oql_bin__(self.pre_domain, opr, value, value_domain)
+                res = model.__oql_bin__(self.pre_domain, None, opr, value, value_domain)
                 if res is None:
                     raise NotImplementedError(f"Operation `{tn(model)} {opr} {value}` not implemented yet. "
                                               f"Please implement it in `{tn(model)}.__oql_bin__`.")

@@ -76,13 +76,15 @@ class OqlBase(models.AbstractModel):
 
     def __oql_bin__(self,
                     domain: Optional[OqlDomain],
+                    field: Optional[str],
                     opr: str,
                     value,
                     value_domain: Optional[OqlDomain]):
         """
         Implement this method in subclasses.
-        :param self: Records pre-selected with `domain`. It will be emtpy records when `domain` is None.
+        :param self: Records pre-selected with `domain`. It will be emtpy recordset when `domain` is None.
         :param domain: Domain for left operand `self`.
+        :param field: dot-style field path for the binary expression. `None` means evaluate on the recordset itself.
         :param opr: Odoo operator.
         :param value: Right operand, could be scalar or list or RecordSet or RecordSets.
         :param value_domain: Domain of the right operand, available only when right operand is RecordSet.

@@ -501,12 +501,14 @@ specific sizes (product attribute values).
     class ProductAttribute(models.Model):
         _inherit = 'product.attribute'
 
-        def __oql_bin__(self, domain, opr, value, value_domain):
+        def __oql_bin__(self, domain, field, opr, value, value_domain):
             """
             Custom logic for term-based binary operations.
 
             :param self: Records pre-filtered by ``domain`` (empty if none).
             :param domain: OqlDomain for the left operand (the term's domain).
+            :param field: dot-style field path for the binary expression.
+                          ``None`` means evaluate on the recordset itself.
             :param opr: Odoo domain operator (=, !=, in, like, ...).
             :param value: Right operand (scalar, list, or RecordSet).
             :param value_domain: Domain of the right operand when it's a RecordSet.
