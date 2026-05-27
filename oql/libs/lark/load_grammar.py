@@ -863,7 +863,7 @@ class FromPackageLoader:
         raise IOError('Cannot find grammar in given paths') from err
 
 
-stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)
+stdlib_loader = FromPackageLoader(__name__.rsplit('.', 1)[0], IMPORT_PATHS)
 
 
 
