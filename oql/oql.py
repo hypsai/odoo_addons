@@ -9,6 +9,7 @@ from typing import Optional
 import odoo.fields
 from odoo import models, _
 from odoo.tools.safe_eval import safe_eval
+from odoo.osv.expression import NEGATIVE_TERM_OPERATORS, TERM_OPERATORS_NEGATION
 
 import lark
 from lark.exceptions import VisitError
@@ -19,6 +20,8 @@ from .recs import *
 from .util import KeyPassingDefaultDict, tn, read_object
 
 _logger = logging.getLogger(__name__)
+_NEGATIVE_OPERATORS = NEGATIVE_TERM_OPERATORS
+_NEGATED_OPERATORS = {v: k for k, v in TERM_OPERATORS_NEGATION.items()}
 
 
 class OqlMeta:
@@ -171,7 +174,8 @@ class FieldAccess:
     pre_domain: OqlDomain
     """Pre-selector domain, select some records for further filtering."""
 
-    def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None, as_: str = None):
+    def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None,
+                 as_: str = None, _is_root=True):
         self.meta = meta
         model = model.browse()  # Make model data-inconscient.
         env = model.env
@@ -226,7 +230,7 @@ class FieldAccess:
             if domains:
                 remains = names[i+1:]
                 for child_domain in domains:
-                    next_.append(FieldAccess(env[child_domain.model], remains, meta, child_domain))
+                    next_.append(FieldAccess(env[child_domain.model], remains, meta, child_domain, _is_root=False))
                 break
             prefix = ".".join([tn(model), *plain_names])
             raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term. "
@@ -250,6 +254,7 @@ class FieldAccess:
         self._non_searchable_fields = non_searchable_fields
         self._tail_alias: Optional[AliasNode] = tail_alias  # Complex alias at tail.
         self._as = as_
+        self._is_root = _is_root
 
     @property
     def as_(self):
@@ -335,18 +340,26 @@ class FieldAccess:
         model = self.model
         names = self.names
         pre_domain = self.pre_domain
+        is_root = self._is_root
         if self.next:  # Branch node
+            dot_opr = "in"
+            if is_root and opr in _NEGATIVE_OPERATORS:  # Negative expression.
+                opr = _NEGATED_OPERATORS[opr]  # To positive operator.
+                dot_opr = "not in"  # Reverse logic at root `has` logic check.
             meta = self.meta
             rear_model = self._rear_model
             list_rec_set_y = []
             for child in self.next:
                 rec_sets = child._eval(una, opr, value)
                 for rec_set in rec_sets:
-                    path = meta.get_path(rear_model._name, ".", rec_set)
-                    fullpath = ".".join([*self.names, path])
-                    domain = OqlDomain(f"{fullpath} in {rec_set.domain}",
+                    if rear_model._name == rec_set.name:
+                        fullpath = ".".join(names)
+                    else:
+                        path = meta.get_path(rear_model._name, ".", rec_set)
+                        fullpath = ".".join([*names, path])
+                    domain = OqlDomain(f"{fullpath} {dot_opr} {rec_set.domain}",
                                        root.name,
-                                       [(fullpath, "in", rec_set.get_recs().ids)])
+                                       [(fullpath, dot_opr, rec_set.get_recs().ids)])
                     list_rec_set_y.append(RecordSet(model, domain))
             return RecordSets(list_rec_set_y)
         elif una:
