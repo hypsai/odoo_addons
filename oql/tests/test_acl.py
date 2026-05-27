@@ -5,7 +5,7 @@
 from odoo.exceptions import AccessError
 from odoo.tests import tagged, TransactionCase
 
-from .test_model_defs import ensure_model_meta
+from .test_model_defs import ensure_model_meta, post_test
 from ..acl import OqlAcl
 from ..compatible import res_users_data, res_users_groups_id
 
@@ -63,7 +63,7 @@ class TestOqlAcl(TransactionCase):
         """Get OqlAcl instance."""
         return OqlAcl(self.env)
 
-    @tagged("acl.basic")
+    @post_test("acl.basic")
     def test_acl_initialization(self):
         """Test basic ACL initialization and model access."""
         acl = self._get_acl()
@@ -74,7 +74,7 @@ class TestOqlAcl(TransactionCase):
         self.assertIsNotNone(product_acl)
         self.assertEqual(product_acl.model_name, "test.oql.product")
 
-    @tagged("acl.field")
+    @post_test("acl.field")
     def test_acl_field_check_read(self):
         """Test field-level read access check."""
         acl = self._get_acl()
@@ -90,7 +90,7 @@ class TestOqlAcl(TransactionCase):
         active_acl = product_acl["active"]
         self.assertTrue(active_acl.check("read"))
 
-    @tagged("acl.field")
+    @post_test("acl.field")
     def test_acl_field_check_write(self):
         """Test field-level write access check."""
         acl = self._get_acl()
@@ -101,7 +101,7 @@ class TestOqlAcl(TransactionCase):
         self.assertTrue(name_acl.check("write"))
         self.assertTrue(name_acl.perm_write)
 
-    @tagged("acl.fields")
+    @post_test("acl.fields")
     def test_acl_perm_fields(self):
         """Test getting permitted fields for a model."""
         acl = self._get_acl()
@@ -118,7 +118,7 @@ class TestOqlAcl(TransactionCase):
         self.assertIsInstance(writable_fields, set)
         self.assertIn("name", writable_fields)
 
-    @tagged("acl.path_permission")
+    @post_test("acl.path_permission")
     def test_acl_perm_paths_with_user(self):
         """Test path permission checking with a regular user."""
         env = self.env
@@ -191,7 +191,7 @@ class TestOqlAcl(TransactionCase):
         self.assertNotIn("active", allowed_paths)
         self.assertIn("tag_ids.name", allowed_paths)
 
-    @tagged("acl.check_field")
+    @post_test("acl.check_field")
     def test_acl_check_field_with_user(self):
         """Test field access check with a regular user."""
         env = self.env
@@ -234,7 +234,7 @@ class TestOqlAcl(TransactionCase):
         with self.assertRaises(AccessError):
             acl.check_field(recs, "active", "read")
 
-    @tagged("acl.multi_model")
+    @post_test("acl.multi_model")
     def test_acl_multiple_models_with_user(self):
         """Test ACL across multiple models with a regular user."""
         env = self.env
@@ -283,7 +283,7 @@ class TestOqlAcl(TransactionCase):
         self.assertIn("name", attribute_acl.perm_fields("read"))
         self.assertIn("name", tag_acl.perm_fields("read"))
 
-    @tagged("acl.relational")
+    @post_test("acl.relational")
     def test_acl_relational_fields_with_user(self):
         """Test ACL for relational fields with a regular user."""
         env = self.env
@@ -325,7 +325,7 @@ class TestOqlAcl(TransactionCase):
         # Should NOT have access to attribute_value_ids (not granted)
         self.assertNotIn("attribute_value_ids", readable_fields)
 
-    @tagged("acl.comprehensive")
+    @post_test("acl.comprehensive")
     def test_acl_complete_workflow(self):
         """Test complete ACL workflow with paths and fields."""
         acl = self._get_acl()
@@ -348,7 +348,7 @@ class TestOqlAcl(TransactionCase):
         recs = self.env["test.oql.product"].browse([self.prod_cold.id])
         acl.check_field(recs, "name", "read")
 
-    @tagged("acl.temp_access")
+    @post_test("acl.temp_access")
     def test_create_temp_model_access(self):
         """Test creating temporary ir.model.access records for testing."""
         env = self.env
@@ -371,7 +371,7 @@ class TestOqlAcl(TransactionCase):
         self.assertTrue(temp_access.perm_oql_fac_default_read)
         self.assertFalse(temp_access.perm_oql_fac_default_write)
 
-    @tagged("acl.with_user")
+    @post_test("acl.with_user")
     def test_acl_with_regular_user(self):
         """Test ACL with a regular (non-sudo) user to verify actual permission enforcement."""
         env = self.env
@@ -409,7 +409,7 @@ class TestOqlAcl(TransactionCase):
         # Should NOT have write access (perm_write=False and perm_oql_fac_default_write=False)
         self.assertNotIn("name", writable_fields)
 
-    @tagged("acl.field_restriction")
+    @post_test("acl.field_restriction")
     def test_acl_field_level_restriction(self):
         """Test field-level ACL restrictions with a regular user."""
         env = self.env
@@ -464,7 +464,7 @@ class TestOqlAcl(TransactionCase):
         # ID should always be readable
         self.assertIn("id", readable_fields)
 
-    @tagged("acl.temp_acl_field")
+    @post_test("acl.temp_acl_field")
     def test_create_temp_acl_field(self):
         """Test creating temporary oql.acl.field records."""
         env = self.env
@@ -518,7 +518,7 @@ class TestOqlAcl(TransactionCase):
         self.assertTrue(acl_active.perm_read)
         self.assertFalse(acl_active.perm_write)
 
-    @tagged("acl.temp_with_check")
+    @post_test("acl.temp_with_check")
     def test_acl_with_temp_records_user_context(self):
         """Test ACL checking with temporary access records in user context."""
         env = self.env
@@ -575,7 +575,7 @@ class TestOqlAcl(TransactionCase):
         self.assertNotIn("name", writable_fields)
         self.assertNotIn("active", writable_fields)
 
-    @tagged("acl.multiple_temp_records")
+    @post_test("acl.multiple_temp_records")
     def test_multiple_temp_acl_fields_user_context(self):
         """Test creating multiple temporary ACL field records with user context."""
         env = self.env
@@ -636,7 +636,7 @@ class TestOqlAcl(TransactionCase):
         self.assertNotIn("attribute_value_ids", readable_fields)
         self.assertNotIn("tag_ids", readable_fields)
 
-    @tagged("acl.cleanup")
+    @post_test("acl.cleanup")
     def test_temp_records_cleanup(self):
         """Test that temporary records can be properly cleaned up."""
         env = self.env
@@ -672,7 +672,7 @@ class TestOqlAcl(TransactionCase):
         self.assertFalse(temp_access.exists())
         self.assertFalse(acl_field.exists())
 
-    @tagged("acl.inheritance")
+    @post_test("acl.inheritance")
     def test_acl_inherited_model_permissions(self):
         """Test that permissions on parent model fields are inherited by child model."""
         env = self.env
@@ -817,7 +817,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Basic record-level rule filtering
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.basic")
+    @post_test("record_rule.basic")
     def test_record_rule_filter_by_name(self):
         """An ir.rule that restricts visible products by spu_name should
         be respected by searcho."""
@@ -834,7 +834,7 @@ class TestOqlRecordRule(TransactionCase):
         names = set(res.mapped("spu_name"))
         self.assertEqual({"Cold Boot"}, names)
 
-    @tagged("record_rule.basic")
+    @post_test("record_rule.basic")
     def test_record_rule_no_restriction(self):
         """Without any ir.rule, a user with model access should see all records."""
         self._grant_model_access(self.metaProduct)
@@ -844,7 +844,7 @@ class TestOqlRecordRule(TransactionCase):
         names = set(res.mapped("spu_name"))
         self.assertEqual({"Cold Boot", "Hot Boot"}, names)
 
-    @tagged("record_rule.basic")
+    @post_test("record_rule.basic")
     def test_record_rule_filter_active(self):
         """An ir.rule filtering active=True should exclude inactive records."""
         self._grant_model_access(self.metaProduct)
@@ -866,7 +866,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: oql() queries with record rules
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.oql")
+    @post_test("record_rule.oql")
     def test_record_rule_with_oql_select(self):
         """Verify oql() results are filtered by ir.rule."""
         self._grant_model_access(self.metaProduct)
@@ -883,7 +883,7 @@ class TestOqlRecordRule(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['spu_name'], "Hot Boot")
 
-    @tagged("record_rule.oql")
+    @post_test("record_rule.oql")
     def test_record_rule_oql_combined_where(self):
         """Record rule domain AND user's WHERE clause are combined."""
         self._grant_model_access(self.metaProduct)
@@ -901,7 +901,7 @@ class TestOqlRecordRule(TransactionCase):
         names = {row['spu_name'] for row in res}
         self.assertEqual({"Cold Boot", "Hot Boot"}, names)
 
-    @tagged("record_rule.oql")
+    @post_test("record_rule.oql")
     def test_record_rule_oql_empty_result(self):
         """When record rule matches nothing, query should return empty."""
         self._grant_model_access(self.metaProduct)
@@ -921,7 +921,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Multiple rules (AND logic)
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.multi")
+    @post_test("record_rule.multi")
     def test_record_rule_global_and(self):
         """Two global ir.rule records are intersected (AND logic).
 
@@ -948,7 +948,7 @@ class TestOqlRecordRule(TransactionCase):
         self.assertNotIn("Inactive Boot", names)
         self.assertEqual({"Cold Boot", "Hot Boot"}, names)
 
-    @tagged("record_rule.multi")
+    @post_test("record_rule.multi")
     def test_record_rule_group_or(self):
         """Two group ir.rule records are OR-ed together.
 
@@ -976,7 +976,7 @@ class TestOqlRecordRule(TransactionCase):
         # OR of group rules: Cold Boot OR Hot Boot = both
         self.assertEqual({"Cold Boot", "Hot Boot"}, names)
 
-    @tagged("record_rule.multi")
+    @post_test("record_rule.multi")
     def test_record_rule_global_and_group(self):
         """Global rule AND group rules OR: global AND (group1 OR group2).
 
@@ -1015,7 +1015,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Record rules with orderby / limit / offset
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.oql")
+    @post_test("record_rule.oql")
     def test_record_rule_with_limit(self):
         """LIMIT clause should work correctly under record rule filtering."""
         self._grant_model_access(self.metaProduct)
@@ -1026,7 +1026,7 @@ class TestOqlRecordRule(TransactionCase):
         )
         self.assertEqual(len(res), 1)
 
-    @tagged("record_rule.oql")
+    @post_test("record_rule.oql")
     def test_record_rule_with_orderby(self):
         """ORDER BY should work correctly with record rules."""
         self._grant_model_access(self.metaProduct)
@@ -1043,7 +1043,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Record rules combined with field-level ACL
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.field_acl")
+    @post_test("record_rule.field_acl")
     def test_record_rule_with_field_restriction(self):
         """Record-level rule + field-level ACL should both be enforced."""
         env = self.env
@@ -1089,7 +1089,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Record rule with no groups (user-specific rule)
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.basic")
+    @post_test("record_rule.basic")
     def test_record_rule_non_group_rule(self):
         """A rule without groups should still be computed by _compute_domain
         (Odoo applies non-global rules to all users)."""
@@ -1110,7 +1110,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Record rules across inherited models
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.inherit")
+    @post_test("record_rule.inherit")
     def test_record_rule_inherited_model(self):
         """Record rules on _inherits parent model are per-model, do NOT cascade.
 
@@ -1137,7 +1137,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Admin/sudo should NOT be affected
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.admin")
+    @post_test("record_rule.admin")
     def test_record_rule_admin_not_affected(self):
         """Admin/sudo user should bypass ir.rule restrictions."""
         self._grant_model_access(self.metaProduct)
@@ -1157,7 +1157,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Direct perm_records method
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.read_only")
+    @post_test("record_rule.read_only")
     def test_record_rule_perm_records_direct(self):
         """Directly test perm_records method with an ir.rule in place."""
         self._grant_model_access(self.metaProduct)
@@ -1180,7 +1180,7 @@ class TestOqlRecordRule(TransactionCase):
         # Verify the AND structure: [('id', '>', 0)] AND [rule domain]
         self.assertTrue(len(result_domain) > 1)
 
-    @tagged("record_rule.searcho")
+    @post_test("record_rule.searcho")
     def test_record_rule_searcho_and_direct_search(self):
         """Record rule via searcho should match direct Odoo search behavior."""
         self._grant_model_access(self.metaProduct)
@@ -1203,7 +1203,7 @@ class TestOqlRecordRule(TransactionCase):
         self.assertEqual(names_oql, names_direct)
         self.assertEqual({"Cold Boot"}, names_oql)
 
-    @tagged("record_rule.searcho")
+    @post_test("record_rule.searcho")
     def test_record_rule_searcho_id_query(self):
         """Record rule applied to a specific ID query."""
         self._grant_model_access(self.metaProduct)
@@ -1224,7 +1224,7 @@ class TestOqlRecordRule(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res.spu_name, "Cold Boot")
 
-    @tagged("record_rule.searcho")
+    @post_test("record_rule.searcho")
     def test_record_rule_searcho_una_expr(self):
         """Record rule combined with unary expression (bool field check)."""
         self._grant_model_access(self.metaProduct)
@@ -1244,7 +1244,7 @@ class TestOqlRecordRule(TransactionCase):
     # Tests: Additional edge cases
     # ------------------------------------------------------------------
 
-    @tagged("record_rule.edge")
+    @post_test("record_rule.edge")
     def test_record_rule_or_logic(self):
         """OR logic in WHERE clause should be properly intersected with record rule."""
         self._grant_model_access(self.metaProduct)
@@ -1263,7 +1263,7 @@ class TestOqlRecordRule(TransactionCase):
         names = set(res.mapped("spu_name"))
         self.assertEqual({"Cold Boot", "Hot Boot"}, names)
 
-    @tagged("record_rule.edge")
+    @post_test("record_rule.edge")
     def test_record_rule_matching_no_record(self):
         """Record rule matching no records should still allow searcho (returns empty)."""
         self._grant_model_access(self.metaProduct)

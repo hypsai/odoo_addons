@@ -2,7 +2,7 @@ from odoo import Command
 from odoo.tests import tagged, TransactionCase
 from ..oql import reader, OqlTransformer
 from ..compatible import set_model_translation, flush_translations
-from .test_model_defs import ensure_model_meta
+from .test_model_defs import ensure_model_meta, post_test
 
 
 @tagged("oql_query", '-at_install', 'post_install')
@@ -100,7 +100,7 @@ class TestOql(TransactionCase):
     def tearDown(self):
         super().tearDown()
 
-    @tagged("grammar")
+    @post_test("grammar")
     def test_grammar_parse(self):
         """Test basic OQL grammar parsing."""
         parsed = reader.query("from test.oql.product "
@@ -193,7 +193,7 @@ class TestOql(TransactionCase):
         res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and (tag_ids.name='Weather:Cold')")
         self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
-    @tagged("oql.const")
+    @post_test("oql.const")
     def test_constants_true_false_null(self):
         """Test TRUE, FALSE, NULL constants in OQL queries."""
         # Test TRUE constant - should return all products with active=True
@@ -204,7 +204,7 @@ class TestOql(TransactionCase):
         res_false = self.env["test.oql.product"].searcho("active = false")
         self.assertEqual({"Inactive Boot"}, set(res_false.mapped("spu_name")))
 
-    @tagged("oql.alias")
+    @post_test("oql.alias")
     def test_select_as_alias(self):
         """Test SELECT field AS alias syntax."""
         # Test simple field alias
@@ -240,7 +240,7 @@ class TestOql(TransactionCase):
         self.assertNotIn('id', res[0])
         self.assertNotIn('spu_name', res[0])
 
-    @tagged("oql.limit")
+    @post_test("oql.limit")
     def test_limit_clause(self):
         """Test LIMIT clause to restrict number of returned records."""
         # Test LIMIT 1 - should return only one product
@@ -258,7 +258,7 @@ class TestOql(TransactionCase):
         res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where Size='5' limit 1")
         self.assertEqual(len(res), 1)
 
-    @tagged("oql.offset")
+    @post_test("oql.offset")
     def test_offset_clause(self):
         """Test OFFSET clause to skip records."""
         # Get all products first to count total
@@ -273,7 +273,7 @@ class TestOql(TransactionCase):
         res = self.env["test.oql.product"].oql(f"from test.oql.product select spu_name where tag_ids offset {total_count}")
         self.assertEqual(len(res), 0)
 
-    @tagged("oql.pagination")
+    @post_test("oql.pagination")
     def test_limit_offset_combined(self):
         """Test combined LIMIT and OFFSET for pagination."""
         # Get all products first
@@ -299,20 +299,20 @@ class TestOql(TransactionCase):
             for row in res:
                 self.assertIn(row['spu_name'], all_names)
 
-    @tagged("oql.pagination")
+    @post_test("oql.pagination")
     def test_offset_exceeds_results(self):
         """Test OFFSET that exceeds total number of results."""
         # OFFSET larger than result set should return empty list
         res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids offset 100")
         self.assertEqual(len(res), 0)
 
-    @tagged("oql.pagination")
+    @post_test("oql.pagination")
     def test_limit_zero(self):
         """Test LIMIT 0 should have no effect"""
         res = self.env["test.oql.product"].oql("from test.oql.product select spu_name where tag_ids limit 0")
         self.assertEqual(len(res), 2)
 
-    @tagged("oql.pagination")
+    @post_test("oql.pagination")
     def test_limit_offset_with_complex_query(self):
         """Test LIMIT and OFFSET with complex WHERE conditions."""
         # Combine with OR logic
@@ -328,7 +328,7 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['spu_name'], "Cold Boot")
 
-    @tagged("oql.orderby")
+    @post_test("oql.orderby")
     def test_orderby_single_field_asc(self):
         """Test ORDER BY with single field in ascending order (default)."""
         res = self.env["test.oql.product"].oql(
@@ -338,7 +338,7 @@ class TestOql(TransactionCase):
         ids = [row['id'] for row in res]
         self.assertEqual(ids, sorted(ids))
 
-    @tagged("oql.orderby")
+    @post_test("oql.orderby")
     def test_orderby_single_field_desc(self):
         """Test ORDER BY with single field in descending order."""
         res = self.env["test.oql.product"].oql(
@@ -348,7 +348,7 @@ class TestOql(TransactionCase):
         ids = [row['id'] for row in res]
         self.assertEqual(ids, sorted(ids, reverse=True))
 
-    @tagged("oql.orderby")
+    @post_test("oql.orderby")
     def test_orderby_explicit_asc(self):
         """Test ORDER BY with explicit ASC keyword."""
         res = self.env["test.oql.product"].oql(
@@ -358,7 +358,7 @@ class TestOql(TransactionCase):
         ids = [row['id'] for row in res]
         self.assertEqual(ids, sorted(ids))
 
-    @tagged("oql.orderby")
+    @post_test("oql.orderby")
     def test_orderby_with_pagination(self):
         """Test ORDER BY combined with LIMIT and OFFSET."""
         # Get all products first to know the order
@@ -381,7 +381,7 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['id'], all_res[1]['id'])
 
-    @tagged("oql.orderby")
+    @post_test("oql.orderby")
     def test_orderby_with_term_query(self):
         """Test ORDER BY with term-based WHERE clause."""
         res = self.env["test.oql.product"].oql(
@@ -391,7 +391,7 @@ class TestOql(TransactionCase):
         ids = [row['id'] for row in res]
         self.assertEqual(ids, sorted(ids))
 
-    @tagged("oql.orderby")
+    @post_test("oql.orderby")
     def test_orderby_case_insensitive(self):
         """Test that ORDER BY keywords are case-insensitive."""
         res1 = self.env["test.oql.product"].oql(
@@ -413,7 +413,7 @@ class TestOql(TransactionCase):
     def assertHints(self, expected, actual):
         self.assertEqual(expected, {x["value"] for x in actual})
 
-    @tagged("oql.non_searchable")
+    @post_test("oql.non_searchable")
     def test_non_searchable_field_error(self):
         """Test that searching with non-searchable fields raises an exception.
 
@@ -445,7 +445,7 @@ class TestOql(TransactionCase):
                 "from test.oql.product select spu_name where name_no_store = 'Cold Boot' and Waterproof"
             )
 
-    @tagged("oql.translate")
+    @post_test("oql.translate")
     def test_translate_grammar_parse(self):
         """Test TRANSLATE keyword parsing in various positions."""
         # SELECT TRANSLATE
@@ -469,7 +469,7 @@ class TestOql(TransactionCase):
                               self._get_transformer())
         self.assertIsNotNone(parsed)
 
-    @tagged("oql.translate")
+    @post_test("oql.translate")
     def test_select_translate(self):
         """Test SELECT TRANSLATE returns translated field values."""
         self.env.user.lang = 'fr_FR'
@@ -479,7 +479,7 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['tmpl_id.name'], 'Botte Froide')
 
-    @tagged("oql.translate")
+    @post_test("oql.translate")
     def test_select_no_translate(self):
         """Test without TRANSLATE, SELECT returns original (untranslated) field values."""
         self.env.user.lang = 'fr_FR'
@@ -489,7 +489,7 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['tmpl_id.name'], 'Cold Boot')
 
-    @tagged("oql.translate")
+    @post_test("oql.translate")
     def test_where_translate(self):
         """Test WHERE TRANSLATE matches against translated field values."""
         self.env.user.lang = 'fr_FR'
@@ -499,7 +499,7 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['spu_name'], 'Cold Boot')
 
-    @tagged("oql.translate")
+    @post_test("oql.translate")
     def test_where_no_translate(self):
         """Test without WHERE TRANSLATE, search uses original (untranslated) field values."""
         self.env.user.lang = 'fr_FR'
@@ -508,7 +508,7 @@ class TestOql(TransactionCase):
         )
         self.assertEqual(len(res), 0)
 
-    @tagged("oql.translate")
+    @post_test("oql.translate")
     def test_translate_case_insensitive(self):
         """Test TRANSLATE keyword is case-insensitive."""
         self.env.user.lang = 'fr_FR'
@@ -518,7 +518,7 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['tmpl_id.name'], 'Botte Froide')
 
-    @tagged("oql.translate")
+    @post_test("oql.translate")
     def test_translate_select_where_both(self):
         """Test combining SELECT TRANSLATE with WHERE TRANSLATE."""
         self.env.user.lang = 'fr_FR'

@@ -3,6 +3,14 @@
 # @Author       : Chris
 # @Description  : Test model definitions for OQL testing
 from odoo import models, fields, api
+from odoo.tests import tagged
+
+
+def post_test(*tags):
+    """Method-level tag decorator that always includes "-at_install" and
+    "post_install", avoiding Odoo's "tests should be either at_install or
+    post_install" warning when using @tagged on individual methods."""
+    return tagged("-at_install", "post_install", *tags)
 
 
 def ensure_model_meta(env):
@@ -64,7 +72,7 @@ class TestOqlProduct(models.Model):
     _inherits = {"test.oql.template": "tmpl_id"}
 
     name = fields.Char("Name", compute="_compute_name", store=True)
-    name_no_store = fields.Char("Name", compute="_compute_name_no_store")
+    name_no_store = fields.Char("Name No Store", compute="_compute_name_no_store")
     spu_name = fields.Char(related="tmpl_id.name", string="Template Name", readonly=False)
     tmpl_id = fields.Many2one("test.oql.template", "Template",
                               delegate=True, required=True, ondelete="cascade")
