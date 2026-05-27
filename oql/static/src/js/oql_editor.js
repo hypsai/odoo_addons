@@ -155,6 +155,15 @@
         },
 
         /**
+         * Refresh the editor layout
+         */
+        refresh: function() {
+            if (this.editor) {
+                this.editor.refresh();
+            }
+        },
+
+        /**
          * Destroy the editor instance
          */
         destroy: function() {
