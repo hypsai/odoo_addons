@@ -359,7 +359,7 @@ odoo.define('oql_web.oql_search_bar', function (require) {
                 
                 // Initialize CodeMirror for this item
                 setTimeout(function () {
-                    var cm = CodeMirror.fromTextArea($textarea[0], {
+                    var cm = CodeMirrorOQL.fromTextArea($textarea[0], {
                         mode: 'text/x-oql',
                         lineNumbers: false,
                         readOnly: true,

@@ -31,9 +31,9 @@
          * Initialize the CodeMirror editor
          */
         start: function() {
-            if (typeof CodeMirror === 'undefined') {
-                console.error('[OQL] CodeMirror not loaded!');
-                return Promise.reject(new Error('CodeMirror not loaded'));
+            if (typeof CodeMirrorOQL === 'undefined') {
+                console.error('[OQL] CodeMirrorOQL not loaded!');
+                return Promise.reject(new Error('CodeMirrorOQL not loaded'));
             }
 
             var self = this;
@@ -42,7 +42,7 @@
 
             return new Promise(function(resolve) {
                 requestAnimationFrame(function() {
-                    self.editor = CodeMirror.fromTextArea(self.$textarea[0], {
+                    self.editor = CodeMirrorOQL.fromTextArea(self.$textarea[0], {
                         mode: 'text/x-oql',
                         lineNumbers: self.lineNumbers,
                         readOnly: self.readonly,
@@ -178,7 +178,7 @@
             strict = strict || false;
             
             var self = this;
-            CodeMirror.showHint(cm, function(cm, callback) {
+            CodeMirrorOQL.showHint(cm, function(cm, callback) {
                 self._getHints(cm, strict).then(function(hints) {
                     callback(hints);
                 }).catch(function(error) {

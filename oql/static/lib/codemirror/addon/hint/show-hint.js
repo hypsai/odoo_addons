@@ -9,7 +9,7 @@
   else if (typeof define == "function" && define.amd) // AMD
     define(["../../lib/codemirror"], mod);
   else // Plain browser env
-    mod(CodeMirror);
+    mod(CodeMirrorOQL);
 })(function(CodeMirror) {
   "use strict";
 

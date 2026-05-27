@@ -12,20 +12,20 @@
      * Rules are based on oql.lark grammar definition
      */
     function registerOQLMode() {
-        // Check if CodeMirror is available
-        if (typeof CodeMirror === 'undefined') {
-            console.error('[OQL Highlight] CodeMirror not loaded!');
+        // Check if CodeMirrorOQL is available
+        if (typeof CodeMirrorOQL === 'undefined') {
+            console.error('[OQL Highlight] CodeMirrorOQL not loaded!');
             return false;
         }
 
         // Avoid re-registering if already registered
-        if (CodeMirror.modes.oql) {
+        if (CodeMirrorOQL.modes.oql) {
             console.log('[OQL Highlight] OQL mode already registered');
             return true;
         }
 
         // Define the OQL mode with complete syntax rules based on oql.lark
-        CodeMirror.defineMode('oql', function() {
+        CodeMirrorOQL.defineMode('oql', function() {
             return {
                 token: function(stream) {
                     // Skip whitespace
@@ -113,7 +113,7 @@
         });
 
         // Also define MIME type
-        CodeMirror.defineMIME('text/x-oql', 'oql');
+        CodeMirrorOQL.defineMIME('text/x-oql', 'oql');
 
         console.log('[OQL Highlight] OQL mode registered successfully');
         return true;
@@ -163,12 +163,12 @@
     }
 
     // Auto-initialize when script loads
-    if (typeof CodeMirror !== 'undefined') {
+    if (typeof CodeMirrorOQL !== 'undefined') {
         init();
     } else {
-        // Wait for CodeMirror to load
+        // Wait for CodeMirrorOQL to load
         window.addEventListener('load', function() {
-            if (typeof CodeMirror !== 'undefined') {
+            if (typeof CodeMirrorOQL !== 'undefined') {
                 init();
             }
         });
