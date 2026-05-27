@@ -4,7 +4,7 @@
 # @Description  :
 from typing import List
 
-from jmespath import visitor
+from ..jmespath import visitor
 
 __all__ = ["extract_fields"]
 

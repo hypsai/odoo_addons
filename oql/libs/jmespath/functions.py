@@ -1,9 +1,9 @@
 import math
 import json
 
-from jmespath import exceptions
-from jmespath.compat import string_type as STRING_TYPE
-from jmespath.compat import get_methods
+from . import exceptions
+from .compat import string_type as STRING_TYPE
+from .compat import get_methods
 
 
 # python types -> jmespath types

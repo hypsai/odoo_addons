@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Iterable, Type
 
 import jinja2
 import jinja2.meta
-import jmespath
+from .libs import jmespath
 from odoo import fields, _
 from odoo.models import BaseModel
 

@@ -2,7 +2,7 @@ import string
 import warnings
 from json import loads
 
-from jmespath.exceptions import LexerError, EmptyExpressionError
+from .exceptions import LexerError, EmptyExpressionError
 
 
 class Lexer(object):

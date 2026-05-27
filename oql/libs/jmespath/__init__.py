@@ -1,5 +1,5 @@
-from jmespath import parser
-from jmespath.visitor import Options
+from . import parser
+from .visitor import Options
 
 __version__ = '1.0.1'
 

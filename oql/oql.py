@@ -10,8 +10,8 @@ import odoo.fields
 from odoo import models, _
 from odoo.tools.safe_eval import safe_eval
 
-import lark
-from lark.exceptions import VisitError
+from .libs import lark
+from .libs.lark.exceptions import VisitError
 from .compatible import NEG2POS_OPR
 from .acl import OqlAcl
 from .alias import AliasRule, AliasNode, AliasField
