@@ -34,15 +34,17 @@ odoo.define('oql.oql_editor_widget', function (require) {
 
         _initEditor: function () {
             var self = this;
+            var options = this.nodeOptions || {};
 
             // Create OQL Editor Core instance
             this.oqlEditor = new window.OQLEditorCore({
                 container: this.$el,
-                model: this.model,
-                res_id: this.res_id,
+                model: options.model || this.model,
+                res_id: options.res_id || this.res_id,
                 fieldName: this.name,
                 readonly: this.isReadonly,
-                lineNumbers: true,
+                lineNumbers: options.line_numbers !== undefined ? options.line_numbers : true,
+                hintMethod: options.hint_method || 'hinto',
                 onChange: function (value) {
                     self._notifyChanges();
                 }
