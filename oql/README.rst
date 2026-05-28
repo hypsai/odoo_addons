@@ -532,7 +532,7 @@ With this implementation, ``EuShoeSize = '40'`` works as follows:
 .. warning::
 
    ``__oql_bin__`` must return a recordset (``models.Model`` instance).
-   Returning ``None`` raises ``NotImplementedError``.
+   Returning ``None`` falls through to OQL's built-in logic for the operator.
 
 .. _access-control:
 

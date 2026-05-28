@@ -388,7 +388,7 @@ class FieldAccess:
                 recs = self.model.search(pre_domain.domain)  # Load record automatically for recordset level method.
                 oql_bin = recs.__oql_bin__
             res = oql_bin(pre_domain, fullpath, opr, value, value_domain)
-            if res is not None:  # `None` means not implemented.
+            if res is not None:  # `None` means fall through to built-in logic.
                 if not isinstance(res, models.Model):
                     raise Exception(f"`{root.name}.__oql_bin__` returns `{type(res)}` data, but recordset expected.")
                 return RecordSets(

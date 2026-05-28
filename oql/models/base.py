@@ -88,6 +88,6 @@ class OqlBase(models.AbstractModel):
         :param opr: Odoo operator.
         :param value: Right operand, could be scalar or list or RecordSet or RecordSets.
         :param value_domain: Domain of the right operand, available only when right operand is RecordSet.
-        :return: `None` means `opr` not implemented.
+        :return: `None` means fall through to built-in logic for `opr`.
         """
         pass
