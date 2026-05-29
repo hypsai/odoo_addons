@@ -7,11 +7,12 @@
         <field name="model">mcp.base.tool</field>
         <field name="arch" type="xml">
             <tree editable="bottom" decoration-muted="not active">
+                <field name="active" widget="boolean_toggle"/>
                 <field name="name"/>
                 <field name="model_id"/>
                 <field name="method_id"/>
                 <field name="is_code_first"/>
-                <field name="active" widget="boolean_toggle"/>
+                <field name="description"/>
             </tree>
         </field>
     </record>
@@ -96,28 +97,6 @@
         <field name="res_model">mcp.base.tool</field>
         <field name="view_mode">tree,form</field>
         <field name="context">{}</field>
-    </record>
-
-    <!-- ═══ ir.model Form Extension: MCP Tools Tab ═══ -->
-    <record id="view_ir_model_form_inherit" model="ir.ui.view">
-        <field name="name">ir.model.form.inherit.mcp.tools</field>
-        <field name="model">ir.model</field>
-        <field name="inherit_id" ref="base.view_model_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//notebook" position="inside">
-                <page string="MCP Tools" name="mcp_tools">
-                    <field name="mcp_tool_ids" context="{'default_model_id': active_id}">
-                        <tree editable="bottom" decoration-muted="not active">
-                            <field name="name"/>
-                            <field name="method_id"/>
-                            <field name="is_code_first"/>
-                            <field name="active" widget="boolean_toggle"/>
-                            <field name="model_id" invisible="1"/>
-                        </tree>
-                    </field>
-                </page>
-            </xpath>
-        </field>
     </record>
 
 </odoo>

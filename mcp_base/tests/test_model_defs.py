@@ -76,6 +76,37 @@ class TestMcpBaseToolInherited(models.Model):
         return f"{greeting}, {name}! Welcome back."
 
 
+# ── Delegation inheritance pair for testing @api.model vs recordset
+#     filtering on name_search and _sync_tools_from_registry ─────────
+
+class TestMcpBaseToolParent(models.Model):
+    _name = "test.mcp.base.tool.parent"
+    _description = "MCP Tool Parent Test"
+
+    @mcp_tool
+    @api.model
+    def parent_api_model_method(self):
+        """An @api.model method defined on the parent — must NOT appear
+        on child models via delegation inheritance."""
+        return "parent api model"
+
+    @mcp_tool
+    def parent_recordset_method(self, name: str):
+        """A recordset method on the parent — MAY appear on child models."""
+        return f"Parent: {name}"
+
+
+class TestMcpBaseToolChild(models.Model):
+    _name = "test.mcp.base.tool.child"
+    _inherit = "test.mcp.base.tool.parent"
+    _description = "MCP Tool Child Test"
+
+    @mcp_tool
+    def child_method(self, value: int):
+        """A recordset method defined on the child model."""
+        return value * 2
+
+
 def ensure_model_meta(env, model_names):
     """
     Insert model meta into `ir.model` manually.

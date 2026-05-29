@@ -50,9 +50,6 @@ class TestMCPController(common.HttpCase):
 
         # Sync @mcp_tool methods into mcp.base.tool ORM records.
         ensure_tool_records(self.env, model_names={"test.mcp.base.tool"})
-        # Invalidate the tools cache so the controller picks up fresh ORM data.
-        from ..controllers import main as main_mod
-        main_mod._tools_cache = None
 
         # Default auth: plain text X-User / X-Password headers (easy to configure)
         self._auth_headers = {
@@ -232,34 +229,13 @@ class TestMCPController(common.HttpCase):
     
     def test_mcp_tools_call_success(self):
         """Test successful tool call via tools/call"""
-        # First get available tools
-        list_payload = {
-            "jsonrpc": "2.0",
-            "id": 10,
-            "method": "tools/list",
-            "params": {}
-        }
-
-        list_response = self.url_open(
-            '/mcp',
-            timeout=20,
-            data=json.dumps(list_payload),
-            headers=self._auth_headers
-        )
-
-        tools = list_response.json()['result']['tools']
-        self.assertGreater(len(tools), 0, "No MCP tools available for testing")
-
-        # Try to call the first available tool
-        first_tool = tools[0]
-        tool_name = first_tool['name']
-
+        # Call a known @api.model tool that doesn't require a recordset.
         call_payload = {
             "jsonrpc": "2.0",
             "id": 11,
             "method": "tools/call",
             "params": {
-                "name": tool_name,
+                "name": "test.mcp.base.tool:get_customers",
                 "arguments": {}
             }
         }
@@ -420,50 +396,6 @@ class TestMCPController(common.HttpCase):
         # Connection header may contain multiple values
         connection = response.headers.get('Connection', '')
         self.assertIn('keep-alive', connection)
-
-    def test_mcp_tools_caching(self):
-        """Test that tool info is cached between requests"""
-        # First request
-        payload1 = {
-            "jsonrpc": "2.0",
-            "id": 16,
-            "method": "tools/list",
-            "params": {}
-        }
-
-        response1 = self.url_open(
-            '/mcp',
-            timeout=20,
-            data=json.dumps(payload1),
-            headers=self._auth_headers
-        )
-
-        tools1 = response1.json()['result']['tools']
-
-        # Second request
-        payload2 = {
-            "jsonrpc": "2.0",
-            "id": 17,
-            "method": "tools/list",
-            "params": {}
-        }
-
-        response2 = self.url_open(
-            '/mcp',
-            timeout=20,
-            data=json.dumps(payload2),
-            headers=self._auth_headers
-        )
-
-        tools2 = response2.json()['result']['tools']
-
-        # Both should return same number of tools
-        self.assertEqual(len(tools1), len(tools2))
-
-        # Tool structures should be identical (cached)
-        self.assertGreater(len(tools1), 0, "No tools found for caching test")
-        self.assertEqual(tools1[0]['name'], tools2[0]['name'])
-        self.assertEqual(tools1[0]['description'], tools2[0]['description'])
 
     def test_mcp_authentication_without_credentials(self):
         """Test that requests without credentials are rejected (no dev mode fallback)"""
@@ -1157,37 +1089,6 @@ class TestMCPController(common.HttpCase):
             headers=self._auth_headers,
         )
         self.assertEqual(response.status_code, 202)
-
-    def test_mcp_tools_list_cache(self):
-        """First tools/list populates the cache, second call hits it."""
-        # Ensure cache starts cold for this test
-        from ..controllers import main as main_mod
-        main_mod._tools_cache = None
-
-        def _list_tools(req_id):
-            return self.url_open(
-                '/mcp', timeout=20,
-                data=json.dumps({
-                    "jsonrpc": "2.0", "id": req_id,
-                    "method": "tools/list", "params": {},
-                }),
-                headers=self._auth_headers,
-            )
-
-        # First call: cache should be empty before, populated after
-        self.assertIsNone(main_mod._tools_cache, "Cache should be cold before first call")
-        resp1 = _list_tools(31)
-        self.assertEqual(resp1.status_code, 200)
-        self.assertIsNotNone(main_mod._tools_cache, "Cache should be populated after first call")
-        cache_key_after_first = main_mod._tools_cache[0]
-
-        # Second call: same registry, should hit cache (key unchanged)
-        resp2 = _list_tools(32)
-        self.assertEqual(resp2.status_code, 200)
-        self.assertEqual(
-            main_mod._tools_cache[0], cache_key_after_first,
-            "Cache key should remain unchanged (same registry)",
-        )
 
     def test_mcp_tool_call_idempotent_same_result(self):
         """Same tool + same arguments → same result (no side-effects)."""

@@ -34,6 +34,7 @@
     },
     'data': [
         'security/ir.model.access.csv',
+        'views/ir_model_views.xml',
         'views/mcp_base_tool_views.xml',
     ],
     # Required for v13-v19 compatibility: explicitly declare controllers
@@ -42,4 +43,5 @@
     'installable': True,
     'application': True,
     'auto_install': False,
+    'post_init_hook': '_post_init_sync_tools',
 }
