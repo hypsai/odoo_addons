@@ -7,6 +7,14 @@ from odoo.release import version_info
 ODOO_VERSION = version_info[0]
 
 
+def model_flush(model, fields=None):
+    """Flush pending model writes — compatible across Odoo versions."""
+    if ODOO_VERSION >= 16:
+        model.flush_model(fields)
+    else:
+        model.flush(fields)
+
+
 def request_update_env(req, uid: int):
     if ODOO_VERSION >= 16:
         req.update_env(uid)

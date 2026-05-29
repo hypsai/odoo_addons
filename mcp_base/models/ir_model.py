@@ -2,7 +2,7 @@
 from odoo import fields, models
 
 
-class IrModel(models.Model):
+class McpBaseIrModel(models.Model):
     _inherit = "ir.model"
 
     mcp_tool_ids = fields.One2many(

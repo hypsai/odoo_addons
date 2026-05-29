@@ -253,10 +253,16 @@ class McpController(http.Controller):
         }
 
     def _handle_list_tools(self, params):
-        """Handle tools/list request. Reads all tool definitions from the ORM."""
+        """Handle tools/list request. Reads tool definitions from the ORM,
+        filtered by per-tool ACL."""
         tools = []
         Tool = request.env['mcp.base.tool']
-        for rec in Tool.search([('active', '=', True)]):
+        AclTool = request.env['mcp.base.tool.acl'].sudo()
+        permitted_ids = AclTool.perm_tools()
+        if not permitted_ids:
+            return {"tools": []}
+
+        for rec in Tool.search([('id', 'in', list(permitted_ids))]):
             model_name = rec.model_id.model
             method_name = rec.method_id.name
 
@@ -309,6 +315,14 @@ class McpController(http.Controller):
             if not tool:
                 return {
                     "content": [{"type": "text", "text": f"Tool not found: {name}"}],
+                    "isError": True,
+                }
+
+            # Verify the user is permitted to call this tool (ACL).
+            permitted_ids = request.env['mcp.base.tool.acl'].sudo().perm_tools()
+            if tool.id not in permitted_ids:
+                return {
+                    "content": [{"type": "text", "text": f"Tool not permitted: {name}"}],
                     "isError": True,
                 }
 

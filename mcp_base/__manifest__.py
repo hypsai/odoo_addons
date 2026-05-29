@@ -36,6 +36,8 @@
         'security/ir.model.access.csv',
         'views/ir_model_views.xml',
         'views/mcp_base_tool_views.xml',
+        'views/ir_model_access_views.xml',
+        'views/mcp_base_menu.xml',
     ],
     # Required for v13-v19 compatibility: explicitly declare controllers
     # so the routing map includes /mcp in test environments.

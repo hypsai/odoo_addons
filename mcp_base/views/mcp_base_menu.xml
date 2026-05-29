@@ -1,0 +1,25 @@
+<odoo>
+    <data>
+
+        <menuitem id="menu_tech_mcp"
+                  name="MCP Framework"
+                  parent="base.menu_custom"
+                  sequence="50">
+        </menuitem>
+
+        <menuitem id="menu_tech_mcp_tools"
+                  name="Tools"
+                  parent="menu_tech_mcp"
+                  action="action_mcp_base_tool"
+                  sequence="10">
+        </menuitem>
+
+        <menuitem id="menu_tech_mcp_acl_tree"
+                  name="Access Rights"
+                  parent="menu_tech_mcp"
+                  action="base.ir_access_act"
+                  sequence="20">
+        </menuitem>
+
+    </data>
+</odoo>

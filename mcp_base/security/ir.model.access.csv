@@ -1,3 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_mcp_base_tool_admin,access_mcp_base_tool_admin,model_mcp_base_tool,,1,1,1,1
 access_mcp_base_method_admin,access_mcp_base_method_admin,model_mcp_base_method,,1,1,1,1
+access_mcp_base_tool_acl_admin,access_mcp_base_tool_acl_admin,model_mcp_base_tool_acl,,1,1,1,1
