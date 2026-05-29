@@ -53,20 +53,62 @@ def search_customers(self, name: str):
         </div>
         <div class="col-md-6 col-lg-3 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                <h5 style="font-weight: 700; color: #667eea;"><i class="fa fa-lock mr-2"></i>Zero Config</h5>
-                <p class="text-muted small">Automatic JSON schema from type hints. No manual work.</p>
+                <h5 style="font-weight: 700; color: #667eea;"><i class="fa fa-magic mr-2"></i>Zero Config</h5>
+                <p class="text-muted small">Automatic JSON schema from type hints and docstrings. No manual work.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-3 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                <h5 style="font-weight: 700; color: #667eea;"><i class="fa fa-file-text-o mr-2"></i>Smart Docs</h5>
-                <p class="text-muted small">Extracts parameter descriptions from docstrings automatically.</p>
+                <h5 style="font-weight: 700; color: #667eea;"><i class="fa fa-shield mr-2"></i>Fine-Grained ACL</h5>
+                <p class="text-muted small">Per-tool access control on top of standard Odoo ACL &mdash; control exactly which AI agents see which tools.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-3 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
                 <h5 style="font-weight: 700; color: #667eea;"><i class="fa fa-rocket mr-2"></i>Production Ready</h5>
                 <p class="text-muted small">Streamable HTTP, JSON-RPC 2.0, enterprise-grade reliability.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code First vs Config First -->
+    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
+        <div class="col-12 text-center mb-4">
+            <h3 style="font-weight: 700; color: #667eea;"><i class="fa fa-code mr-2"></i>Two Ways to Build Tools</h3>
+            <p class="text-muted">Choose the workflow that fits your team &mdash; developer-friendly decorators or admin-friendly UI.</p>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div style="background: white; border: 2px solid #667eea; border-radius: 12px; padding: 25px; height: 100%;">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <span style="display: inline-block; background: #667eea; color: white; padding: 6px 18px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">CODE FIRST</span>
+                </div>
+                <h4 style="font-weight: 700; color: #283593; text-align: center;">Decorate. Ship. Done.</h4>
+                <p style="color: #555; margin-bottom: 10px;">Write Python methods and tag them with <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">@mcp_tool</code>. The framework auto-discovers them on startup:</p>
+                <ul style="color: #555; padding-left: 18px;">
+                    <li><strong>Python type hints</strong> &rarr; JSON Schema automatically</li>
+                    <li><strong>Docstrings</strong> &rarr; parameter descriptions</li>
+                    <li>Respects <code style="background: #e9ecef; padding: 1px 4px; border-radius: 3px; font-size: 0.9em;">@api.model</code> and model inheritance</li>
+                    <li>Auto-synced at every server restart</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div style="background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 25px; height: 100%;">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <span style="display: inline-block; background: #6c757d; color: white; padding: 6px 18px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">CONFIG FIRST</span>
+                </div>
+                <h4 style="font-weight: 700; color: #283593; text-align: center;">No Code. Just Configure.</h4>
+                <p style="color: #555; margin-bottom: 6px;">Define tools directly in the Odoo UI &mdash; no Python required. Two entry points:</p>
+                <p style="color: #888; font-size: 0.85rem; margin-bottom: 12px;">
+                    <strong>1)</strong> <code style="background: #e9ecef; padding: 1px 5px; border-radius: 3px;">Settings &rarr; Technical &rarr; MCP Framework &rarr; Tools</code> (global list)<br>
+                    <strong>2)</strong> <code style="background: #e9ecef; padding: 1px 5px; border-radius: 3px;">Settings &rarr; Technical &rarr; Database Structure &rarr; Models &rarr; MCP Tools</code> tab (scoped to that model)
+                </p>
+                <ul style="color: #555; padding-left: 18px;">
+                    <li>Pick a <strong>model</strong> and a <strong>method</strong> from dropdowns</li>
+                    <li>Write a <strong>docstring</strong> in Google/NumPy/Sphinx style</li>
+                    <li>System auto-generates JSON Schema from your docstring</li>
+                    <li>Editable metadata &mdash; description, input schema, active flag</li>
+                </ul>
             </div>
         </div>
     </div>

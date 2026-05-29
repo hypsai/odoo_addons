@@ -121,9 +121,17 @@ class TestMcpBaseToolORM(common.TransactionCase):
         self._create_tool('config_unique_test')
         # _sql_constraints violations may surface as psycopg2.UniqueViolation
         # (raw) or odoo.exceptions.ValidationError depending on Odoo version.
-        # Catch Exception for v13–v19 compatibility.
-        with self.assertRaises(Exception):
-            self._create_tool('config_unique_test')
+        # The raw psycopg2 error aborts the current transaction, which poisons
+        # the outer TransactionCase savepoint.  Nest a savepoint here so we
+        # can roll back to it *after* catching the expected exception, keeping
+        # the outer transaction clean for subsequent tests.
+        self.env.cr.execute('SAVEPOINT test_unique_model_method')
+        try:
+            with self.assertRaises(Exception):
+                self._create_tool('config_unique_test')
+        finally:
+            self.env.cr.execute(
+                'ROLLBACK TO SAVEPOINT test_unique_model_method')
 
     def test_same_method_different_model(self):
         """Same method name on different models is allowed."""
