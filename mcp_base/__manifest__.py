@@ -24,7 +24,7 @@
         intelligent assistants, and LLM integrations with your Odoo ERP.
     """,
     'category': 'Tools/AI',
-    'author': 'Chris',
+    'author': 'Hypsai.ai',
     'website': 'https://github.com/chrisking94/odoo_addons/tree/main/mcp_base',
     'license': 'LGPL-3',
     'depends': ['base'],
@@ -33,7 +33,12 @@
         'python': [],
     },
     'data': [
+        'security/ir.model.access.csv',
+        'views/mcp_base_tool_views.xml',
     ],
+    # Required for v13-v19 compatibility: explicitly declare controllers
+    # so the routing map includes /mcp in test environments.
+    'controllers': ['controllers/main.py'],
     'installable': True,
     'application': True,
     'auto_install': False,

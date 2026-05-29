@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ═══ mcp.base.tool Tree View ═══ -->
+    <record id="view_mcp_base_tool_tree" model="ir.ui.view">
+        <field name="name">mcp.base.tool.tree</field>
+        <field name="model">mcp.base.tool</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" decoration-muted="not active">
+                <field name="name"/>
+                <field name="model_id"/>
+                <field name="method_id"/>
+                <field name="is_code_first"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ═══ mcp.base.tool Form View ═══ -->
+    <record id="view_mcp_base_tool_form" model="ir.ui.view">
+        <field name="name">mcp.base.tool.form</field>
+        <field name="model">mcp.base.tool</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <widget name="web_ribbon" title="Code First"
+                            attrs="{'invisible': [('is_code_first', '=', False)]}"
+                            bg_color="bg-info"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="toggle_active" type="object"
+                                class="oe_stat_button" icon="fa-archive"
+                                attrs="{'invisible': [('is_code_first', '=', True)]}">
+                            <field name="active" widget="boolean_button"
+                                   options='{"terminology": "archive"}'/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name" string="Tool Name"/>
+                        <h1><field name="name" placeholder="e.g. Search Customers"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="model_id"
+                                   attrs="{'readonly': [('is_code_first', '=', True)]}"/>
+                            <field name="method_id"
+                                   attrs="{'readonly': [('is_code_first', '=', True)]}"
+                                   domain="[('model_id', '=', model_id)]"
+                                   options="{'no_create': True, 'no_open': True}"/>
+                        </group>
+                        <group>
+                            <field name="is_code_first"/>
+                            <field name="active"
+                                   attrs="{'invisible': [('is_code_first', '=', True)]}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Docstring">
+                            <field name="docstring" colspan="2" nolabel="1"
+                                   attrs="{'readonly': [('is_code_first', '=', True)]}"
+                                   placeholder="Write a docstring in Google, NumPy, or Sphinx style to define this tool's parameters and behavior..."/>
+                        </page>
+                        <page string="Generated Metadata">
+                            <group>
+                                <field name="description" colspan="2" nolabel="1"/>
+                            </group>
+                            <group string="Input Schema">
+                                <field name="input_schema" colspan="2" nolabel="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ═══ Search View ═══ -->
+    <record id="view_mcp_base_tool_search" model="ir.ui.view">
+        <field name="name">mcp.base.tool.search</field>
+        <field name="model">mcp.base.tool</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="model_id"/>
+                <field name="method_id"/>
+                <filter string="Code First" name="code_first" domain="[('is_code_first','=',True)]"/>
+                <filter string="Config First" name="config_first" domain="[('is_code_first','=',False)]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active','=',False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ═══ Window Action ═══ -->
+    <record id="action_mcp_base_tool" model="ir.actions.act_window">
+        <field name="name">MCP Tools</field>
+        <field name="res_model">mcp.base.tool</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- ═══ ir.model Form Extension: MCP Tools Tab ═══ -->
+    <record id="view_ir_model_form_inherit" model="ir.ui.view">
+        <field name="name">ir.model.form.inherit.mcp.tools</field>
+        <field name="model">ir.model</field>
+        <field name="inherit_id" ref="base.view_model_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="MCP Tools" name="mcp_tools">
+                    <field name="mcp_tool_ids" context="{'default_model_id': active_id}">
+                        <tree editable="bottom" decoration-muted="not active">
+                            <field name="name"/>
+                            <field name="method_id"/>
+                            <field name="is_code_first"/>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="model_id" invisible="1"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

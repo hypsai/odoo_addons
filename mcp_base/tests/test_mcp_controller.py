@@ -2,8 +2,12 @@
 import json
 from base64 import b64encode
 
+import werkzeug.test
+import werkzeug.wrappers
+
+from odoo import http
 from odoo.tests import common, tagged
-from .test_model_defs import ensure_model_meta
+from .test_model_defs import ensure_model_meta, ensure_tool_records
 
 
 @tagged('mcp_base', 'post_install', '-at_install')
@@ -12,6 +16,21 @@ class TestMCPController(common.HttpCase):
 
     def setUp(self):
         super().setUp()
+
+        # Use werkzeug.test.Client to call the WSGI app directly in the
+        # test thread, bypassing the multi-threaded HTTP server where the
+        # routing map may not include /mcp (timing issue in post_install
+        # tests). This is equivalent to how Odoo's HttpCase.url_open works
+        # internally, but in the test thread.
+        self._client = werkzeug.test.Client(http.root, werkzeug.wrappers.Response)
+
+        # Authenticate via the standard HttpCase pattern to get a valid
+        # session cookie for Root.setup_db → database resolution.
+        self.authenticate('admin', 'admin')
+        self._session_cookie = 'session_id=%s' % self.opener.cookies['session_id']
+
+        # Rebuild routing map to ensure /mcp is included.
+        self.env['ir.http']._clear_routing_map()
 
         ensure_model_meta(self.env, ["test.mcp.base.tool"])
 
@@ -29,6 +48,12 @@ class TestMCPController(common.HttpCase):
             'perm_unlink': True,
         })
 
+        # Sync @mcp_tool methods into mcp.base.tool ORM records.
+        ensure_tool_records(self.env, model_names={"test.mcp.base.tool"})
+        # Invalidate the tools cache so the controller picks up fresh ORM data.
+        from ..controllers import main as main_mod
+        main_mod._tools_cache = None
+
         # Default auth: plain text X-User / X-Password headers (easy to configure)
         self._auth_headers = {
             'Content-Type': 'application/json',
@@ -42,6 +67,34 @@ class TestMCPController(common.HttpCase):
             'Content-Type': 'application/json',
             'Authorization': f'Basic {credentials}',
         }
+
+    # ------------------------------------------------------------------
+    #  Helpers
+    # ------------------------------------------------------------------
+
+    def _mcp_request(self, url, data=None, timeout=None, files=None,
+                      headers=None, allow_redirects=True, head=False):
+        """Wsgi-level request with session cookie for database resolution."""
+        _headers = dict(headers or {})
+        _headers.setdefault('Content-Type', 'application/json')
+        # Attach the session cookie so Root.setup_db finds the database.
+        _headers.setdefault('Cookie', self._session_cookie)
+
+        kwargs = {'headers': _headers}
+        if data is not None:
+            kwargs['data'] = data
+        if files is not None:
+            kwargs['data'] = files
+
+        if head:
+            return self._client.head(url, **kwargs)
+        if data is not None or files is not None:
+            return self._client.post(url, **kwargs)
+        return self._client.get(url, **kwargs)
+
+    # ------------------------------------------------------------------
+    #  Tests
+    # ------------------------------------------------------------------
     
     def test_mcp_endpoint_exists(self):
         """Test that MCP endpoint is accessible"""
@@ -1166,21 +1219,28 @@ class TestMCPController(common.HttpCase):
 class TestMCPIntegration(common.TransactionCase):
     """Integration tests for MCP functionality"""
     
+    def setUp(self):
+        super().setUp()
+        ensure_model_meta(self.env, ["test.mcp.base.tool"])
+        ensure_tool_records(self.env, model_names={"test.mcp.base.tool"})
+
     def test_mcp_tool_registration(self):
-        """Test that MCP tools can be discovered in registry"""
-        
-        # Check that we can iterate over models
-        tools_found = 0
-        for model_name, model_obj in self.env.registry.models.items():
-            for attr_name in dir(model_obj):
-                if attr_name.startswith('_'):
-                    continue
-                try:
-                    method = getattr(model_obj, attr_name)
-                    if callable(method) and getattr(method, '_is_mcp_tool', False):
-                        tools_found += 1
-                except:
-                    continue
-        
-        # Should find at least some MCP tools
-        self.assertGreater(tools_found, 0, "No MCP tools found in registry")
+        """MCP tools should exist as active mcp.base.tool ORM records."""
+        tools = self.env['mcp.base.tool'].search([
+            ('model_id.model', '=', 'test.mcp.base.tool'),
+            ('active', '=', True),
+        ])
+        self.assertGreater(len(tools), 0, "No MCP tools found in mcp.base.tool")
+
+        method_names = tools.mapped('method_id.name')
+        self.assertIn('get_customer_detail', method_names)
+        self.assertIn('get_customers', method_names)
+        self.assertIn('greet_customer', method_names)
+
+        # Verify code-first metadata is populated.
+        detail = tools.filtered(lambda r: r.method_id.name == 'get_customer_detail')
+        self.assertTrue(detail, "get_customer_detail tool not found")
+        self.assertTrue(detail.description, "Description should be computed")
+        self.assertTrue(detail.input_schema, "inputSchema should be computed")
+        schema = json.loads(detail.input_schema)
+        self.assertIn('name', schema.get('properties', {}))

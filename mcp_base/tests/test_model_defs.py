@@ -99,3 +99,60 @@ def ensure_model_meta(env, model_names):
                 'transient': is_transient,
                 'order': 'id',  # Default ordering
             })
+
+
+def ensure_tool_records(env, model_names=None):
+    """Create or update ``mcp.base.tool`` records for all ``@mcp_tool`` methods.
+
+    This mirrors what the future auto-sync mechanism will do at module
+    install/upgrade time, so that controller tests see the same ORM-based
+    tool definitions that a real instance would produce.
+    """
+    for model_name, model_cls in env.registry.models.items():
+        if model_names and model_name not in model_names:
+            continue
+
+        ir_model = env['ir.model'].search([('model', '=', model_name)], limit=1)
+        if not ir_model:
+            continue
+
+        for attr_name in dir(model_cls):
+            if attr_name.startswith('_'):
+                continue
+            method = getattr(model_cls, attr_name, None)
+            if not callable(method) or not getattr(method, '_is_mcp_tool', False):
+                continue
+
+            docstring = method.__doc__ or ''
+
+            # find or create mcp.base.method
+            method_ref = env['mcp.base.method'].search([
+                ('name', '=', attr_name),
+                ('model_id', '=', ir_model.id),
+            ], limit=1)
+            if not method_ref:
+                method_ref = env['mcp.base.method'].create({
+                    'name': attr_name,
+                    'model_id': ir_model.id,
+                })
+
+            existing = env['mcp.base.tool'].search([
+                ('model_id', '=', ir_model.id),
+                ('method_id', '=', method_ref.id),
+            ], limit=1)
+
+            if existing:
+                existing.write({
+                    'name': f"{model_name}:{attr_name}",
+                    'docstring': docstring,
+                    'is_code_first': True,
+                    'active': True,
+                })
+            else:
+                env['mcp.base.tool'].create({
+                    'name': f"{model_name}:{attr_name}",
+                    'model_id': ir_model.id,
+                    'method_id': method_ref.id,
+                    'docstring': docstring,
+                    'is_code_first': True,
+                })

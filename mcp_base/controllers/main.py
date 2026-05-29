@@ -6,7 +6,6 @@ import json
 import logging
 import traceback
 from base64 import b64decode
-from typing import Tuple, Optional
 
 from odoo import http
 from odoo.exceptions import AccessDenied
@@ -14,12 +13,9 @@ from odoo.http import request
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 from ..compatible import request_update_env, root_patch_get_request, is_api_model, session_authenticate
-from ..mcputil import build_tool_info
-from ..typeutil import OdooMro
 from .. import jsonutil
 
 _logger = logging.getLogger(__name__)
-_tools_cache: Optional[Tuple[int, list]] = None  # (cache_key, tools) or None
 _MCP_HANDLERS = {
     'initialize': '_handle_initialize',
     'tools/list': '_handle_list_tools',
@@ -257,43 +253,40 @@ class McpController(http.Controller):
         }
 
     def _handle_list_tools(self, params):
-        """Handle tools/list request."""
-        global _tools_cache
-        registry = request.env.registry
-        cache_key = id(registry)
-
-        if _tools_cache is not None and _tools_cache[0] == cache_key:
-            _logger.debug(f"MCP found {len(_tools_cache[1])} tools (cached)")
-            return {"tools": _tools_cache[1]}
-
+        """Handle tools/list request. Reads all tool definitions from the ORM."""
         tools = []
-        for model_name, model_cls in registry.models.items():
-            bases = model_cls.__bases__
-            for i, def_cls in enumerate(bases):
-                for attr_name, method in def_cls.__dict__.items():
-                    if callable(method) and getattr(method, '_is_mcp_tool', False):
-                        tool_info = getattr(method, "_mcp_base_cache_tool_info", None)
+        Tool = request.env['mcp.base.tool']
+        for rec in Tool.search([('active', '=', True)]):
+            model_name = rec.model_id.model
+            method_name = rec.method_id.name
 
-                        if not tool_info:
-                            custom_desc = getattr(method, '_mcp_custom_description', None)
-                            inherit_docs = getattr(method, '_mcp_inherit_docs', True)
+            input_schema = rec.input_schema
+            if input_schema:
+                input_schema = json.loads(input_schema)
+            else:
+                input_schema = {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                }
 
-                            mro = OdooMro(attr_name, bases[i:])
-                            tool_info = build_tool_info(
-                                mro, custom_desc=custom_desc,
-                                inherit_docs=inherit_docs,
-                            )
-                            tool_info["name"] = f"{model_name}:{attr_name}"
+            tool_info = {
+                "name": f"{model_name}:{method_name}",
+                "description": rec.description or "",
+                "inputSchema": input_schema,
+            }
 
-                            schema = tool_info['inputSchema']
-                            schema = self._add_built_in_properties(method, schema)
-                            tool_info["inputSchema"] = schema
+            # Add _search_ built-in property if the target method is not an API model.
+            model_cls = request.env.registry.get(model_name)
+            if model_cls:
+                method = getattr(model_cls, method_name, None)
+                if method and not is_api_model(method):
+                    tool_info["inputSchema"] = self._add_built_in_properties(
+                        method, tool_info["inputSchema"],
+                    )
 
-                            method._mcp_base_cache_tool_info = tool_info
+            tools.append(tool_info)
 
-                        tools.append(tool_info)
-
-        _tools_cache = (cache_key, tools)
         _logger.debug(f"MCP found {len(tools)} tools")
         return {"tools": tools}
     
@@ -306,6 +299,19 @@ class McpController(http.Controller):
 
         try:
             model_name, method_name = name.split(':')
+
+            # Verify the tool is registered and active in ORM.
+            tool = request.env['mcp.base.tool'].sudo().search([
+                ('model_id.model', '=', model_name),
+                ('method_id.name', '=', method_name),
+                ('active', '=', True),
+            ], limit=1)
+            if not tool:
+                return {
+                    "content": [{"type": "text", "text": f"Tool not found: {name}"}],
+                    "isError": True,
+                }
+
             model = request.env[model_name]
 
             # Extract `_search_` parameter if present
