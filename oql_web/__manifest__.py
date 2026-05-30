@@ -1,6 +1,6 @@
 {
     "name": "Advanced Search",
-    "version":"1.5.2",
+    "version":"1.5.3",
     "author": "Hypsai Tech",
     "website": "https://github.com/hypsai/odoo_addons/tree/main/oql_web",
     "license": "LGPL-3",
