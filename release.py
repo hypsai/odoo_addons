@@ -563,10 +563,7 @@ def main():
     print('='*60)
     print(f"\nGitHub Actions will automatically test the following modules on each branch:")
     for branch in target_branches:
-        # Find all modules supported in this branch
-        branch_modules = [mod for mod, versions in MODULE_VERSIONS.items()
-                          if branch in versions]
-        print(f"  - {branch}: {', '.join(branch_modules)}")
+        print(f"  - {branch}: {module}")
 
     print(f"\nCheck CI/CD status: https://github.com/hypsai/odoo_addons/actions")
 
