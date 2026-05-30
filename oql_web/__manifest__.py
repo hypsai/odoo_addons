@@ -1,6 +1,6 @@
 {
     "name": "OQL Web",
-    "version":"1.5.1",
+    "version":"1.5.2",
     "author": "Hypsai Tech",
     "website": "https://github.com/hypsai/odoo_addons/tree/main/oql_web",
     "license": "LGPL-3",
