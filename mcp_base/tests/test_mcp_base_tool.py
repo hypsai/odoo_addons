@@ -3,13 +3,13 @@
 import json
 import logging
 
-from odoo.tests import common, tagged
+from odoo.tests import tagged, TransactionCase
 
 _logger = logging.getLogger(__name__)
 
 
 @tagged('mcp_base', 'post_install', '-at_install')
-class TestMcpBaseToolORM(common.TransactionCase):
+class TestMcpBaseToolORM(TransactionCase):
     """Exercise the mcp.base.tool model directly (no HTTP)."""
 
     def setUp(self):
@@ -19,6 +19,9 @@ class TestMcpBaseToolORM(common.TransactionCase):
 
         # Ensure test model metadata exists.
         self._ensure_test_model('test.mcp.base.tool', 'MCP Tool Test')
+        # Ensure delegation-inheritance pair models exist.
+        self._ensure_test_model('test.mcp.base.tool.parent', 'MCP Tool Parent')
+        self._ensure_test_model('test.mcp.base.tool.child', 'MCP Tool Child')
 
     def _ensure_test_model(self, model_name, description):
         """Create an ir.model record if it doesn't already exist."""
@@ -242,18 +245,6 @@ class TestMcpBaseToolORM(common.TransactionCase):
         self.assertIn(rec2.id, im.mcp_tool_ids.ids)
 
     # ── @api.model vs recordset filtering ───────────────────────────────
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # Ensure ir.model records exist for the delegation-inheritance pair.
-        for mn in ('test.mcp.base.tool.parent', 'test.mcp.base.tool.child'):
-            if not cls.env['ir.model'].search([('model', '=', mn)], limit=1):
-                cls.env['ir.model'].create({
-                    'model': mn,
-                    'name': mn,
-                    'state': 'base',
-                })
 
     def _get_ir_id(self, model_name):
         return self.env['ir.model'].search([('model', '=', model_name)], limit=1).id

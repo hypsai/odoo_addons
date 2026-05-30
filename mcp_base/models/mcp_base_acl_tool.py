@@ -46,7 +46,8 @@ class McpBaseToolAcl(models.Model):
             return set(Tool.search([('active', '=', True)]).ids)
 
         model_flush(self.env["ir.model.access"])
-        model_flush(self, self._fields)
+        model_flush(self)
+        model_flush(self.env["mcp.base.tool"], ["active"])
 
         self.env.cr.execute("""
             SELECT DISTINCT d.id
@@ -59,7 +60,7 @@ class McpBaseToolAcl(models.Model):
             WHERE b.active AND a.uid = %s
             GROUP BY d.id
             HAVING BOOL_OR(
-                b.perm_read AND COALESCE(e.perm_read, b.perm_mcp_base_tool_default_read, FALSE)
+                COALESCE(e.perm_read, b.perm_mcp_base_tool_default_read, FALSE)
             )
         """, (self.env.uid,))
         return {row[0] for row in self.env.cr.fetchall()}
