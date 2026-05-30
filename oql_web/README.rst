@@ -1,9 +1,9 @@
-=========
-OQL Web
-=========
+================
+Advanced Search
+================
 
 .. image:: /oql_web/static/description/icon.png
-   :alt: OQL Web Logo
+   :alt: Advanced Search Logo
    :align: center
    :width: 200px
 
@@ -15,9 +15,9 @@ OQL Web
    :target: https://github.com/hypsai/odoo_addons/tree/main/oql_web
    :alt: Github Repo
 
-**Beautiful web interface for writing and executing OQL queries**
+**Type-to-search: replace Odoo's click-based search with a powerful text query bar**
 
-Transform your Odoo search bar into a powerful OQL editor with syntax highlighting, autocomplete, and intelligent search capabilities.
+Transform your Odoo search bar into a powerful text editor with syntax highlighting, autocomplete, and intelligent search capabilities. Just type your query and press Enter — no more clicking through filter widgets.
 
 Why This Module?
 ================
@@ -26,7 +26,7 @@ Why This Module?
 
 While OQL (Odoo Query Language) simplifies query writing at the code level, users still need a convenient way to execute these queries through the Odoo interface. The native search bar only supports traditional domain-based searches.
 
-**OQL Web Solution:**
+**Advanced Search Solution:**
 
 * **Syntax Highlighting**: Color-coded keywords, operators, and values
 * **Smart Autocomplete**: Intelligent suggestions for terms and aliases (with oql_pro)
@@ -38,20 +38,20 @@ Quick Start
 ===========
 
 1. Install the OQL module (required dependency)
-2. Install OQL Web in your Odoo instance
+2. Install Advanced Search in your Odoo instance
 3. Click the "OQL" button next to the search bar and start querying
 
 .. important::
-   **Prerequisite**: OQL Web requires the ``oql`` module to be installed first.
+   **Prerequisite**: Advanced Search requires the ``oql`` module to be installed first.
    Get it from `Odoo App Store <https://apps.odoo.com/apps/modules/15.0/oql>`_.
 
 Live Demo
 =========
 
-See OQL Web in action! The following demo shows the search interface with syntax highlighting and intelligent features:
+See Advanced Search in action! The following demo shows the search interface with syntax highlighting and intelligent features:
 
 .. image:: static/description/preview.gif
-   :alt: OQL Web Search Demo - Syntax highlighting and smart search in Odoo
+   :alt: Advanced Search Demo - Syntax highlighting and smart search in Odoo
    :align: center
    :width: 100%
 
@@ -85,7 +85,7 @@ Key Features
 Syntax Highlighting
 -------------------
 
-OQL Web uses CodeMirror to provide professional-grade syntax highlighting based on the OQL grammar:
+Advanced Search uses CodeMirror to provide professional-grade syntax highlighting based on the OQL grammar:
 
 * **Keywords**: Logical operators (AND, OR, NOT) highlighted in distinct colors
 * **Operators**: Comparison operators (=, !=, >, <, IN, LIKE) clearly visible
@@ -97,7 +97,7 @@ This visual feedback helps you write correct queries faster and catch syntax err
 Intelligent Search Bar Integration
 -----------------------------------
 
-OQL Web seamlessly integrates with Odoo's native search bar:
+Advanced Search seamlessly integrates with Odoo's native search bar:
 
 **Toggle Button**
 
@@ -118,7 +118,7 @@ When OQL mode is enabled:
 
 **Zero Learning Curve**
 
-If you're familiar with OQL syntax, you can start using OQL Web immediately. The interface behaves exactly like the native search bar you already know.
+If you're familiar with OQL syntax, you can start using Advanced Search immediately. The interface behaves exactly like the native search bar you already know.
 
 Search History Management
 --------------------------
@@ -152,7 +152,7 @@ Never lose your favorite queries again:
 State Persistence
 -----------------
 
-OQL Web remembers your preferences:
+Advanced Search remembers your preferences:
 
 **Toggle State**
 
@@ -210,7 +210,7 @@ Installation Steps
    * Enable Developer Mode: Add ``?debug=1`` to your Odoo URL
    * Navigate to **Apps** menu
    * Click **Update Apps List** (top menu)
-   * Search for "**oql_web**"
+   * Search for "**Advanced Search**"
    * Click **Install**
 
 4. **Verify**
@@ -271,8 +271,8 @@ Click the history icon (📋) on the right side of the editor to see your past q
 Tips and Best Practices
 =======================
 
-When to Use OQL Web
--------------------
+When to Use Advanced Search
+---------------------------
 
 * Quick data exploration and filtering
 * Repeated searches with slight variations
@@ -306,7 +306,7 @@ OQL Button Not Visible
 If you can't see the OQL toggle button next to the search bar:
 
 1. Verify OQL module is installed and working
-2. Check that oql_web module is installed (Apps → Search "oql_web")
+2. Check that Advanced Search module is installed (Apps → Search "Advanced Search")
 3. Clear browser cache and reload the page
 4. Ensure you're viewing a list view (not form or kanban)
 
@@ -340,11 +340,11 @@ If editor feels slow or unresponsive:
 3. Check if oql_pro is causing conflicts (try without it)
 4. Ensure Odoo server is responding quickly
 
-Comparison: OQL Web vs Native Search
-=====================================
+Comparison: Advanced Search vs Native Search
+=============================================
 
 ========================  ====================  ====================
-Feature                   Native Search         OQL Web
+Feature                   Native Search         Advanced Search
 ========================  ====================  ====================
 Query Syntax              Domain filters        OQL (business terms)
 Readability               Technical             Natural language
@@ -362,7 +362,7 @@ Business User Friendly    No                    Yes
 Migration from Native Search
 =============================
 
-Switching from native Odoo search to OQL Web is straightforward:
+Switching from native Odoo search to Advanced Search is straightforward:
 
 **Before (Native Search)**
 
@@ -373,13 +373,13 @@ Switching from native Odoo search to OQL Web is straightforward:
 5. Repeat for each condition
 6. Combine with AND/OR groups
 
-**After (OQL Web)**
+**After (Advanced Search)**
 
 1. Click OQL button
 2. Type: ``Field = 'Value' and AnotherField > 10``
 3. Press Enter
 
-The result is the same, but OQL Web is faster and more intuitive!
+The result is the same, but Advanced Search is faster and more intuitive!
 
 Bug Tracker
 ===========

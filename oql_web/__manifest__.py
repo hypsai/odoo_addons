@@ -1,11 +1,11 @@
 {
-    "name": "OQL Web",
+    "name": "Advanced Search",
     "version":"1.5.2",
     "author": "Hypsai Tech",
     "website": "https://github.com/hypsai/odoo_addons/tree/main/oql_web",
     "license": "LGPL-3",
     "category": "Productivity/Apps",
-    "summary": "Odoo web components.",
+    "summary": "Text-based search bar with syntax highlighting and autocomplete.",
     "depends": ["oql"],
     "images": ["static/description/banner.png"],
 

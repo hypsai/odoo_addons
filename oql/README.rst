@@ -730,7 +730,7 @@ OQL is part of a family of modules that work together:
 
    * - Module
      - Description
-   * - **oql_web**
+   * - **Advanced Search (oql_web)**
      - Graphical UI tools — **OQL Workbench** (full IDE at ``/oql`` with multi-tab
        editing and model browser), **search bar integration** (CodeMirror-powered
        syntax highlighting with native/OQL mode toggle), and **OQL Editor** with
@@ -748,7 +748,7 @@ OQL is part of a family of modules that work together:
 .. note::
 
    All modules require ``oql`` (this module) as a dependency.
-   Install ``oql_web`` and ``oql_mcp`` from the same repository, and
+   Install ``oql_web`` (Advanced Search) and ``oql_mcp`` from the same repository, and
    ``oql_pro`` from the `Odoo App Store <https://apps.odoo.com>`_.
 
 Support and Contribution

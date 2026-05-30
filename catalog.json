@@ -10,7 +10,7 @@
     },
     "oql_web": {
       "supported_versions": ["15.0"],
-      "description": "OQL Web Interface"
+      "description": "Advanced Search - Type-to-search with syntax highlighting"
     },
     "oql_mcp": {
       "supported_versions": ["15.0"],
