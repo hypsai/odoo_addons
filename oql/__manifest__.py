@@ -36,7 +36,6 @@ Menu: Settings > Technical > OQL
 
     "assets": {
         "web.assets_backend": [
-            "web/static/lib/jquery/jquery.js",
             "oql/static/src/css/oql_navbar_button.css",
             "oql/static/src/js/oql_navbar_button.js",
         ],

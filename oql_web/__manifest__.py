@@ -14,7 +14,6 @@
 
     "assets": {
         "web.assets_backend": [
-            "web/static/lib/jquery/jquery.js",
             "oql/static/lib/codemirror/lib/codemirror.css",
             "oql/static/lib/codemirror/addon/hint/show-hint.css",
             "oql/static/lib/codemirror/lib/codemirror.js",
