@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 11:10 2026/4/28
 # @Author       : Chris
 # @Description  : Test model definitions for OQL testing

@@ -1,6 +1,6 @@
 {
     "name": "OQL - Odoo Query Language",
-    "version":"1.9.15",
+    "version":"19.0.1.9.15",
     "author": "Hypsai Tech",
     "website": "https://github.com/hypsai/odoo_addons/tree/main/oql",
     "license": "LGPL-3",
@@ -36,6 +36,7 @@ Menu: Settings > Technical > OQL
 
     "assets": {
         "web.assets_backend": [
+            "web/static/lib/jquery/jquery.js",
             "oql/static/src/css/oql_navbar_button.css",
             "oql/static/src/js/oql_navbar_button.js",
         ],

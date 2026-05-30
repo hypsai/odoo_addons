@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 20:33 2026/5/9
 # @Author       : Chris
 # @Description  :
@@ -27,8 +26,10 @@ class OqlAclAlias(models.Model):
     # Aux
     model_id = fields.Many2one(related="mac_id.model_id")
 
-    _sql_constraints = [("mac_alias_unique", "unique(mac_id, alias_id)",
-                         "Alias must be unique in a model's alias access collection.")]
+    _mac_alias_unique = models.Constraint(
+        'unique(mac_id, alias_id)',
+        "Alias must be unique in a model's alias access collection.",
+    )
 
     @api.model
     def perm_aliases(self, model: str, mode: Literal["read", "write"]) -> Set[str]:

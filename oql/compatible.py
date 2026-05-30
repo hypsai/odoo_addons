@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 19:16 2026/4/27
 # @Author       : Chris
 # @Description  :
@@ -25,7 +24,7 @@ if ODOO_VERSION >= 19:
     normalize_domain = Domain
     NEG2POS_OPR = Domain.NEGATIVE_OPERATORS
 else:
-    from odoo.osv.expression import AND, OR, normalize_domain
+    from odoo.fields import Domain, normalize_domain
     from odoo.osv.expression import NEGATIVE_TERM_OPERATORS, TERM_OPERATORS_NEGATION
     NEG2POS_OPR = {x: TERM_OPERATORS_NEGATION[x] for x in NEGATIVE_TERM_OPERATORS}
 
