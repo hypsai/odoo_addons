@@ -3,6 +3,7 @@
 import logging
 
 from odoo.tests import tagged, TransactionCase
+from ..compatible import res_users_data
 
 _logger = logging.getLogger(__name__)
 
@@ -34,14 +35,14 @@ class TestMcpBaseAcl(TransactionCase):
         })
 
         # ── test user ───────────────────────────────────────────────────
-        self.test_user = self.env['res.users'].create({
+        self.test_user = self.env['res.users'].create(res_users_data({
             'name': 'Test MCP ACL User',
             'login': 'test_mcp_acl_user',
             'email': 'test_mcp_acl@example.com',
             'groups_id': [
                 (6, 0, [self.env.ref('base.group_user').id]),
             ],
-        })
+        }))
 
         # Grant model-level read on test.mcp.base.tool for group_user.
         self.test_mac = self.ModelAccess.create({
@@ -157,9 +158,9 @@ class TestMcpBaseAcl(TransactionCase):
     def test_perm_tools_no_model_access(self):
         """User without any ir.model.access sees zero tools."""
         # Remove the test group from the user
-        self.test_user.groups_id = [
-            (3, self.env.ref('base.group_user').id),
-        ]
+        self.test_user.write(res_users_data({
+            'groups_id': [(3, self.env.ref('base.group_user').id)],
+        }))
 
         permitted = self._perm_tools_as(self.test_user)
         self.assertEqual(permitted, set(),
@@ -263,7 +264,9 @@ class TestMcpBaseAcl(TransactionCase):
         })
 
         # Add group2 to the test user
-        self.test_user.groups_id = [(4, group2.id)]
+        self.test_user.write(res_users_data({
+            'groups_id': [(4, group2.id)],
+        }))
 
         permitted = self._perm_tools_as(self.test_user)
         # From group_user: all tools (default=True)
@@ -276,7 +279,9 @@ class TestMcpBaseAcl(TransactionCase):
     def test_multiple_mac_restrictive_union(self):
         """When two groups both restrict → only tools ANY group allows pass."""
         # Remove default group and set up two restrictive groups
-        self.test_user.groups_id = [(3, self.env.ref('base.group_user').id)]
+        self.test_user.write(res_users_data({
+            'groups_id': [(3, self.env.ref('base.group_user').id)],
+        }))
         self.test_mac.unlink()
 
         customer_tool = self._find_tool('get_customers')
@@ -296,7 +301,9 @@ class TestMcpBaseAcl(TransactionCase):
                 'tool_id': tool.id,
                 'perm_read': True,
             })
-            self.test_user.groups_id = [(4, g.id)]
+            self.test_user.write(res_users_data({
+                'groups_id': [(4, g.id)],
+            }))
 
         permitted = self._perm_tools_as(self.test_user)
         self.assertEqual(permitted, {customer_tool.id, greet_tool.id},

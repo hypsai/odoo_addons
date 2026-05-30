@@ -100,3 +100,18 @@ def post_ini_hook(func):
         return func(cr, registry)
 
     return wrapper
+
+
+def res_users_data(data: dict):
+    if ODOO_VERSION >= 19:
+        # V19 renamed `groups_id` to `group_ids`
+        val = data.pop("groups_id", None)
+        if val is not None:
+            data["group_ids"] = val
+    return data
+
+
+def res_users_groups_id(record):
+    if ODOO_VERSION >= 19:
+        return record.group_ids
+    return record.groups_id
