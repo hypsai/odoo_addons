@@ -1,35 +1,28 @@
 /**
  * OQL Workbench Navbar Button
  * Adds an OQL button to Odoo's top navigation bar.
- * Compatible with multiple Odoo versions (14, 15, 16, 17, 18+).
+ * Compatible with Odoo v13–v19.
+ *
+ * jQuery ($) is guaranteed to be available synchronously:
+ *   v13–v17: bundled in web.assets_common / web.assets_backend
+ *   v18+:    explicitly listed before this script in web.assets_backend
  */
 (function() {
     'use strict';
-
-    // Odoo 18+ no longer exposes jQuery as global $.
-    // Grab it from window.jQuery which is available in all versions.
-    var $ = window.$;
-    if (!$) {
-        console.warn('[OQL Navbar] jQuery not available, navbar button skipped');
-        return;
-    }
 
     var ATTEMPTS = 20;
     var DELAY = 500; // Start with 500ms
 
     // Known systray selectors across Odoo versions, from most- to least-specific
     var SYSTRAY_SELECTORS = [
-        '.o_menu_systray',             // Odoo 14–17 standard
-        '.o-mail-NotificationList',   // Odoo 18+ (discuss module)
-        '#o_menu_systray',             // Odoo 14–15 (id variant)
-        '.o_systray',                  // Odoo 15 (some builds)
-        '.o-navbar-systray',           // Odoo 16 EE variant
+        '.o_menu_systray',              // Odoo 14–17 standard
+        '.o-mail-NotificationList',    // Odoo 18+ (discuss module)
+        '#o_menu_systray',              // Odoo 14–15 (id variant)
+        '.o_systray',                   // Odoo 15 (some builds)
+        '.o-navbar-systray',            // Odoo 16 EE variant
         'nav.o_main_navbar .navbar-nav', // generic fallback
     ];
 
-    /**
-     * Search for the first visible systray container.
-     */
     function findSystray() {
         for (var i = 0; i < SYSTRAY_SELECTORS.length; i++) {
             var $el = $(SYSTRAY_SELECTORS[i]);
