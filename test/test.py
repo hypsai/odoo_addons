@@ -20,8 +20,8 @@ del sys.argv[1:3]
 
 sys.argv.append(f"--config={root}/test/odoo.conf")
 sys.argv.append(f"--addons-path={root},{pro_addons}")
-sys.argv.append(f"--data-dir=C:/data/odoo_addons_v{ver}")
-sys.argv.append(f"--database=odoo_addons_v{ver}")
+sys.argv.append(f"--data-dir=C:/data/odoo{ver}_test_{target}")
+sys.argv.append(f"--database=odoo{ver}_test_{target}")
 # sys.argv.append(f"--init={target}")
 # sys.argv.append(f"--update={target}")
 sys.argv.append(f"--test-enable")
