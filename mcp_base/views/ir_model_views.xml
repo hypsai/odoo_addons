@@ -7,8 +7,8 @@
         <field name="inherit_id" ref="base.view_model_form"/>
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
-                <page string="MCP Tools" name="mcp_tools">
-                    <field name="mcp_tool_ids" context="{'default_model_id': active_id}">
+                <page string="MCP Tools" name="mcp_base_tools">
+                    <field name="mcp_tool_ids">
                         <tree editable="bottom" decoration-muted="not active">
                             <field name="active" widget="boolean_toggle"/>
                             <field name="name"/>
