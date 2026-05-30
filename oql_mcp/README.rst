@@ -164,7 +164,7 @@ Support
 -------
 
 For issues or contributions, visit:
-https://github.com/chrisking94/odoo_addons/tree/main/oql_mcp
+https://github.com/hypsai/odoo_addons/tree/main/oql_mcp
 
 License
 -------

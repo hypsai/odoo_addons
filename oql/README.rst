@@ -755,7 +755,7 @@ Support and Contribution
 ------------------------
 
 For issues, feature requests, or contributions:
-https://github.com/chrisking94/odoo_addons/tree/main/oql
+https://github.com/hypsai/odoo_addons/tree/main/oql
 
 License
 -------

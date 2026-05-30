@@ -568,7 +568,7 @@ def main():
                           if branch in versions]
         print(f"  - {branch}: {', '.join(branch_modules)}")
 
-    print(f"\nCheck CI/CD status: https://github.com/chrisking94/odoo_addons/actions")
+    print(f"\nCheck CI/CD status: https://github.com/hypsai/odoo_addons/actions")
 
 
 if __name__ == '__main__':

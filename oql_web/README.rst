@@ -12,7 +12,7 @@ OQL Web
    :alt: License: LGPL-3
 
 .. image:: https://img.shields.io/badge/github-repo-blue?logo=github
-   :target: https://github.com/chrisking94/odoo_addons/tree/main/oql_web
+   :target: https://github.com/hypsai/odoo_addons/tree/main/oql_web
    :alt: Github Repo
 
 **Beautiful web interface for writing and executing OQL queries**
@@ -384,14 +384,14 @@ The result is the same, but OQL Web is faster and more intuitive!
 Bug Tracker
 ===========
 
-Bugs are tracked on `GitHub Issues <https://github.com/chrisking94/odoo_addons/issues>`_.
+Bugs are tracked on `GitHub Issues <https://github.com/hypsai/odoo_addons/issues>`_.
 
 Maintainer
 ==========
 
-.. image:: https://avatars.githubusercontent.com/u/29966935
+.. image:: https://avatars.githubusercontent.com/u/288936625
    :alt: Chris King Github Home
-   :target: https://github.com/chrisking94
+   :target: https://github.com/hypsai
    :width: 80px
 
 This module is maintained by **Chris**.

@@ -24,8 +24,8 @@
         intelligent assistants, and LLM integrations with your Odoo ERP.
     """,
     'category': 'Tools/AI',
-    'author': 'Hypsai.ai',
-    'website': 'https://github.com/chrisking94/odoo_addons/tree/main/mcp_base',
+    'author': 'Hypsai Tech',
+    'website': 'https://github.com/hypsai/odoo_addons/tree/main/mcp_base',
     'license': 'LGPL-3',
     'depends': ['base'],
     'images': ['static/description/banner.png'],

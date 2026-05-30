@@ -1,8 +1,8 @@
 {
     "name": "OQL MCP Integration",
     "version": "1.0.0",
-    "author": "Chris",
-    "website": "https://github.com/chrisking94/odoo_addons/tree/main/oql_mcp",
+    "author": "Hypsai Tech",
+    "website": "https://github.com/hypsai/odoo_addons/tree/main/oql_mcp",
     "license": "LGPL-3",
     "category": "Tools/AI",
     "summary": "Expose OQL query capabilities to AI agents via Model Context Protocol (MCP).",

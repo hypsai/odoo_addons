@@ -1,8 +1,8 @@
 {
     "name": "OQL - Odoo Query Language",
     "version":"1.9.13",
-    "author": "Chris",
-    "website": "https://github.com/chrisking94/odoo_addons/tree/main/oql",
+    "author": "Hypsai Tech",
+    "website": "https://github.com/hypsai/odoo_addons/tree/main/oql",
     "license": "LGPL-3",
     "category": "Technical Settings",
     "summary": "Query Odoo models with intuitive, business-focused syntax instead of complex technical domains.",

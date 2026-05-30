@@ -12,7 +12,7 @@ Web Widget YAML
    :alt: License: LGPL-3
 
 .. image:: https://img.shields.io/badge/github-repo-blue?logo=github
-   :target: https://github.com/chrisking94/odoo_addons/tree/main/web_widget_yaml
+   :target: https://github.com/hypsai/odoo_addons/tree/main/web_widget_yaml
    :alt: Github Repo
 
 This module provides a dedicated YAML code editor widget for Odoo form views, 
@@ -49,14 +49,14 @@ Commonly used options include:
 Bug Tracker
 ===========
 
-Bugs are tracked on `GitHub Issues <https://github.com/chrisking94/odoo_addons/issues>`_.
+Bugs are tracked on `GitHub Issues <https://github.com/hypsai/odoo_addons/issues>`_.
 
 Maintainer
 ==========
 
-.. image:: https://avatars.githubusercontent.com/u/29966935
+.. image:: https://avatars.githubusercontent.com/u/288936625
    :alt: Chris King Github Home
-   :target: https://github.com/chrisking94
+   :target: https://github.com/hypsai
    :width: 80px
 
 This module is maintained by Chris.
