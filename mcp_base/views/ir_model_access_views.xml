@@ -7,7 +7,7 @@
         <field name="inherit_id" ref="base.ir_access_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//group[./field[@name='perm_read']]" position="after">
-                <group name="mcp_base" string="MCP Access">
+                <group name="mcp_base" string="MCP Access" colspan="2">
                     <notebook>
                         <page string="Tools">
                             <div class="alert alert-warning" role="alert">
