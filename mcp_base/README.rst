@@ -1,4 +1,4 @@
-.. |tool_logo| image:: /mcp_base/static/description/icon.png
+.. image:: /mcp_base/static/description/icon.png
    :alt: Odoo MCP Framework Logo
    :align: center
    :width: 200px
