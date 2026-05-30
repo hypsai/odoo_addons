@@ -9,6 +9,15 @@
 (function(window) {
     'use strict';
 
+    // Odoo 18+ no longer exposes jQuery as global $.
+    // Grab it from window.jQuery which is available in all versions.
+    // On workbench pages jQuery is loaded via CDN — both globals are fine.
+    var $ = window.jQuery || window.$;
+    if (!$) {
+        console.error('[OQL Editor] jQuery not available');
+        return;
+    }
+
     // ==========================================
     // OQL Editor Core Class
     // ==========================================
