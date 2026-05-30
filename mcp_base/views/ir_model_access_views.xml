@@ -14,10 +14,10 @@
                                 <strong>Warning:</strong> MCP tool ACL can expose model methods
                                 to external AI agents. Configure permissions carefully.
                             </div>
-                            <group col="4">
+                            <group col="2">
                                 <field name="perm_mcp_base_tool_default_read"
-                                       string="Default Tool Read Access"/>
-                                <field name="mcp_base_tac_ids" nolabel="1" colspan="99">
+                                       string="Default Usage Access"/>
+                                <field name="mcp_base_tac_ids" nolabel="1" colspan="2">
                                     <tree editable="bottom">
                                         <field name="tool_id"
                                                domain="[('model_id', '=', model_id)]"

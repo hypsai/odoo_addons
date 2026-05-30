@@ -27,10 +27,10 @@
                             <div class="alert alert-warning" role="alert">
                                 <strong>Warning:</strong> OQL field-level ACL can bypass Odoo's standard access control. Configure permissions carefully.
                             </div>
-                            <group col="4">
+                            <group col="2">
                                 <field name="perm_oql_fac_default_read" string="Default Read Access"/>
                                 <field name="perm_oql_fac_default_write" string="Default Write Access"/>
-                                <field name="oql_fac_ids" nolabel="1" colspan="99">
+                                <field name="oql_fac_ids" nolabel="1" colspan="2">
                                     <tree editable="bottom">
                                         <field name="field_id"/>
                                         <field name="perm_read"/>
@@ -45,10 +45,10 @@
                             <div class="alert alert-warning" role="alert">
                                 <strong>Warning:</strong> OQL alias ACL can bypass Odoo's standard access control. Configure permissions carefully.
                             </div>
-                            <group col="4">
+                            <group col="2">
                                 <field name="perm_oql_aac_default_read" string="Default Read Access"/>
                                 <field name="perm_oql_aac_default_write" string="Default Write Access"/>
-                                <field name="oql_aac_ids" nolabel="1" colspan="99">
+                                <field name="oql_aac_ids" nolabel="1" colspan="2">
                                     <tree editable="bottom">
                                         <field name="alias_id"/>
                                         <field name="perm_read"/>
