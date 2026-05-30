@@ -2,7 +2,7 @@
 {
     'name': 'Web Widget Pill Icon (Conditional Icons & Colors)',
     'summary': 'Transform any field into a stylish pill/badge with dynamic FontAwesome icons and CSS classes based on value mapping.',
-    'version': '1.0.0',
+    'version':'1.0.1',
     'category': 'Web',
     'author': 'Hypsai Tech',
     'website': 'https://github.com/hypsai/odoo_addons/tree/main/web_widget_pill_icon',
