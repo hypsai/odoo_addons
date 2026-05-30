@@ -8,7 +8,7 @@
 
     // Odoo 18+ no longer exposes jQuery as global $.
     // Grab it from window.jQuery which is available in all versions.
-    var $ = window.jQuery;
+    var $ = window.$;
     if (!$) {
         console.warn('[OQL Navbar] jQuery not available, navbar button skipped');
         return;
