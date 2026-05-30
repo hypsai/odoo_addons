@@ -30,7 +30,9 @@ class TestMCPController(common.HttpCase):
         self._session_cookie = 'session_id=%s' % self.opener.cookies['session_id']
 
         # Rebuild routing map to ensure /mcp is included.
-        self.env['ir.http']._clear_routing_map()
+        # _clear_routing_map() was removed in Odoo 17+ (routing auto-refreshes).
+        if hasattr(self.env['ir.http'], '_clear_routing_map'):
+            self.env['ir.http']._clear_routing_map()
 
         ensure_model_meta(self.env, ["test.mcp.base.tool"])
 
