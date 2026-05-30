@@ -88,3 +88,15 @@ def session_authenticate(request_, username, password):
             request_.env.cr.dbname, username, password
         )
     return uid
+
+
+def post_ini_hook(func):
+
+    def wrapper(cr, registry=None):
+        if ODOO_VERSION >= 17:
+            env = cr
+            cr = env.cr
+            registry = env.registry
+        return func(cr, registry)
+
+    return wrapper
