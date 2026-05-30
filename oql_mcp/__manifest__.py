@@ -1,6 +1,6 @@
 {
     "name": "OQL MCP Integration",
-    "version": "1.0.0",
+    "version":"1.0.1",
     "author": "Hypsai Tech",
     "website": "https://github.com/hypsai/odoo_addons/tree/main/oql_mcp",
     "license": "LGPL-3",
