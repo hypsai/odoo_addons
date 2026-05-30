@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Transient helper model that provides dynamic Many2one options for tool methods.
 
 ``name_search`` is overridden to resolve methods directly from the Odoo

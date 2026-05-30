@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 11:53 2026/4/29
 # @Author       : Chris
 # @Description  : MCP Utility Functions

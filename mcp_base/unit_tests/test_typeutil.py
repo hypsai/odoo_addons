@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for type conversion utilities."""
 import sys
 import unittest

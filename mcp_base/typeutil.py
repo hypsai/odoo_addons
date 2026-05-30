@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 23:27 2026/4/25
 # @Author       : Chris
 # @Description  : Type conversion utilities for MCP framework.

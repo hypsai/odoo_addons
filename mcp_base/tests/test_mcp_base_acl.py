@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for the MCP tool ACL (``mcp.base.tool.acl``)."""
 import logging
 
