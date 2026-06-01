@@ -26,8 +26,10 @@ sys.argv.append(f"--database=odoo{ver}_test_{target}")
 # sys.argv.append(f"--update={target}")
 sys.argv.append(f"--test-enable")
 sys.argv.append(f"--stop-after-init")
-sys.argv.append("--log-level=test")
+sys.argv.append(f"--log-level=test")
 sys.argv.append(f"--test-tags=/{target}")
+sys.argv.append(f"--init={target}")
+sys.argv.append(f"--update={target}")
 
 if __name__ == "__main__":
     odoo.cli.command.main()

@@ -23,6 +23,8 @@ sys.argv.append(f"--config={root}/test/odoo.conf")
 sys.argv.append(f"--data-dir=C:/data/odoo{ver}_test_{target}")
 sys.argv.append(f"--database=odoo{ver}_test_{target}")
 sys.argv.append(f"--dev=all")
+sys.argv.append(f"--init={target}")
+sys.argv.append(f"--update={target}")
 
 if __name__ == "__main__":
     odoo.cli.command.main()
