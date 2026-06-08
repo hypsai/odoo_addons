@@ -217,6 +217,103 @@ Installation Steps
    
    Open any list view (e.g., Products, Customers). You should see an "OQL" button next to the search bar.
 
+OQL Editor Widget
+=================
+
+The ``oql_editor`` widget allows you to embed a full-featured OQL editor in any
+form or list view field. It provides syntax highlighting, autocomplete, and
+seamless integration with Odoo's field system.
+
+Basic Usage
+-----------
+
+Add ``widget="oql_editor"`` to a ``char`` or ``text`` field in your view XML:
+
+.. code-block:: xml
+
+    <field name="oql_query" widget="oql_editor"/>
+
+This works in both form views and editable list views. In list views, click the
+cell to enter edit mode — the editor will place the cursor where you clicked.
+
+Configuration Options
+---------------------
+
+All options are passed via the ``options`` attribute on the ``<field>`` element.
+Options are passed directly to `CodeMirror <https://codemirror.net/doc/manual.html#config>`_,
+so you can use any CodeMirror configuration option.
+
+.. code-block:: xml
+
+    <field name="oql_query" widget="oql_editor"
+           options="{'lineWrapping': False, 'tabSize': 4}"/>
+
+Default Values
+~~~~~~~~~~~~~~
+
+The following CodeMirror options are set by default (can be overridden):
+
+========================  ============  ========================================
+Option                    Default       Description
+========================  ============  ========================================
+``mode``                  text/x-oql    OQL syntax highlighting mode
+``lineNumbers``           True          Show line numbers
+``lineWrapping``          True          Wrap long lines (no horizontal scroll)
+``viewportMargin``        Infinity      Render entire document at once
+``readOnly``              (auto)        Managed by Odoo's readonly/edit mode
+========================  ============  ========================================
+
+Common Options
+~~~~~~~~~~~~~~
+
+**Disable line wrapping** (show horizontal scrollbar instead):
+
+.. code-block:: xml
+
+    <field name="query" widget="oql_editor"
+           options="{'lineWrapping': False}"/>
+
+**Hide line numbers** (compact layout for list views):
+
+.. code-block:: xml
+
+    <field name="query" widget="oql_editor"
+           options="{'lineNumbers': False}"/>
+
+**Custom tab size and indentation**:
+
+.. code-block:: xml
+
+    <field name="query" widget="oql_editor"
+           options="{'tabSize': 4, 'indentWithTabs': True}"/>
+
+**Combine multiple options**:
+
+.. code-block:: xml
+
+    <field name="query" widget="oql_editor"
+           options="{'lineWrapping': False, 'lineNumbers': False, 'tabSize': 2}"/>
+
+For a full list of available options, see the
+`CodeMirror configuration reference <https://codemirror.net/doc/manual.html#config>`_.
+
+OQL-Specific Options
+~~~~~~~~~~~~~~~~~~~~~
+
+These options are consumed by the OQL editor itself and not passed to CodeMirror:
+
+========================  ============  ========================================
+Option                    Default       Description
+========================  ============  ========================================
+``hintMethod``            hinto         Hint API method: ``hinto`` for WHERE
+                                        clause only, ``oql`` for full OQL
+========================  ============  ========================================
+
+.. code-block:: xml
+
+    <field name="full_oql" widget="oql_editor"
+           options="{'hintMethod': 'oql'}"/>
+
 Usage Examples
 ==============
 

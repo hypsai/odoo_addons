@@ -202,19 +202,18 @@ odoo.define('oql.oql_editor_widget', function (require) {
                 _lastClickY = e.clientY;
             });
 
-            this.oqlEditor = new window.OQLEditorCore({
+            this.oqlEditor = new window.OQLEditorCore($.extend({}, options, {
                 container: this.$el,
                 model: options.model || this.model,
                 res_id: options.res_id || this.res_id,
                 fieldName: this.name,
                 readonly: isReadonly,
-                lineNumbers: options.line_numbers !== undefined ? options.line_numbers : true,
-                hintMethod: options.hint_method || 'hinto',
+                hintMethod: options.hintMethod || 'hinto',
                 onChange: function () {
                     // Do NOT commit value on every keystroke.
                     // Only commit when the editor loses focus (blur event below).
                 }
-            });
+            }));
 
             return this.oqlEditor.start().then(function () {
                 self._editorReady = true;

@@ -12,15 +12,30 @@
     // ==========================================
     // OQL Editor Core Class
     // ==========================================
+
+    // Options consumed by OQLEditorCore itself (not passed to CodeMirror)
+    var _CORE_OPTIONS = new Set([
+        'container', 'model', 'res_id', 'fieldName',
+        'onSearch', 'onChange', 'enterMode', 'hintMethod', 'readonly'
+    ]);
+
     var OQLEditorCore = function(options) {
         this.container = options.container;
         this.model = options.model || 'base';
         this.readonly = options.readonly || false;
-        this.lineNumbers = options.lineNumbers || false;
         this.onSearch = options.onSearch || null;
         this.onChange = options.onChange || null;
-        this.enterMode = options.enterMode || 'newline';  // 'search' for Enter triggers search, 'newline' for Enter creates new line
-        this.hintMethod = options.hintMethod || 'oql';    // 'oql' for full OQL, 'hinto' for WHERE clause only
+        this.enterMode = options.enterMode || 'newline';
+        this.hintMethod = options.hintMethod || 'oql';
+
+        // All other options are passed directly to CodeMirror.
+        // Users can use any CodeMirror option by referencing the official docs.
+        this.cmOptions = {};
+        for (var key in options) {
+            if (options.hasOwnProperty(key) && !_CORE_OPTIONS.has(key)) {
+                this.cmOptions[key] = options[key];
+            }
+        }
 
         this.editor = null;
         this.$textarea = null;
@@ -43,13 +58,22 @@
 
             return new Promise(function(resolve) {
                 requestAnimationFrame(function() {
-                    self.editor = CodeMirrorOQL.fromTextArea(self.$textarea[0], {
+                    // Default CodeMirror options (can be overridden by cmOptions)
+                    var defaults = {
                         mode: 'text/x-oql',
-                        lineNumbers: self.lineNumbers,
+                        lineNumbers: true,
+                        lineWrapping: true,
                         readOnly: self.readonly,
                         viewportMargin: Infinity,
                         extraKeys: self._getExtraKeys()
-                    });
+                    };
+                    // Merge: cmOptions overrides defaults, but extraKeys are always kept
+                    var merged = $.extend({}, defaults, self.cmOptions);
+                    if (!merged.extraKeys) {
+                        merged.extraKeys = defaults.extraKeys;
+                    }
+
+                    self.editor = CodeMirrorOQL.fromTextArea(self.$textarea[0], merged);
 
                     // Setup event listeners
                     self._setupEventListeners();
