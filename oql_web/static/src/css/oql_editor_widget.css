@@ -13,4 +13,11 @@
     border-radius: 4px;
 }
 
+/* Ensure cursor is always visible when editor is focused and NOT readonly.
+   CodeMirror hides the cursor in readOnly mode via .CodeMirror-focused,
+   but sometimes the cursor stays hidden after switching readOnly off. */
+.o_oql_editor > .CodeMirror.CodeMirror-focused:not(.CodeMirror-readonly) .CodeMirror-cursor {
+    visibility: visible !important;
+}
+
 /* Note: Hint styles are defined in oql_editor.css with .CodeMirror-hints.oql-editor-hints */

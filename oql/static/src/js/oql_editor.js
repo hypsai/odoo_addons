@@ -54,11 +54,15 @@
                     // Setup event listeners
                     self._setupEventListeners();
 
-                    // Refresh and set size
-                    self.editor.refresh();
+                    // Set size first, then refresh after layout is complete
                     self.editor.setSize('100%', 'auto');
-                    
-                    resolve();
+
+                    // Delay refresh to ensure the container is laid out
+                    // (offsetHeight > 0) before CodeMirror renders content
+                    requestAnimationFrame(function() {
+                        self.editor.refresh();
+                        resolve();
+                    });
                 });
             });
         },
@@ -151,6 +155,16 @@
         focus: function() {
             if (this.editor) {
                 this.editor.focus();
+            }
+        },
+
+        /**
+         * Set readonly state
+         */
+        setReadonly: function(readonly) {
+            this.readonly = !!readonly;
+            if (this.editor) {
+                this.editor.setOption('readOnly', this.readonly);
             }
         },
 

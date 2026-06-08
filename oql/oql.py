@@ -522,6 +522,8 @@ class OqlTransformer(lark.Transformer):
         _fields = self.recs._fields
         for name, __ in fields:
             f_meta: odoo.fields.Field = _fields.get(name)
+            if not f_meta:
+                raise Exception(_("Order-by field `%s` not found on model `%s`.") % (name, self.model_name))
             if not f_meta.store:
                 raise Exception(_("Can't order by `%s`, it's not a stored field.") % (name, ))
         return ','.join(f"{t[0]} {t[1]}" for t in fields)
