@@ -1,6 +1,6 @@
 {
     "name": "OQL - Odoo Query Language",
-    "version":"1.9.20",
+    "version":"17.0.1.9.20",
     "author": "Hypsai Tech",
     "website": "https://github.com/hypsai/odoo_addons/tree/main/oql",
     "license": "LGPL-3",

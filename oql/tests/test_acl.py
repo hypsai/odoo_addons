@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 15:42 2026/5/12
 # @Author       : Chris
 # @Description  : Test OQL ACL functionality
