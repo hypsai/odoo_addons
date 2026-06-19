@@ -534,10 +534,19 @@ def main():
         # Switch to branch
         run_command(f"git checkout {branch}")
 
-        # Overwrite with main branch code (main is the single source of truth)
-        # No pull from remote version branch — code merging only happens on main
-        print(f"→ Overwriting {branch} with main branch code")
-        run_command(f"git reset --hard main")
+        # Replace ONLY the target module with main branch code.
+        # Do NOT reset the entire branch — other modules on this branch
+        # may have been obfuscated / migrated by previous releases and
+        # must be preserved.
+        print(f"→ Updating {module} from main branch")
+        # Remove existing module directory first (in case main has deleted files)
+        mod_path = Path(module)
+        if mod_path.exists():
+            shutil.rmtree(mod_path)
+        # Copy the module from main (without switching working tree)
+        run_command(f"git checkout main -- {module}")
+        # Also copy catalog.json from main so branch stays in sync
+        run_command(f"git checkout main -- catalog.json")
 
         # Clean up modules not supported in this branch BEFORE updating version
         print(f"→ Cleaning up unsupported modules in {branch}")
@@ -612,9 +621,9 @@ def main():
         else:
             print(f"⚠️ No changes to commit (version already {branch_version})")
 
-        # Force push because we used git reset --hard
+        # Push (no force needed since we no longer use git reset --hard)
         if args.push:
-            run_command(f"git push origin {branch} --force")
+            run_command(f"git push origin {branch}")
             print(f"✅ Branch {branch} released successfully")
         else:
             print(f"✅ Branch {branch} committed locally (use --push to push to remote)")
