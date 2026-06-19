@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Lightweight docstring parser supporting Google, NumPy, and Sphinx styles.
 

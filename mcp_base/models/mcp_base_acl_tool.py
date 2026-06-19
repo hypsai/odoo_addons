@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Per-tool read access control layered on top of ``ir.model.access``.
 
 A tool appears in ``tools/list`` when:
