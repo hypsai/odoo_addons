@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 11:01 2025/10/17
 # @Author       : Chris
 # @Description  :
@@ -7,7 +6,8 @@ from collections import defaultdict
 from string import Formatter
 from typing import List, Callable, Any, Union
 
-from odoo import models, fields, _
+from odoo import models, fields
+from odoo.tools.translate import _
 
 
 def parse_list(s: str) -> List[str]:

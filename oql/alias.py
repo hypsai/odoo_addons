@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 10:46 2025/10/17
 # @Author       : Chris
 # @Description  :
@@ -11,12 +10,13 @@ from typing import List, Optional, Dict, Iterable, Type
 import jinja2
 import jinja2.meta
 from .libs import jmespath
-from odoo import fields, _
+from odoo import fields
 from odoo.models import BaseModel
 
 from .libs import jmespath_ex, jinja2_ex
 from .recs import RecordSet
 from .util import get_field_def, field_type2python_type, RecordDictAdapter
+from odoo.tools.translate import _
 
 _logger = logging.getLogger(__name__)
 

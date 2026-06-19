@@ -11,4 +11,7 @@ class OqlTerm(models.Model):
     domain_ids = fields.One2many("oql.term.domain", "term_id", "Domains",
                                  help="The domains used to filter model records. They are allied in `or` logic.")
 
-    _sql_constraints = [("name_unique", "unique(name)", "Term name must be unique.")]
+    _name_unique = models.Constraint(
+        'unique(name)',
+        "Term name must be unique.",
+    )

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 11:54 2025/10/17
 # @Author       : Chris
 # @Description  :
@@ -10,6 +9,7 @@ from odoo import fields
 from odoo.models import Model
 
 from .term import *
+from odoo.fields import Domain
 
 _logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class RecordSet:
 
     def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):
         """Search on current record set."""
-        domain = AND([self.domain.domain, domain or []])
+        domain = Domain.AND([self.domain.domain, domain or []])
         return self._model.search_read(domain, fields, offset, limit, order, **read_kwargs)
 
     def __bool__(self):

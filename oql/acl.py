@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 11:38 2026/5/6
 # @Author       : Chris
 # @Description  :
@@ -6,12 +5,14 @@ import logging
 from collections import defaultdict
 from typing import Dict, Union, List, Set, Literal, Iterable, Tuple
 
-from odoo import models, _, fields
+from odoo import models, fields
 from odoo.exceptions import AccessError
 
 from .compatible import AND
 from .alias import AliasNode
 from .util import KeyPassingDefaultDict
+from odoo.fields import Domain
+from odoo.tools.translate import _
 
 _logger = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ class OqlModelAcl:
         """Return domain."""
         perm_domain = self.env['ir.rule']._compute_domain(self.model_name, mode=mode)
         if perm_domain:
-            domain = AND([domain, perm_domain])
+            domain = Domain.AND([domain, perm_domain])
         return domain
 
     def _perm_fields(self, mode: str) -> Set[str]:

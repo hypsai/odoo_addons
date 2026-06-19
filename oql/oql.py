@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 17:50 2025/10/15
 # @Author       : Chris
 # @Description  :
@@ -8,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import odoo.fields
-from odoo import models, _
+from odoo import models
 from odoo.tools.safe_eval import safe_eval
 
 from .libs import lark
@@ -19,6 +18,8 @@ from .alias import AliasRule, AliasNode, AliasField
 from .compatible import zip_c, is_api_model
 from .recs import *
 from .util import KeyPassingDefaultDict, tn, read_object
+from odoo.fields import Domain
+from odoo.tools.translate import _
 
 _logger = logging.getLogger(__name__)
 

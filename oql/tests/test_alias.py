@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 21:56 2026/5/15
 # @Author       : Chris
 # @Description  : Test cases for OQL Alias functionality

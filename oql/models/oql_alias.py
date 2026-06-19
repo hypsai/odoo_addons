@@ -9,5 +9,7 @@ class OqlAlias(models.Model):
                                required=True, ondelete="cascade", index=True)
     line_ids = fields.One2many("oql.alias.line", "rule_id", "Rule Lines")
 
-    _sql_constraints = [("model_id_unique", "unique(model_id)",
-                         "Each model can have at most 1 field path rule, please add new rule as rule line of existing rule.")]
+    _model_id_unique = models.Constraint(
+        'unique(model_id)',
+        "Each model can have at most 1 field path rule, please add new rule as rule line of existing rule.",
+    )
