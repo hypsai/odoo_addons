@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 15:37 2026/5/28
 # @Author       : Chris
 # @Description  : MCP Tool ORM Model - stores MCP tool definitions for config-first and code-first.

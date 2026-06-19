@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Quick test for docstring parser functionality."""
 import sys
 import unittest
