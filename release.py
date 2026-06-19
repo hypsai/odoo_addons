@@ -33,21 +33,23 @@ REPO_ROOT = Path(__file__).parent
 # Load module configuration from JSON file
 CONFIG_FILE = REPO_ROOT / 'catalog.json'
 
+
 def load_module_config():
     """Load module configuration from modules_config.json"""
     if not CONFIG_FILE.exists():
         print(f"❌ Error: Configuration file not found: {CONFIG_FILE}")
         sys.exit(1)
-    
+
     with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
         config = json.load(f)
-    
+
     # Convert to MODULE_VERSIONS format for backward compatibility
     module_versions = {}
     for module_name, module_info in config['modules'].items():
         module_versions[module_name] = module_info['supported_versions']
-    
+
     return module_versions
+
 
 # Module to supported Odoo versions mapping (loaded from config)
 MODULE_VERSIONS = load_module_config()
@@ -64,6 +66,7 @@ def run_command(cmd, cwd=None, env=None):
     result = subprocess.run(
         cmd, shell=True, cwd=cwd,
         capture_output=True, text=True, env=env,
+        encoding='utf-8', errors='replace',
     )
     if result.returncode != 0:
         print(f"❌ Error: {result.stderr}")
@@ -110,23 +113,22 @@ def get_proxy():
     return None
 
 
-
 def update_manifest_version(module, version):
     """Update version in manifest file"""
     manifest_path = get_manifest_path(module)
-    
+
     if not manifest_path.exists():
         print(f"❌ Error: Manifest file not found: {manifest_path}")
         sys.exit(1)
-    
+
     content = manifest_path.read_text(encoding='utf-8')
-    
+
     # Check if version is already set
     match = re.search(r'[\'"]version[\'"]:\s*[\'"]([^\'"]+)[\'"]', content)
     if match and match.group(1) == version:
         print(f"✅ Version is already {version}, no update needed")
         return False
-    
+
     # Replace version (support both single and double quotes, preserve original quote style)
     def replace_version(match):
         prefix = match.group(1)  # e.g., '"version": ' or "'version': "
@@ -135,13 +137,13 @@ def update_manifest_version(module, version):
             return f'{prefix}"{version}"'
         else:
             return f"{prefix}'{version}'"
-    
+
     new_content = re.sub(
         r'([\'"]version[\'"]:)\s*[\'"][^\'"]+[\'"]',
         replace_version,
         content
     )
-    
+
     manifest_path.write_text(new_content, encoding='utf-8')
     print(f"✅ Version updated to: {version}")
     return True
@@ -182,13 +184,13 @@ def get_branch_version(branch, main_version):
 def get_current_version(module):
     """Get current version from manifest file"""
     manifest_path = get_manifest_path(module)
-    
+
     if not manifest_path.exists():
         return None
-    
+
     content = manifest_path.read_text(encoding='utf-8')
     match = re.search(r'[\'"]version[\'"]:\s*[\'"]([^\'"]+)[\'"]', content)
-    
+
     if match:
         return match.group(1)
     return None
@@ -231,31 +233,81 @@ def list_versions(modules=None):
     """List current versions of modules"""
     if modules is None:
         modules = list(MODULE_VERSIONS.keys())
-    
+
     print("\n📦 Current Module Versions")
     print("=" * 60)
-    
+
     for module in modules:
         if module not in MODULE_VERSIONS:
             print(f"⚠️  Unknown module: {module}")
             continue
-        
+
         version = get_current_version(module)
         odoo_versions = MODULE_VERSIONS[module]
-        
+
         if version:
             print(f"\n{module}:")
             print(f"  Main version: {version}")
             print(f"  Supported Odoo versions: {', '.join(odoo_versions)}")
-            
+
             # Show branch versions
             for branch in odoo_versions:
                 branch_version = get_branch_version(branch, version)
                 print(f"  Branch {branch}: {branch_version}")
         else:
             print(f"\n{module}: ❌ Version not found")
-    
+
     print("\n" + "=" * 60)
+
+
+def run_release_scripts(module, branch, addon_version):
+    """Scan and execute _release scripts for a module on a specific branch.
+
+    Looks for a ``_release`` directory inside the module root.  Scripts are
+    sorted by filename and executed in order.  Each script receives three
+    CLI arguments: odoo version (branch name), addon version, module name.
+
+    After all scripts finish, the ``_release`` directory is removed.
+
+    Returns True if any scripts were executed, False otherwise.
+    """
+    release_dir = Path(module) / '_release'
+    if not release_dir.is_dir():
+        print(f"   ℹ️ No _release directory found, skipping release scripts")
+        return False
+
+    scripts = sorted(
+        p for p in release_dir.iterdir()
+        if p.is_file() and p.suffix == '.py'
+    )
+
+    if not scripts:
+        print(f"   ℹ️ _release directory is empty (no .py scripts), skipping")
+        return False
+
+    print(f"   → Found {len(scripts)} release script(s) in _release/")
+    for script in scripts:
+        print(f"   → Running _release/{script.name} "
+              f"(odoo={branch}, version={addon_version}, module={module})")
+        result = subprocess.run(
+            [sys.executable, str(script), branch, addon_version, module],
+            cwd=str(REPO_ROOT),
+            capture_output=True, text=True,
+            encoding='utf-8', errors='replace',
+        )
+        if result.stdout:
+            print(result.stdout.rstrip())
+        if result.returncode != 0:
+            print(f"   ❌ _release/{script.name} failed (exit code {result.returncode})")
+            if result.stderr:
+                print(result.stderr.rstrip())
+            sys.exit(1)
+        print(f"   ✅ _release/{script.name} completed")
+
+    # Remove _release directory after successful execution
+    shutil.rmtree(release_dir)
+    print(f"   ✅ _release directory removed")
+    return True
 
 
 def main():
@@ -286,6 +338,10 @@ def main():
     # Branch filter
     parser.add_argument('-b', '--branch', nargs='+', metavar='VER',
                         help='Only release for specific branch(es)')
+
+    # Push flag
+    parser.add_argument('--push', action='store_true',
+                        help='Push commits to remote (default: local only)')
 
     # List mode
     parser.add_argument('-l', '--list', nargs='*', metavar='MODULE',
@@ -383,6 +439,7 @@ def main():
                 result = subprocess.run(
                     ['git', 'ls-remote', _MIGRATOR_GIT_URL, 'refs/heads/master'],
                     capture_output=True, text=True,
+                    encoding='utf-8', errors='replace',
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     return result.stdout.strip().split()[0]
@@ -434,7 +491,10 @@ def main():
         print("\n📋 Step 4: Committing main branch")
         run_command(f"git add {manifest_path}")
         run_command(f'git commit -m "Release {module} version {new_version}"')
-        run_command("git push origin main")
+        if args.push:
+            run_command("git push origin main")
+        else:
+            print("   ℹ️ Skipping push (use --push to push to remote)")
     else:
         print("⚠️ Main branch version unchanged, skipping commit")
 
@@ -455,19 +515,21 @@ def main():
     # non-ASCII characters.
     import builtins as _bi
     _open_orig = _bi.open
+
     def _open_utf8(file, mode='r', buffering=-1, encoding=None,
                    errors=None, newline=None, closefd=True, opener=None):
         if encoding is None and 'b' not in mode:
             encoding = 'utf-8'
         return _open_orig(file, mode, buffering, encoding,
                           errors, newline, closefd, opener)
+
     _bi.open = _open_utf8
 
     for branch in target_branches:
         branch_version = get_branch_version(branch, new_version)
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"📋 Processing branch: {branch}")
-        print('='*60)
+        print('=' * 60)
 
         # Switch to branch
         run_command(f"git checkout {branch}")
@@ -479,7 +541,6 @@ def main():
 
         # Clean up modules not supported in this branch BEFORE updating version
         print(f"→ Cleaning up unsupported modules in {branch}")
-        all_modules = set(MODULE_VERSIONS.keys())
         supported_modules = set()
 
         # Find all modules supported in this branch
@@ -487,9 +548,16 @@ def main():
             if branch in versions:
                 supported_modules.add(mod)
 
-        # Remove unsupported module directories
+        # Scan disk for all Odoo module directories (have __manifest__.py)
+        # This catches modules not listed in catalog.json (e.g. companion apps)
+        disk_modules = set()
+        for child in REPO_ROOT.iterdir():
+            if child.is_dir() and (child / '__manifest__.py').exists():
+                disk_modules.add(child.name)
+
+        # Remove module directories not supported in this branch
         has_cleanup = False
-        for mod in (all_modules - supported_modules):
+        for mod in (disk_modules - supported_modules):
             mod_path = Path(mod)
             if mod_path.exists():
                 print(f"   Removing {mod} (not supported in {branch})")
@@ -506,12 +574,12 @@ def main():
             from odoo_module_migrate.migration import Migration
 
             migration = Migration(
-                str(Path(__file__).parent),   # directory
-                oldest,                        # init_version_name
-                branch,                        # target_version_name
+                str(Path(__file__).parent),  # directory
+                oldest,  # init_version_name
+                branch,  # target_version_name
                 module_names=[module],
                 format_patch=False,
-                commit_enabled=False,           # release.py handles commits
+                commit_enabled=False,  # release.py handles commits
                 pre_commit=False,
                 remove_migration_folder=False,
             )
@@ -521,14 +589,17 @@ def main():
         else:
             print(f"   ℹ️ No migration needed ({oldest} == {branch})")
 
+        # Run _release scripts (e.g. obfuscation) before version update
+        has_release_scripts = run_release_scripts(module, branch, new_version)
+
         # Update version to branch format
         print(f"→ Updating version to {branch_version}")
         branch_version_updated = update_manifest_version(module, branch_version)
 
-        if branch_version_updated or has_cleanup or has_migrated:
+        if branch_version_updated or has_cleanup or has_migrated or has_release_scripts:
             # Commit all changes together with meaningful message
             run_command(f"git add {manifest_path}")
-            if has_cleanup or has_migrated:
+            if has_cleanup or has_migrated or has_release_scripts:
                 run_command(f"git add -A")
 
             commit_msg = f"Release {module} v{new_version} for Odoo {branch} [skip ci]"
@@ -542,13 +613,16 @@ def main():
             print(f"⚠️ No changes to commit (version already {branch_version})")
 
         # Force push because we used git reset --hard
-        run_command(f"git push origin {branch} --force")
-        print(f"✅ Branch {branch} released successfully")
+        if args.push:
+            run_command(f"git push origin {branch} --force")
+            print(f"✅ Branch {branch} released successfully")
+        else:
+            print(f"✅ Branch {branch} committed locally (use --push to push to remote)")
 
     # 6. Switch back to main
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("📋 Done! Switching back to main branch")
-    print('='*60)
+    print('=' * 60)
     run_command("git checkout main")
 
     print(f"\n🎉 Module {module} v{new_version} released successfully!")
@@ -558,12 +632,15 @@ def main():
         print(f"  - {branch}: {branch_ver}")
 
     # 7. Trigger CI/CD
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("📋 Step 7: CI/CD will be triggered automatically")
-    print('='*60)
+    print('=' * 60)
     print(f"\nGitHub Actions will automatically test the following modules on each branch:")
     for branch in target_branches:
-        print(f"  - {branch}: {module}")
+        # Find all modules supported in this branch
+        branch_modules = [mod for mod, versions in MODULE_VERSIONS.items()
+                          if branch in versions]
+        print(f"  - {branch}: {', '.join(branch_modules)}")
 
     print(f"\nCheck CI/CD status: https://github.com/hypsai/odoo_addons/actions")
 
