@@ -9,7 +9,7 @@
             <xpath expr="//notebook" position="inside">
                 <page string="MCP Tools" name="mcp_base_tools">
                     <field name="mcp_tool_ids">
-                        <tree editable="bottom" decoration-muted="not active">
+                        <tree editable="bottom">
                             <field name="active" widget="boolean_toggle"/>
                             <field name="name"/>
                             <field name="method_id"/>
