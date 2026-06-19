@@ -41,12 +41,12 @@
             var $systray = findSystray();
 
             if ($systray.length && $('#oql_workbench_btn').length === 0) {
-                var $button = $('<li class="nav-item">' +
+                var $button = $('<div class="nav-item">' +
                     '<a id="oql_workbench_btn" href="/oql" class="nav-link oql-workbench-btn" title="OQL Workbench" target="_blank">' +
                         '<i class="fa fa-database"></i>' +
                         '<span>OQL</span>' +
                     '</a>' +
-                '</li>');
+                '</div>');
 
                 $systray.prepend($button);
                 return;
