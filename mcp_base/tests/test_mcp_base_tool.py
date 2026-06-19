@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for the ``mcp.base.tool`` ORM model."""
 import json
 import logging

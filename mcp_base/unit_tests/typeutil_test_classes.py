@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test classes for typeutil tests - defined at module level to avoid circular imports."""
 
 
