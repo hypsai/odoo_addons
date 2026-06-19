@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 12:33 2026/4/29
 # @Author       : Chris
 # @Description  : Run unit tests within Odoo test framework

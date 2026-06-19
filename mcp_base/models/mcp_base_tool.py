@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Time         : 15:37 2026/5/28
 # @Author       : Chris
 # @Description  : MCP Tool ORM Model - stores MCP tool definitions for config-first and code-first.
@@ -49,10 +48,10 @@ class McpBaseTool(models.Model):
              "Code-first tools are refreshed on module upgrade to stay in sync with the Python code.",
     )
 
-    _sql_constraints = [
-        ("model_method_unique", "unique(model_id, method_id)",
-         "Each model can have at most one tool per method."),
-    ]
+    _model_method_unique = models.Constraint(
+        'unique(model_id, method_id)',
+        "Each model can have at most one tool per method.",
+    )
 
     # ── Metadata computation ───────────────────────────────────────────
 

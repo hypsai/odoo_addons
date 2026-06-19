@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Per-tool read access control layered on top of ``ir.model.access``.
 
 A tool appears in ``tools/list`` when:
@@ -29,10 +28,10 @@ class McpBaseToolAcl(models.Model):
     # Aux
     model_id = fields.Many2one(related="mac_id.model_id")
 
-    _sql_constraints = [
-        ("mac_tool_unique", "unique(mac_id, tool_id)",
-         "Tool must be unique per model access record."),
-    ]
+    _mac_tool_unique = models.Constraint(
+        'unique(mac_id, tool_id)',
+        "Tool must be unique per model access record.",
+    )
 
     @api.model
     def perm_tools(self):

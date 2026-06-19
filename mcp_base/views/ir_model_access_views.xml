@@ -18,14 +18,14 @@
                                 <field name="perm_mcp_base_tool_default_read"
                                        string="Default Usage Access"/>
                                 <field name="mcp_base_tac_ids" nolabel="1" colspan="2">
-                                    <tree editable="bottom">
+                                    <list editable="bottom">
                                         <field name="tool_id"
                                                domain="[('model_id', '=', model_id)]"
                                                required="1"/>
                                         <field name="perm_read"/>
                                         <field name="mac_id" invisible="1" column_invisible="1"/>
                                         <field name="model_id" invisible="1" column_invisible="1"/>
-                                    </tree>
+                                    </list>
                                 </field>
                             </group>
                         </page>
