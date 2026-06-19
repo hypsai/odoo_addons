@@ -623,7 +623,7 @@ def main():
 
         # Push (no force needed since we no longer use git reset --hard)
         if args.push:
-            run_command(f"git push origin {branch}")
+            run_command(f"git push --force origin {branch}")
             print(f"✅ Branch {branch} released successfully")
         else:
             print(f"✅ Branch {branch} committed locally (use --push to push to remote)")
