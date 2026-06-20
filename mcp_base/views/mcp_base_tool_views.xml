@@ -6,7 +6,7 @@
         <field name="name">mcp.base.tool.list</field>
         <field name="model">mcp.base.tool</field>
         <field name="arch" type="xml">
-            <list editable="bottom" decoration-muted="not active">
+            <list decoration-muted="not active">
                 <field name="active" widget="boolean_toggle"/>
                 <field name="name"/>
                 <field name="model_id"/>
