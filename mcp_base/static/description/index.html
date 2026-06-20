@@ -103,6 +103,7 @@ def search_customers(self, name: str):
                     <strong>1)</strong> <code style="background: #e9ecef; padding: 1px 5px; border-radius: 3px;">Settings &rarr; Technical &rarr; MCP Framework &rarr; Tools</code> (global list)<br>
                     <strong>2)</strong> <code style="background: #e9ecef; padding: 1px 5px; border-radius: 3px;">Settings &rarr; Technical &rarr; Database Structure &rarr; Models &rarr; MCP Tools</code> tab (scoped to that model)
                 </p>
+                <p style="color: #856404; font-size: 0.8rem; margin-bottom: 12px;"><i class="fa fa-exclamation-triangle mr-1"></i><strong>Note:</strong> The <em>Technical</em> menu requires <strong>Developer (Debug) Mode</strong> &mdash; add <code style="background: #e9ecef; padding: 1px 4px; border-radius: 3px;">?debug=1</code> to your URL to enable it.</p>
                 <ul style="color: #555; padding-left: 18px;">
                     <li>Pick a <strong>model</strong> and a <strong>method</strong> from dropdowns</li>
                     <li>Write a <strong>docstring</strong> in Google/NumPy/Sphinx style</li>
@@ -249,6 +250,36 @@ class ResPartner(models.Model):
         </div>
     </div>
 
+    <!-- Access Control (ACL) -->
+    <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
+        <div class="col-12">
+            <h3 class="text-center mb-4" style="font-weight: 700; color: #667eea;"><i class="fa fa-key mr-2"></i>Access Control (ACL)</h3>
+            <p class="text-center text-muted">Tools are inaccessible without proper ACL configuration. Set up access rights before connecting AI clients.</p>
+
+            <div class="row">
+                <div class="col-lg-8 offset-lg-2">
+                    <div style="background: white; border: 2px solid #e9ecef; border-radius: 12px; padding: 25px;">
+                        <h5 style="font-weight: 700; color: #283593; margin-bottom: 15px;"><i class="fa fa-map-signs mr-2" style="color: #667eea;"></i>Menu Entry</h5>
+                        <div style="background-color: #f5f5f5; border-radius: 8px; padding: 18px; border: 1px solid #e0e0e0; margin-bottom: 15px;">
+                            <p style="margin: 0; font-size: 1.05rem; color: #333;">
+                                <strong>Settings</strong> &rarr; <strong>Technical</strong> &rarr; <strong>MCP Framework</strong> &rarr; <strong>Access Rights</strong>
+                            </p>
+                        </div>
+
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 3px solid #f39c12; margin-bottom: 15px;">
+                            <p style="margin: 0; font-size: 15px; color: #856404;">
+                                <strong><i class="fa fa-exclamation-triangle mr-1"></i>Important:</strong>
+                                The <strong>Technical</strong> menu is only visible when <strong>Developer (Debug) Mode</strong> is enabled. To activate it, add <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">?debug=1</code> to your URL (e.g., <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">http://localhost:8069/web?debug=1</code>), or click the bug icon in the header bar.
+                            </p>
+                        </div>
+
+                        <p style="color: #555;">From the <strong>Access Rights</strong> menu, you can configure per-tool access control rules that determine which Odoo groups and users are allowed to invoke specific MCP tools. This works alongside standard Odoo ACL &mdash; a user must have both the Odoo model access <em>and</em> the MCP tool access to use a tool.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Security & Authentication -->
     <div class="row oe_spaced mt-5 pt-4" style="border-top: 1px solid #eee;">
         <div class="col-12">
@@ -333,6 +364,7 @@ X-Password: your-password</pre>
                             <li>Set name and choose target user</li>
                             <li>Copy the generated API key</li>
                         </ul>
+                        <p style="color: #856404; font-size: 0.8rem; margin-bottom: 0; padding-left: 40px;"><i class="fa fa-exclamation-triangle mr-1"></i><strong>Note:</strong> The <em>Technical</em> menu requires <strong>Developer (Debug) Mode</strong> &mdash; add <code style="background: #e9ecef; padding: 1px 4px; border-radius: 3px;">?debug=1</code> to your URL to enable it.</p>
                     </div>
 
                     <div style="margin-bottom: 20px;">
