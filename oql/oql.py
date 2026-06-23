@@ -8,13 +8,13 @@ from typing import Optional
 import odoo.fields
 from odoo import models, _
 
-from .clause import SelectClause, WhereClause
+from .clause import SelectClause, SetClause, WhereClause
 from .field import FieldAccess
 from .libs import lark
 from .libs.lark.exceptions import VisitError
 from .meta import OqlMeta
 from .recs import *
-from .stmt import Statement, SelectStmt
+from .stmt import Statement, SelectStmt, UpdateStmt, CreateStmt, DeleteStmt
 from .util import tn
 
 _logger = logging.getLogger(__name__)
@@ -28,6 +28,9 @@ class OqlTransformer(lark.Transformer):
     FLOAT = float
 
     select_stmt = SelectStmt
+    update_stmt = UpdateStmt
+    create_stmt = CreateStmt
+    delete_stmt = DeleteStmt
 
     def __init__(self, env: odoo.api.Environment):
         super().__init__(True)
@@ -55,6 +58,12 @@ class OqlTransformer(lark.Transformer):
             fields = self._meta.acl[self.model_name].perm_fields("read")
             fields = [FieldAccess(self.recs, [x], self._meta) for x in fields]
         return SelectClause(bool(translate), fields)
+
+    def set_clause(self, *assignments):
+        return SetClause(list(assignments))
+
+    def assignment(self, name: str, value):
+        return (name, value)
 
     def where_clause(self, translate: Optional[str], rec_sets: RecordSets):
         return WhereClause(bool(translate), rec_sets)

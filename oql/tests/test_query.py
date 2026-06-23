@@ -529,5 +529,264 @@ class TestOql(TransactionCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['tmpl_id.name'], 'Botte Froide')
 
+    # ---- UPDATE tests ----
+
+    @post_test("oql.update")
+    def test_update_simple(self):
+        """Test UPDATE with a single field and WHERE clause."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product update spu_name = 'Updated Boot' where spu_name = 'Cold Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        updated = self.env["test.oql.product"].browse(res[0]['id'])
+        self.assertEqual(updated.spu_name, 'Updated Boot')
+        # Ensure other records are not affected.
+        hot = self.env["test.oql.product"].search([("spu_name", "=", "Hot Boot")])
+        self.assertTrue(hot)
+
+    @post_test("oql.update")
+    def test_update_multi_fields(self):
+        """Test UPDATE with multiple fields."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product update spu_name = 'Multi', active = false where spu_name = 'Hot Boot'"
+        )
+        self.assertEqual(len(res), 1)
+        updated = self.env["test.oql.product"].browse(res[0]['id'])
+        self.assertEqual(updated.spu_name, 'Multi')
+        self.assertFalse(updated.active)
+
+    @post_test("oql.update")
+    def test_update_no_where(self):
+        """Test UPDATE without WHERE clause updates all active records."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product update active = false"
+        )
+        # Active products should be updated (2 active: Cold, Hot). Inactive one is filtered out by default.
+        self.assertEqual(len(res), 2)
+        all_inactive = self.env["test.oql.product"].with_context(active_test=False).search([("active", "=", False)])
+        self.assertEqual(len(all_inactive), 3)
+
+    @post_test("oql.update")
+    def test_update_with_limit(self):
+        """Test UPDATE with LIMIT clause."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product update active = false where active = true limit 1"
+        )
+        self.assertEqual(len(res), 1)
+        active_count = self.env["test.oql.product"].search_count([("active", "=", True)])
+        self.assertEqual(active_count, 1)
+
+    @post_test("oql.update")
+    def test_update_translate(self):
+        """Test UPDATE with TRANSLATE keyword for translated fields."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product update translate spu_name = 'Botte Modifiée' "
+            "where translate spu_name = 'Botte Froide'"
+        )
+        self.assertEqual(len(res), 1)
+        updated = self.env["test.oql.product"].browse(res[0]['id'])
+        self.assertEqual(updated.with_context(lang='fr_FR').spu_name, 'Botte Modifiée')
+        # Original (en) name should remain.
+        self.assertEqual(updated.with_context(lang=None).spu_name, 'Cold Boot')
+
+    @post_test("oql.update")
+    def test_update_x2many(self):
+        """Test UPDATE with x2many field using array of ids."""
+        term_size = self.env["oql.term"].search([("name", "=", "Size")], limit=1)
+        term_width = self.env["oql.term"].search([("name", "=", "Width")], limit=1)
+        tag = self.env["test.oql.tag"].search([("name", "=", "Waterproof:GTX")], limit=1)
+        res = self.env["test.oql.tag"].oql(
+            f"from test.oql.tag update term_ids = ({term_size.id}, {term_width.id}) where id = {tag.id}"
+        )
+        self.assertEqual(len(res), 1)
+        updated_tag = self.env["test.oql.tag"].browse(tag.id)
+        self.assertEqual(set(updated_tag.term_ids.ids), {term_size.id, term_width.id})
+
+    @post_test("oql.update")
+    def test_update_x2many_clear(self):
+        """Test UPDATE with x2many field set to null clears the relation."""
+        tag = self.env["test.oql.tag"].search([("name", "=", "Waterproof:GTX")], limit=1)
+        term_waterproof = self.env["oql.term"].search([("name", "=", "Waterproof")], limit=1)
+        tag.term_ids = [Command.link(term_waterproof.id)]
+        self.assertTrue(tag.term_ids)
+        res = self.env["test.oql.tag"].oql(
+            f"from test.oql.tag update term_ids = null where id = {tag.id}"
+        )
+        self.assertEqual(len(res), 1)
+        updated_tag = self.env["test.oql.tag"].browse(tag.id)
+        self.assertFalse(updated_tag.term_ids)
+
+    @post_test("oql.update")
+    def test_update_many2one(self):
+        """Test UPDATE with many2one field."""
+        attr = self.env["test.oql.attribute"].create({"name": "TestAttr"})
+        val = self.env["test.oql.attribute.value"].create({"name": "Val1"})
+        res = self.env["test.oql.attribute.value"].oql(
+            f"from test.oql.attribute.value update attribute_id = {attr.id} where id = {val.id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(val.attribute_id.id, attr.id)
+
+    @post_test("oql.update")
+    def test_update_nonexistent_field(self):
+        """Test UPDATE with a nonexistent field raises an exception."""
+        with self.assertRaises(Exception):
+            self.env["test.oql.product"].oql(
+                "from test.oql.product update nonexistent_field = 'value' where spu_name = 'Cold Boot'"
+            )
+
+    # ---- CREATE tests ----
+
+    @post_test("oql.create")
+    def test_create_simple(self):
+        """Test CREATE with a single field."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product create spu_name = 'Created Product'"
+        )
+        self.assertEqual(len(res), 1)
+        created = self.env["test.oql.product"].browse(res[0]['id'])
+        self.assertEqual(created.spu_name, 'Created Product')
+
+    @post_test("oql.create")
+    def test_create_multi_fields(self):
+        """Test CREATE with multiple fields."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product create spu_name = 'Multi Create', active = false"
+        )
+        self.assertEqual(len(res), 1)
+        created = self.env["test.oql.product"].browse(res[0]['id'])
+        self.assertEqual(created.spu_name, 'Multi Create')
+        self.assertFalse(created.active)
+
+    @post_test("oql.create")
+    def test_create_translate(self):
+        """Test CREATE with TRANSLATE keyword."""
+        self.env.user.lang = 'fr_FR'
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product create translate spu_name = 'Nouveau Produit'"
+        )
+        self.assertEqual(len(res), 1)
+        created = self.env["test.oql.product"].browse(res[0]['id'])
+        self.assertEqual(created.with_context(lang='fr_FR').spu_name, 'Nouveau Produit')
+
+    @post_test("oql.create")
+    def test_create_with_many2one(self):
+        """Test CREATE with a many2one field."""
+        prod = self.env["test.oql.product"].search([("spu_name", "=", "Cold Boot")], limit=1)
+        res = self.env["test.oql.attribute.value"].oql(
+            f"from test.oql.attribute.value create name = 'New Value', product_id = {prod.id}"
+        )
+        self.assertEqual(len(res), 1)
+        created = self.env["test.oql.attribute.value"].browse(res[0]['id'])
+        self.assertEqual(created.name, 'New Value')
+        self.assertEqual(created.product_id.id, prod.id)
+
+    @post_test("oql.create")
+    def test_create_with_x2many(self):
+        """Test CREATE with x2many field using array of ids."""
+        term_size = self.env["oql.term"].search([("name", "=", "Size")], limit=1)
+        term_width = self.env["oql.term"].search([("name", "=", "Width")], limit=1)
+        res = self.env["test.oql.tag"].oql(
+            f"from test.oql.tag create name = 'New Tag', term_ids = ({term_size.id}, {term_width.id})"
+        )
+        self.assertEqual(len(res), 1)
+        created = self.env["test.oql.tag"].browse(res[0]['id'])
+        self.assertEqual(created.name, 'New Tag')
+        self.assertEqual(set(created.term_ids.ids), {term_size.id, term_width.id})
+
+    @post_test("oql.create")
+    def test_create_nonexistent_field(self):
+        """Test CREATE with a nonexistent field raises an exception."""
+        with self.assertRaises(Exception):
+            self.env["test.oql.product"].oql(
+                "from test.oql.product create nonexistent_field = 'value'"
+            )
+
+    # ---- DELETE tests ----
+
+    @post_test("oql.delete")
+    def test_delete_with_where(self):
+        """Test DELETE with WHERE clause."""
+        val = self.env["test.oql.attribute.value"].create({"name": "ToDelete"})
+        val_id = val.id
+        res = self.env["test.oql.attribute.value"].oql(
+            f"from test.oql.attribute.value delete where id = {val_id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['id'], val_id)
+        self.assertFalse(self.env["test.oql.attribute.value"].browse(val_id).exists())
+
+    @post_test("oql.delete")
+    def test_delete_with_limit(self):
+        """Test DELETE with LIMIT clause."""
+        for i in range(5):
+            self.env["test.oql.attribute.value"].create({"name": f"LimitDelete{i}"})
+        res = self.env["test.oql.attribute.value"].oql(
+            "from test.oql.attribute.value delete where name like 'LimitDelete%' limit 2"
+        )
+        self.assertEqual(len(res), 2)
+        remaining = self.env["test.oql.attribute.value"].search([("name", "like", "LimitDelete%")])
+        self.assertEqual(len(remaining), 3)
+
+    @post_test("oql.delete")
+    def test_delete_no_where(self):
+        """Test DELETE without WHERE clause deletes all records."""
+        for i in range(3):
+            self.env["test.oql.attribute.value"].create({"name": f"DeleteAll{i}"})
+        res = self.env["test.oql.attribute.value"].oql(
+            "from test.oql.attribute.value delete where name like 'DeleteAll%'"
+        )
+        self.assertEqual(len(res), 3)
+        remaining = self.env["test.oql.attribute.value"].search([("name", "like", "DeleteAll%")])
+        self.assertEqual(len(remaining), 0)
+
+    @post_test("oql.delete")
+    def test_delete_no_match(self):
+        """Test DELETE with WHERE clause that matches nothing."""
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product delete where spu_name = 'NonExistent'"
+        )
+        self.assertEqual(len(res), 0)
+
+    # ---- Combined / integration tests ----
+
+    @post_test("oql.crud")
+    def test_create_update_delete_cycle(self):
+        """Test CREATE -> UPDATE -> DELETE lifecycle."""
+        # CREATE
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product create spu_name = 'Lifecycle'"
+        )
+        self.assertEqual(len(res), 1)
+        rec_id = res[0]['id']
+
+        # UPDATE
+        res = self.env["test.oql.product"].oql(
+            f"from test.oql.product update spu_name = 'Lifecycle Updated' where id = {rec_id}"
+        )
+        self.assertEqual(len(res), 1)
+        rec = self.env["test.oql.product"].browse(rec_id)
+        self.assertEqual(rec.spu_name, 'Lifecycle Updated')
+
+        # DELETE
+        res = self.env["test.oql.product"].oql(
+            f"from test.oql.product delete where id = {rec_id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertFalse(rec.exists())
+
+    @post_test("oql.crud")
+    def test_update_then_select(self):
+        """Test UPDATE then SELECT to verify the change."""
+        self.env["test.oql.product"].oql(
+            "from test.oql.product update spu_name = 'Verified' where spu_name = 'Cold Boot'"
+        )
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select spu_name where spu_name = 'Verified'"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['spu_name'], 'Verified')
+
     def _get_transformer(self):
         return OqlTransformer(self.env)
