@@ -13,11 +13,22 @@ class OqlBase(models.AbstractModel):
     _inherit = "base"
 
     @api.model
-    def searcho(self, oql_where: str):
+    def searcho(self, oql_where: str, offset=0, limit=None, order=None, count=False):
         """Search with OQL."""
-        prefix = f"FROM {self._name} SELECT id WHERE "
+        if count:
+            raise NotImplementedError("searcho(count) not implemented yet.")
+        chips = [f"FROM {self._name}",
+                 f"SELECT {'COUNT(*)' if count else 'id'}",
+                 f"WHERE {oql_where}"]
+        if order:
+            chips.append(f"ORDER BY {order}")
+        if limit:
+            chips.append(f"LIMIT {limit}")
+        if offset:
+            chips.append(f"OFFSET {offset}")
+        oql = '\n'.join(chips)
         try:
-            result = self.oql(f"{prefix}{oql_where}")
+            result = self.oql(oql)
             return self.browse([x["id"] for x in result])
         except Exception as e:
             _logger.debug(f"OQL query error: {e}", exc_info=True)
