@@ -65,6 +65,19 @@ Use ``searcho()`` instead of ``search()``, or ``oql()`` for full queries::
         "where active = true order by list_price desc limit 10 offset 20"
     )
 
+    # UPDATE — modify records, returns List[dict] with affected ids
+    env['product.product'].oql(
+        "update product.product set list_price = 99.99 where name like 'Boot'"
+    )
+
+    # INSERT — insert a new record, returns [{"id": <new_id>}]
+    env['product.product'].oql(
+        "insert into product.product set name = 'New Boot', list_price = 50.00"
+    )
+
+    # DELETE — remove records, returns List[dict] with deleted ids
+    env['product.product'].oql("delete from product.product where active = false")
+
 **3. OQL Workbench** — try it out right away
 
 After installation, you can access the built-in OQL Workbench in two ways:
@@ -162,17 +175,38 @@ Three methods are added to every Odoo model:
         env['product.product'].searcho_ids("list_price = null")
 
 ``oql(query: str) -> List[dict]``
-    Full query with SELECT, FROM, WHERE, ORDER BY, LIMIT, OFFSET.
-    Returns a list of dictionaries.
+    Full query with SELECT, UPDATE, INSERT, DELETE, FROM, WHERE, ORDER BY,
+    LIMIT, OFFSET. Returns a list of dictionaries (each containing an ``id``
+    key for the affected record).
 
     ::
 
+        # SELECT
         env['product.product'].oql(
             "from product.product"
             " select name, list_price, partner_id.name"
             " where active = true"
             " order by name asc"
             " limit 50 offset 0"
+        )
+
+        # UPDATE
+        env['product.product'].oql(
+            "from product.product"
+            " update list_price = 99.99, active = true"
+            " where name like 'Boot'"
+        )
+
+        # INSERT
+        env['product.product'].oql(
+            "insert into product.product"
+            " set name = 'New Boot', list_price = 50.00"
+        )
+
+        # DELETE
+        env['product.product'].oql(
+            "delete from product.product"
+            " where active = false"
         )
 
 .. note::
@@ -185,7 +219,15 @@ Three methods are added to every Odoo model:
 Query Syntax
 ------------
 
-An OQL query follows this structure::
+OQL supports four statement types. **SELECT** places ``FROM`` first (so the
+editor knows the model before suggesting fields); **UPDATE**, **INSERT**, and
+**DELETE** follow standard SQL syntax with the model name right after the
+keyword.
+
+SELECT
+~~~~~~
+
+An OQL SELECT query follows this structure::
 
     FROM <model>
     SELECT [TRANSLATE] <field> [AS <alias>], ...
@@ -194,12 +236,103 @@ An OQL query follows this structure::
     [LIMIT <n>]
     [OFFSET <n>]
 
-Key differences from SQL: **clause order is FROM → SELECT → WHERE** (not
-SELECT → FROM → WHERE), and all keywords are case-insensitive.
+Key difference from SQL: **clause order is FROM → SELECT → WHERE** (not
+SELECT → FROM → WHERE). This is intentional — the editor needs the model name
+first to provide field auto-completion. All keywords are case-insensitive.
 
 The optional ``translate`` keyword enables translated field lookups in
 ``SELECT`` (returns translated values) and/or ``WHERE`` (searches against
 translated values). It has no effect on non-translatable fields.
+
+UPDATE
+~~~~~~
+
+Updates records matching the optional ``WHERE`` clause. Returns a list of
+``{"id": <id>}`` for every updated record.
+
+::
+
+    UPDATE <model> SET [TRANSLATE] <field> = <value>, ...
+    [WHERE [TRANSLATE] <conditions>]
+    [LIMIT <n>]
+
+::
+
+    # Update a single record
+    oql("update product.product set list_price = 99.99 where id = 42")
+
+    # Bulk update with WHERE and LIMIT
+    oql("update product.product set active = false where name like 'Old%' limit 100")
+
+    # Update translated field
+    oql("update product.product set translate name = 'Chaussure' where id = 42")
+
+    # Update x2many field (replace all lines)
+    oql("update product.template set tag_ids = (1, 2, 3) where id = 42")
+
+    # Clear x2many field (set to null)
+    oql("update product.template set tag_ids = null where id = 42")
+
+.. note::
+
+   - ``TRANSLATE`` controls the language context for the ``write()`` call —
+     use it to update translated field values in the user's language.
+   - x2many fields accept an array of ids ``(1, 2, 3)`` (replaces all lines)
+     or ``null`` (clears all lines).
+   - ``LIMIT`` restricts how many matching records are updated.
+
+INSERT
+~~~~~~
+
+Inserts a single new record. Returns ``[{"id": <new_id>}]``.
+
+::
+
+    INSERT INTO <model> SET [TRANSLATE] <field> = <value>, ...
+
+::
+
+    # Insert with multiple fields
+    oql("insert into product.product set name = 'New Boot', list_price = 50.00, active = true")
+
+    # Insert with translated field
+    oql("insert into product.product set translate name = 'Nouvelle Chaussure'")
+
+    # Insert with many2one and x2many
+    oql("insert into product.template set name = 'Template', categ_id = 5, tag_ids = (1, 2)")
+
+.. note::
+
+   ``INSERT`` does not support ``WHERE``, ``ORDER BY``, ``LIMIT``, or
+   ``OFFSET`` — it always creates exactly one record.
+
+DELETE
+~~~~~~
+
+Deletes records matching the optional ``WHERE`` clause. Returns a list of
+``{"id": <id>}`` for every deleted record.
+
+::
+
+    DELETE FROM <model>
+    [WHERE [TRANSLATE] <conditions>]
+    [LIMIT <n>]
+
+::
+
+    # Delete by condition
+    oql("delete from product.product where active = false")
+
+    # Delete specific record
+    oql("delete from product.product where id = 42")
+
+    # Delete with LIMIT
+    oql("delete from product.product where name like 'Test%' limit 10")
+
+.. warning::
+
+   ``DELETE`` without a ``WHERE`` clause deletes **all** records in the model
+   (subject to record rules). Use with caution.
 
 Operators
 ~~~~~~~~~
@@ -568,8 +701,21 @@ Navigate to **Settings → Technical → Security → Access Rights**, open any
 How ACL Is Enforced
 ~~~~~~~~~~~~~~~~~~~
 
+**Model-level:** OQL checks ``ir.model.access`` for the appropriate permission
+mode before executing any statement:
+
+- **SELECT** → ``read``
+- **UPDATE** → ``write``
+- **INSERT** → ``create`` (plus ``write`` for field-level checks)
+- **DELETE** → ``unlink``
+
+If the user lacks the required model-level permission, an ``AccessError`` is
+raised immediately.
+
 **Field-level:** Each field path in WHERE and SELECT is checked. If any field
 in the path lacks read access, the query is blocked with an ``AccessError``.
+For UPDATE and INSERT, every field in the SET clause is checked for write
+access.
 
 **Alias-level:** Each alias is checked against the user's alias permissions.
 
@@ -587,7 +733,13 @@ in the path lacks read access, the query is blocked with an ``AccessError``.
 
 **Record rules (ir.rule):** Odoo's standard record rules are still applied.
 On every query, ``ir.rule._compute_domain()`` is AND‑merged with the query's
-domain, ensuring users only see records their groups permit.
+domain, ensuring users only see/modify records their groups permit. The
+permission mode passed to ``_compute_domain()`` matches the statement type:
+
+- SELECT → ``read``
+- UPDATE → ``write``
+- INSERT → ``create`` (no record filtering — new record)
+- DELETE → ``unlink``
 
 Example
 ~~~~~~~
@@ -605,6 +757,17 @@ Restrict users to query only ``name`` and ``list_price`` via OQL::
 
     # Note: standard read() is unaffected
     products.read(['default_code'])  # ✓ Still works
+
+Restrict which fields a user can UPDATE::
+
+    # Default Write Access = False
+    # Grant write to: list_price only
+
+    # ✓ Works — list_price is writable
+    oql("update product.product set list_price = 99.99 where id = 42")
+
+    # ✗ AccessError — name is not writable
+    oql("update product.product set name = 'New' where id = 42")
 
 .. _architecture:
 

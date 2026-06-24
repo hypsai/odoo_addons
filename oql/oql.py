@@ -28,9 +28,6 @@ class OqlTransformer(lark.Transformer):
     FLOAT = float
 
     select_stmt = SelectStmt
-    update_stmt = UpdateStmt
-    create_stmt = CreateStmt
-    delete_stmt = DeleteStmt
 
     def __init__(self, env: odoo.api.Environment):
         super().__init__(True)
@@ -46,12 +43,26 @@ class OqlTransformer(lark.Transformer):
         stmt.meta = self._meta
         return stmt.execute()
 
-    def from_clause(self, model: str):
+    def _init_model(self, model_name: str):
+        """Initialize model for non-SELECT statements."""
         acl = self._meta.acl
-        acl[model].check("read", True)
-        self.model_name = model
-        self.recs = self.env[model].sudo()  # OQL ACL is fully controlled by OQL, so use sudo() here to pass Odoo ACL.
+        acl[model_name].check("read", True)
+        self.model_name = model_name
+        self.recs = self.env[model_name].sudo()
+
+    def from_clause(self, model: str):
+        self._init_model(model)
         return self.recs
+
+    def update_stmt(self, model_name: str, _set, translate, set_clause: SetClause,
+                    where: Optional[WhereClause] = None, limit=None):
+        return UpdateStmt(self.recs, translate, set_clause, where, limit)
+
+    def insert_stmt(self, model_name: str, _set, translate, set_clause: SetClause):
+        return CreateStmt(self.recs, translate, set_clause)
+
+    def delete_stmt(self, model_name: str, where: Optional[WhereClause] = None, limit=None):
+        return DeleteStmt(self.recs, where, limit)
 
     def select_clause(self, translate: Optional[str], fields="*"):
         if fields == "*":
@@ -109,7 +120,9 @@ class OqlTransformer(lark.Transformer):
         return list(fields)
 
     def model(self, names: Tuple[str]):
-        return '.'.join(names)
+        model_name = '.'.join(names)
+        self._init_model(model_name)
+        return model_name
 
     def field(self, names: Tuple[str]):
         return FieldAccess(self.recs, names, self._meta)

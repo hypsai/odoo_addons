@@ -137,7 +137,7 @@ class DeleteStmt(Statement):
         # 2 Search records to delete.
         if self.where:
             domain = self.where.rec_set.domain.domain
-            domain = acl.perm_records(domain, "write")  # Record level ACL
+            domain = acl.perm_records(domain, "unlink")  # Record level ACL
             where_model = self.from_.with_context(lang=env.user.lang if self.where.translate else None)
         else:
             domain = []

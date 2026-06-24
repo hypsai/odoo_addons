@@ -1,14 +1,11 @@
 ?start: query
 
-query: select_stmt | update_stmt | create_stmt | delete_stmt
+query: select_stmt | update_stmt | insert_stmt | delete_stmt
 
 select_stmt: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
-
-update_stmt: from_clause "update"i [TRANSLATE] set_clause [where_clause] [limit_clause]
-
-create_stmt: from_clause "create"i [TRANSLATE] set_clause
-
-delete_stmt: from_clause "delete"i [where_clause] [limit_clause]
+update_stmt: "update"i model SET [TRANSLATE] set_clause [where_clause] [limit_clause]
+insert_stmt: "insert"i "into"i model SET [TRANSLATE] set_clause
+delete_stmt: "delete"i "from"i model [where_clause] [limit_clause]
 
 from_clause: "from"i model
 select_clause: "select"i [TRANSLATE] ("*" | fields)
@@ -100,6 +97,7 @@ ORDER_BY: /order\s+by/i
 ASC: "asc"i
 DESC: "desc"i
 TRANSLATE: "translate"i
+SET: "set"i
 
 // Imports
 %import common.LETTER
