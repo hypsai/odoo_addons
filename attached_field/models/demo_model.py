@@ -11,7 +11,7 @@ class AttachedFieldDemoSet(models.Model):
 
     @attached(picked=fields.Boolean("Picked", compute="_entity_compute_picked", inverse="_entity_inverse_picked"),
               kind=fields.Selection([("customer", "Customer"), ("supplier", "Supplier")], "Kind",
-                                    view={"widget": "radio"},
+                                    view={"widget": "radio", "options": "{'horizontal': true}"},
                                     compute="_entity_compute_kind", inverse="_entity_inverse_kind"))
     def action_pick_records(self):
         return {

@@ -9,6 +9,8 @@ import logging
 
 from odoo import models
 
+from .compatible import refresh_models
+
 _logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -36,7 +38,7 @@ def attached(**field_mapping):
 
             @attached(
                 note=fields.Char(compute='_compute_note'),
-                score=fields.Integer(compute='_compute_score', inverse='_inverse_score'),
+                score=fields.Integer(compute='_compute_score', inverse='_inverse_score', view={'widget': 'progress'}),
             )
             def action_open_view(self):
                 return self.env['other.model'].search([])
@@ -69,11 +71,7 @@ def attached(**field_mapping):
             # 3.  Build field-meta for the target model.
             fields_meta = {}
             for user_fname, user_fdef in field_mapping.items():
-                if isinstance(user_fdef, tuple):
-                    field_def, view_config = user_fdef
-                else:
-                    field_def, view_config = user_fdef, {}
-
+                field_def, view_config = user_fdef, user_fdef.args.get("view", {})
                 actual_fname = f"{invoker_table}_{action_method}_{user_fname}"
                 fields_meta[user_fname] = {
                     "actual_fname": actual_fname,
@@ -82,7 +80,6 @@ def attached(**field_mapping):
                 }
 
             # 4.  Register pending fields + trigger refresh_models (DB migration).
-            from .compatible import refresh_models
             registry_key = (res_model, invoker_model, action_method)
             if registry_key not in _PENDING_ATTACHED:
                 _PENDING_ATTACHED[registry_key] = {

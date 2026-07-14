@@ -11,10 +11,9 @@
 .o_attached_field_box {
     float: right;
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.5rem;
-    padding: 0.5rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
     margin-top: 0.25rem;
     margin-right: 0.5rem;
     background: rgba(255, 255, 255, 0.95);
@@ -22,14 +21,28 @@
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     width: auto;
-    pointer-events: auto; /* Re-enables clicking for the picker itself */
+    pointer-events: auto;
+}
+
+/* Each row: label (right) | separator | value (left) */
+.o_attached_field_row {
+    display: flex;
+    align-items: center;
+    gap: 0;
 }
 
 .o_attached_field_label {
-    font-weight: bold;
-    margin-right: 0.25rem;
+    text-align: right;
+    min-width: 60px;
     margin-bottom: 0;
+    padding-right: 0.5rem;
+    border-right: 1px solid #dee2e6;
     font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
+}
+
+.o_attached_field_value {
+    flex: 1;
+    padding-left: 0.5rem;
 }

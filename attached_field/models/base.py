@@ -169,6 +169,7 @@ def _inject_form_fields(doc, res, fields_meta, model):
         fdef = model._fields.get(actual_fname)
         string = (fdef.string if fdef else actual_fname) if fdef else actual_fname
 
+        row = etree.Element('div', {'class': 'o_attached_field_row'})
         label = etree.Element('label', {
             'for': actual_fname,
             'string': string,
@@ -177,9 +178,12 @@ def _inject_form_fields(doc, res, fields_meta, model):
         field_attrs = {'name': actual_fname}
         field_attrs.update(view_config)
         field_el = etree.Element('field', field_attrs)
+        value_div = etree.Element('div', {'class': 'o_attached_field_value'})
+        value_div.append(field_el)
 
-        inner_box.append(label)
-        inner_box.append(field_el)
+        row.append(label)
+        row.append(value_div)
+        inner_box.append(row)
 
     container.append(inner_box)
     form_nodes = doc.xpath("/form")
@@ -244,34 +248,24 @@ class AttachedFieldBase(models.AbstractModel):
                 # -- Build a new Field instance for the target model --
                 FieldClass = type(field_def)
 
-                # Replicate common attributes from the original field definition.
-                args = {}
-                if hasattr(field_def, 'args') and isinstance(field_def.args, dict):
-                    for key, val in field_def.args.items():
-                        if key == 'view':
-                            continue
-                        # Skip callable defaults – they may belong to the invoker.
-                        if callable(val):
-                            continue
-                        args[key] = val
-
-                # Make sure 'string' is always present.
-                if 'string' not in args and field_def.string:
-                    args['string'] = field_def.string
+                # Replicate attributes from the original field definition.
+                args = field_def.args.copy()
 
                 # Install delegated compute/inverse on the target model.
-                if field_def.compute:
+                original_compute = args.get("compute")
+                if original_compute:
                     comp_method_name = f"_attached_compute_{actual_fname}"
                     compute_fn = _create_attached_compute(
-                        invoker_model, field_def.compute, user2actual
+                        invoker_model, original_compute, user2actual
                     )
                     setattr(cls, comp_method_name, compute_fn)
                     args['compute'] = comp_method_name
 
-                if field_def.inverse:
+                original_inverse = args.get("inverse")
+                if original_inverse:
                     inv_method_name = f"_attached_inverse_{actual_fname}"
                     inverse_fn = _create_attached_inverse(
-                        invoker_model, field_def.inverse, user2actual
+                        invoker_model, original_inverse, user2actual
                     )
                     setattr(cls, inv_method_name, inverse_fn)
                     args['inverse'] = inv_method_name
