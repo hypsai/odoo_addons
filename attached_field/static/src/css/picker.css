@@ -1,5 +1,5 @@
 /* Container that handles the 'no-squeeze' logic */
-.o_record_picker_container {
+.o_attached_field_container {
     position: sticky;
     top: 0;
     z-index: 10;
@@ -8,10 +8,12 @@
 }
 
 /* The actual floating box */
-.o_record_picker_box {
+.o_attached_field_box {
     float: right;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
     padding: 0.5rem;
     margin-top: 0.25rem;
     margin-right: 0.5rem;
@@ -23,10 +25,11 @@
     pointer-events: auto; /* Re-enables clicking for the picker itself */
 }
 
-.o_record_picker_label {
+.o_attached_field_label {
     font-weight: bold;
-    margin-right: 0.5rem;
+    margin-right: 0.25rem;
     margin-bottom: 0;
     font-size: 12px;
     cursor: pointer;
+    white-space: nowrap;
 }
