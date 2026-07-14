@@ -1,10 +1,10 @@
 {
-    "name": "Record Picker",
+    "name": "Attached Field",
     "version": "15.0.1.0.0",
     "category": "Tools",
-    "summary": "Pick record in a more intuitive and clear way.",
+    "summary": "Attach a picker field to any model for intuitive record selection.",
     "description": """
-        Record Picker
+        Attached Field
     """,
     "author": "Your Company",
     "website": "https://www.yourcompany.com",
@@ -12,7 +12,7 @@
     "data": [],
     "assets": {
         "web.assets_backend": [
-            "record_picker/static/src/css/picker.css",
+            "attached_field/static/src/css/picker.css",
         ],
         "web.qunit_suite_tests": [
         ],

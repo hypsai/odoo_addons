@@ -52,7 +52,7 @@ class TestBase(HttpCase):
             # Use 'init' mode to treat it as a fresh installation
             convert_file(
                 self.cr,
-                'field_confidence',  # The module name to associate with XMLIDs
+                'attached_field',  # The module name to associate with XMLIDs
                 file_path,
                 {},  # idref (usually empty for new files)
                 mode='init',

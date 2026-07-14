@@ -30,6 +30,11 @@
       "supported_versions": ["15.0"],
       "description": "Web Widget YAML Editor",
       "port": 6
+    },
+    "attached_field": {
+      "supported_versions": ["15.0"],
+      "description": "Attached Field - Attach a picker field to any model for intuitive record selection",
+      "port": 7
     }
   }
 }
