@@ -20,7 +20,7 @@ class McpBaseTool(models.Model):
         help="Display name for this MCP tool (e.g., 'Search Customers').",
     )
     model_id = fields.Many2one(
-        "ir.model", "Model", required=True, readonly=True, ondelete="cascade", index=True,
+        "ir.model", "Model", required=True, ondelete="cascade", index=True,
         help="The Odoo model this tool operates on.  Immutable after creation.",
     )
     method_id = fields.Many2one(
