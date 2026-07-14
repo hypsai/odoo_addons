@@ -256,12 +256,12 @@ class McpController(http.Controller):
         filtered by per-tool ACL."""
         tools = []
         Tool = request.env['mcp.base.tool']
-        AclTool = request.env['mcp.base.tool.acl'].sudo()
+        AclTool = request.env['mcp.base.tool.acl']
         permitted_ids = AclTool.perm_tools()
         if not permitted_ids:
             return {"tools": []}
 
-        for rec in Tool.search([('id', 'in', list(permitted_ids))]):
+        for rec in Tool.sudo().search([('id', 'in', list(permitted_ids))]):
             model_name = rec.model_id.model
             method_name = rec.method_id.name
 
