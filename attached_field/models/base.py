@@ -147,6 +147,7 @@ def _inject_form_fields(doc, res: dict, field_names: Iterable[str], model: model
             _logger.warning(f"Attached field `{fname}` is missing from `{model}`, injection ignored.")
             continue
         view_config = getattr(fdef, "view", None) or {}
+        view_config.update(getattr(fdef, "view_form", {}))
         string = (fdef.string if fdef else fname) if fdef else fname
 
         row = etree.Element('div', {'class': 'o_attached_field_row'})
@@ -187,6 +188,7 @@ def _inject_tree_fields(doc, res: dict, field_names: Iterable[str], model: model
             _logger.warning(f"Attached field `{fname}` is missing from `{model}`, injection ignored.")
             continue
         view_config = getattr(fdef, "view", None) or {}
+        view_config.update(getattr(fdef, "view_tree", {}))
         field_attrs = {
             'name': fname,
             'string': fdef.string or fname,
