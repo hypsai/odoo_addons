@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================ -->
+    <!-- Demo: Open "Entities" view on res.partner with attached fields    -->
+    <!-- ================================================================ -->
+    <record id="demo_set_partner" model="attached.field.demo.set">
+        <field name="name">Partners with Picked &amp; Kind</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+    </record>
+</odoo>

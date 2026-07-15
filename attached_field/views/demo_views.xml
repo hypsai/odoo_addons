@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================ -->
+    <!-- Demo Set Tree                                                        -->
+    <!-- ================================================================ -->
+    <record id="view_attached_field_demo_set_tree" model="ir.ui.view">
+        <field name="name">attached.field.demo.set.tree</field>
+        <field name="model">attached.field.demo.set</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="model_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ================================================================ -->
+    <!-- Demo Set Form                                                        -->
+    <!-- ================================================================ -->
+    <record id="view_attached_field_demo_set_form" model="ir.ui.view">
+        <field name="name">attached.field.demo.set.form</field>
+        <field name="model">attached.field.demo.set</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="model_id"
+                               options="{'no_create': True, 'no_open': True}"/>
+                        <button string="Pick" name="action_pick_records" type="object" class="btn-primary fa-plus"/>
+                    </group>
+                    <group string="Entities" name="entity_group">
+                        <field name="entity_ids">
+                            <tree editable="bottom">
+                                <field name="res_id"/>
+                                <field name="kind"/>
+                            </tree>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ================================================================ -->
+    <!-- Action                                                              -->
+    <!-- ================================================================ -->
+    <record id="action_attached_field_demo_set" model="ir.actions.act_window">
+        <field name="name">Attached Field Demo</field>
+        <field name="res_model">attached.field.demo.set</field>
+        <field name="res_id" ref="demo_set_partner"/>
+        <field name="view_mode">form,tree</field>
+    </record>
+
+    <!-- ================================================================ -->
+    <!-- Menu  (application=True → top-level app, click to open directly)   -->
+    <!-- ================================================================ -->
+    <menuitem id="menu_attached_field_demo_root"
+              name="Attached Field Demo"
+              sequence="90"/>
+
+    <menuitem id="menu_attached_field_demo_set"
+              name="Set"
+              parent="menu_attached_field_demo_root"
+              action="action_attached_field_demo_set"
+              sequence="10"/>
+</odoo>

@@ -1,0 +1,92 @@
+<section class="oe_container" style="font-family: 'Montserrat', sans-serif; background-color: #fcfcfc; padding: 20px;">
+
+    <!-- Header -->
+    <div class="row oe_spaced">
+        <div class="col-12 text-center">
+            <h1 style="font-weight: 700; color: #283593;">Attached Field</h1>
+            <p class="lead" style="color: #555; max-width: 700px; margin: 15px auto;">
+                Dynamically attach fields to any Odoo model with <strong>one decorator</strong>.
+            </p>
+        </div>
+    </div>
+
+    <!-- Example -->
+    <div class="row oe_spaced">
+        <div class="col-12">
+            <div style="background: #f5f5f5; border-radius: 10px; padding: 25px; border: 1px solid #e0e0e0; overflow-x: auto;">
+                <pre style="margin: 0; font-size: 0.9rem; background: transparent; border: none;">
+<span style="color: #667eea; font-weight: bold;">@attached</span>(
+    picked=fields.Boolean("Picked", compute="_entity_compute_picked", inverse="_entity_inverse_picked"),
+    kind=fields.Selection([("customer","Customer"),("supplier","Supplier")], "Kind",
+                          compute="_entity_compute_kind", inverse="_entity_inverse_kind",
+                          <span style="color: #999;">view={"widget": "radio"}</span>),
+)
+def action_pick_records(self):
+    return {
+        'name': "Entities", 'type': 'ir.actions.act_window',
+        'res_model': self.model_id.model, 'view_mode': 'tree,form',
+        'target': 'current', 'context': self.env.context,
+    }</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Grid -->
+    <div class="row oe_spaced mt-4">
+        <div class="col-md-3 mb-3">
+            <div style="background: white; border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; height: 100%; text-align: center;">
+                <h5 style="font-weight: 700; color: #667eea;">Auto DB Migrate</h5>
+                <p class="small text-muted">Schema synced on-the-fly, no module upgrade.</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div style="background: white; border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; height: 100%; text-align: center;">
+                <h5 style="font-weight: 700; color: #667eea;">View Injection</h5>
+                <p class="small text-muted">Form: floating panel. Tree: appended columns.</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div style="background: white; border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; height: 100%; text-align: center;">
+                <h5 style="font-weight: 700; color: #667eea;">Delegated Logic</h5>
+                <p class="small text-muted">Compute/inverse on invoker; fields on target.</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div style="background: white; border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; height: 100%; text-align: center;">
+                <h5 style="font-weight: 700; color: #667eea;">Curried Names</h5>
+                <p class="small text-muted">Use <code>rec.picked</code>, not the auto-generated name.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Naming + view config -->
+    <div class="row oe_spaced mt-4 pt-3" style="border-top: 1px solid #eee;">
+        <div class="col-md-6 mb-3">
+            <div style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; height: 100%;">
+                <h5 style="font-weight: 700; color: #667eea;">Field Naming</h5>
+                <code style="display: block; background: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 0.85rem;">
+                    &lt;table&gt;_&lt;action&gt;_&lt;field&gt;
+                </code>
+                <p class="small text-muted mt-2">Example: <code>attached_field_demo_set_action_pick_records_picked</code></p>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; height: 100%;">
+                <h5 style="font-weight: 700; color: #667eea;">view={} Config</h5>
+                <code style="display: block; background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 0.85rem;">
+                    view={"widget": "radio", "class": "oe_inline"}
+                </code>
+                <p class="small text-muted mt-2">Injected as <code>&lt;field/&gt;</code> attributes on the view XML.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="row oe_spaced mt-4 text-center">
+        <div class="col-12">
+            <a href="https://github.com/hypsai/odoo_addons" target="_blank" class="btn btn-primary btn-lg px-5" style="border-radius: 50px; font-weight: 700; background-color: #667eea; border-color: #667eea; color: #ffffff;">
+                <i class="fa fa-github mr-2"></i> Star on GitHub
+            </a>
+        </div>
+    </div>
+</section>
