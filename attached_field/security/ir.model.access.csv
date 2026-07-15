@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_attached_field_demo_set,attached.field.demo.set,model_attached_field_demo_set,base.group_user,1,1,1,1
+access_attached_field_demo_entity,attached.field.demo.entity,model_attached_field_demo_entity,base.group_user,1,1,1,1

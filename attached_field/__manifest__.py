@@ -28,7 +28,7 @@
     ],
     "assets": {
         "web.assets_backend": [
-            "attached_field/static/src/css/picker.css",
+            "attached_field/static/src/css/attached.css",
         ],
         "web.qunit_suite_tests": [
         ],
