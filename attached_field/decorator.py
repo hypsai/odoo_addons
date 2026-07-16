@@ -66,7 +66,7 @@ def attached(**field_mapping: fields.Field):
             fields_meta = {}
             for user_fname, user_fdef in field_mapping.items():
                 user_fdef.args["name_user"] = user_fname
-                fields_meta[f"{invoker_table}_{action_method}_{user_fname}"] = user_fdef
+                fields_meta[f"attached_{invoker_table}_{action_method}_{user_fname}"] = user_fdef
             attached_ctx = {
                 "invoker_table": invoker_table,
                 "invoker_model": invoker_model,
@@ -83,6 +83,7 @@ def attached(**field_mapping: fields.Field):
             #     so that ``fields_view_get`` can render the dynamic fields.
             res = dict(res)
             res['context'] = {**res.get('context', {}), '_attached_fields': attached_ctx}
+
             return res
 
         return wrapper

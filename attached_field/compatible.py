@@ -7,6 +7,7 @@ import logging
 from collections import defaultdict
 
 from odoo.release import version_info
+from odoo.tools.func import lazy_property
 
 ODOO_VERSION = version_info[0]
 _logger = logging.getLogger(__name__)
@@ -67,7 +68,6 @@ def refresh_models(env, model_names):
                 registry.field_depends_context[field] = tuple(depends_context)
 
     # ---- 3. Invalidate lazy_property caches ----
-    from odoo.tools.func import lazy_property
     registry_dict = vars(registry)
     for attr_name in list(registry_dict):
         if isinstance(getattr(type(registry), attr_name, None), lazy_property):
