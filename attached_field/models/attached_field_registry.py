@@ -7,13 +7,14 @@ import logging
 from typing import Dict, List
 
 from odoo import models, fields, api
+from odoo.tools import table_exists
 
 from ..util import RawAttachedField
 
 _logger = logging.getLogger(__name__)
 
 # Per-database cache: {dbname: bool} — avoids information_schema check on every model.
-_table_exists_cache = None
+_table_exists_cache = {}
 
 
 class AttachedFieldRegistry(models.Model):
@@ -75,20 +76,15 @@ class AttachedFieldRegistry(models.Model):
         self.create(to_create)
 
     @api.model
-    def _has_table_cached(self, cr):
+    def table_exists(self):
+        """Check whether `self._table` exists in database."""
         global _table_exists_cache
-        if _table_exists_cache is None:
-            _table_exists_cache = {}
+        cr = self.env.cr
         dbname = cr.dbname
-        if dbname not in _table_exists_cache:
-            cr.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables
-                    WHERE table_name = 'attached_field_registry'
-                )
-            """)
-            _table_exists_cache[dbname] = cr.fetchone()[0]
-        return _table_exists_cache[dbname]
+        exists = _table_exists_cache.get(dbname)
+        if exists is None:
+            _table_exists_cache[dbname] = exists = table_exists(cr, self._table)
+        return exists
 
     @api.model
     def load_fields(self, model_name) -> List[RawAttachedField]:
@@ -98,7 +94,7 @@ class AttachedFieldRegistry(models.Model):
         ORM-dependency loops during early registry loading.
         """
         cr = self.env.cr
-        if not self._has_table_cached(cr):
+        if not self.table_exists():
             return []
 
         cr.execute("""
