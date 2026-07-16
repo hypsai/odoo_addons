@@ -1,6 +1,6 @@
 {
     "name": "Attached Field",
-    "version":"15.0",
+    "version":"1.0.1",
     "category": "Tools",
     "summary": "Dynamically attach fields to models from action methods.",
     "description": """
