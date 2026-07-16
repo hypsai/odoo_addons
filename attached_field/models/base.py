@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-# @Time         : 12:01 2026/2/23
+# @Time         : 12:01 2026/07/15
 # @Author       : Chris
 # @Description  : Extends ``base`` so that attached fields are
 #                 - installed during ``_setup_base`` (triggered by refresh_models)
 #                 - injected into views via ``fields_view_get``.
 import logging
-from typing import Dict, Iterable
+from typing import Dict, Iterable, List
 
 from lxml import etree
 from odoo import models, api, fields
+
+from ..util import RawAttachedField, groupby
 
 _logger = logging.getLogger(__name__)
 
@@ -203,50 +205,39 @@ class AttachedFieldBase(models.AbstractModel):
     def _setup_base(self):
         super()._setup_base()
 
-        # Try load attached meta from context.
-        ctx: dict = self.env.context.get("_attached_fields")
-        if not ctx:
-            return
-        invoker_model = ctx.get("invoker_model")
-        action_method = ctx.get("action_method")
-        fields_meta: Dict[str, fields.Field] = ctx.get("fields_meta")
-        user2actual = {f.args["name_user"]: actual for actual, f in fields_meta.items()}
-
-        # Install attached field to this model.
-        cls = type(self).__base__  # the concrete model class
+        # 1. Load attached field registries meta from database.
+        cls = type(self).__base__
         _fields = self._fields  # noqa
-        for fname, fdef in fields_meta.items():
-            if fname in _fields:
-                continue  # Has already been installed.
+        all_rfs: List[RawAttachedField] = self.env["attached.field.registry"].load_fields(self._name)
+        for (invoker_model, ), rfs in groupby(all_rfs, lambda x: (x.invoker_model, )):
+            rfs: List[RawAttachedField]
+            user2actual = {x.name_user: x.name for x in rfs}
+            for rf in rfs:
+                if rf.name in _fields:
+                    continue
+                FieldClass = rf.clazz
+                args = rf.args.copy()
 
-            # -- Build a new Field instance for the target model --
-            FieldClass = type(fdef)
+                original_compute = args.get("compute")
+                original_inverse = args.get("inverse")
+                if not original_compute and not original_inverse:
+                    raise Exception(
+                        f"Attached field `{rf.name}` must define compute and/or inverse.")
 
-            # Replicate attributes from the original field definition.
-            args = fdef.args.copy()
+                if original_compute:
+                    cm = f"_attached_compute_{rf.name}"
+                    setattr(cls, cm, _create_attached_compute(
+                        invoker_model, original_compute, rf.name, user2actual))
+                    args['compute'] = cm
+                if original_inverse:
+                    im = f"_attached_inverse_{rf.name}"
+                    setattr(cls, im, _create_attached_inverse(
+                        invoker_model, original_inverse, user2actual))
+                    args['inverse'] = im
 
-            # Install delegated compute/inverse on the target model.
-            original_compute = args.get("compute")
-            original_inverse = args.get("inverse")
-            if not original_compute and not original_inverse:
-                raise Exception(f"Attached field `{fname}` must define either one of compute/inverse method.")
-            if original_compute:
-                comp_method_name = f"_attached_compute_{fname}"
-                compute_fn = _create_attached_compute(invoker_model, original_compute, fname, user2actual)
-                setattr(cls, comp_method_name, compute_fn)
-                args['compute'] = comp_method_name
-            if original_inverse:
-                inv_method_name = f"_attached_inverse_{fname}"
-                inverse_fn = _create_attached_inverse(invoker_model, original_inverse, user2actual)
-                setattr(cls, inv_method_name, inverse_fn)
-                args['inverse'] = inv_method_name
-
-            new_field = FieldClass(**args)
-            self._add_field(fname, new_field)
-            _logger.debug(
-                "Attached field '%s' on model '%s' (invoker: %s.%s)",
-                fname, self._name, invoker_model, action_method,
-            )
+                self._add_field(rf.name, FieldClass(**args))
+                _logger.debug("Attached field '%s' on '%s' (invoker: %s.%s)",
+                              rf.name, self._name, invoker_model, rf.action_method)
 
     @api.model
     def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
@@ -255,16 +246,16 @@ class AttachedFieldBase(models.AbstractModel):
         if not ctx or not res.get('arch'):
             return res
 
-        fields_meta: Dict[str, fields.Field] = ctx.get('fields_meta', {})
-        if not fields_meta:
+        fields_names: List[str] = ctx.get('fields', [])
+        if not fields_names:
             return res
 
         doc = etree.fromstring(res['arch'])
 
         if view_type == 'form':
-            _inject_form_fields(doc, res, fields_meta, self)
+            _inject_form_fields(doc, res, fields_names, self)
         elif view_type in ('tree', 'list'):
-            _inject_tree_fields(doc, res, fields_meta, self)
+            _inject_tree_fields(doc, res, fields_names, self)
 
         res['arch'] = etree.tostring(doc, encoding='unicode')
 

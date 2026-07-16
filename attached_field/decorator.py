@@ -53,6 +53,8 @@ def attached(**field_mapping: fields.Field):
             # 2.  Determine target model & ensure it is a view-action res.
             if isinstance(res, dict):
                 res_model = res.get('res_model')
+                if not res_model:
+                    return res
             else:
                 # Not a view action – return unchanged.
                 return res
@@ -67,21 +69,21 @@ def attached(**field_mapping: fields.Field):
             for user_fname, user_fdef in field_mapping.items():
                 user_fdef.args["name_user"] = user_fname
                 fields_meta[f"attached_{invoker_table}_{action_method}_{user_fname}"] = user_fdef
+
+            # 4.  Register pending fields + trigger refresh_models (DB migration).
+            env["attached.field.registry"].register(res_model, fields_meta, invoker_model, action_method)
+            refresh_models(env, [res_model])
+
+            # 5.  Inject ``_attached_fields`` into the action's client context
+            #     so that ``fields_view_get`` can render the dynamic fields.
+            res = res.copy()
             attached_ctx = {
                 "invoker_table": invoker_table,
                 "invoker_model": invoker_model,
                 "invoker_ids": invoker_ids,
                 "action_method": action_method,
-                "fields_meta": fields_meta,
+                "fields": list(fields_meta.keys()),
             }
-            ctx = {**env.context, '_attached_fields': attached_ctx}
-
-            # 4.  Register pending fields + trigger refresh_models (DB migration).
-            refresh_models(env(context=ctx), [res_model])
-
-            # 5.  Inject ``_attached_fields`` into the action's client context
-            #     so that ``fields_view_get`` can render the dynamic fields.
-            res = dict(res)
             res['context'] = {**res.get('context', {}), '_attached_fields': attached_ctx}
 
             return res
