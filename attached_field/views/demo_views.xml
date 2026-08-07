@@ -52,9 +52,6 @@
         <field name="view_mode">form,tree</field>
     </record>
 
-    <!-- ================================================================ -->
-    <!-- Menu  (application=True → top-level app, click to open directly)   -->
-    <!-- ================================================================ -->
     <menuitem id="menu_attached_field_demo_root"
               name="Attached Field Demo"
               sequence="90"/>
@@ -64,4 +61,16 @@
               parent="menu_attached_field_demo_root"
               action="action_attached_field_demo_set"
               sequence="10"/>
+
+    <menuitem id="menu_hypsai_attached_field"
+              name="Attached Field"
+              parent="hypsai.menu_hypsai_root"
+              sequence="30"/>
+
+    <menuitem id="menu_hypsai_attached_field_demo"
+              name="Demo"
+              parent="menu_hypsai_attached_field"
+              action="action_attached_field_demo_set"
+              sequence="10"/>
+
 </odoo>

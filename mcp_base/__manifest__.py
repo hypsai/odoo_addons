@@ -27,7 +27,7 @@
     'author': 'Hypsai Tech',
     'website': 'https://github.com/hypsai/odoo_addons/tree/main/mcp_base',
     'license': 'LGPL-3',
-    'depends': ['base'],
+    'depends': ['base', 'hypsai'],
     'images': ['static/description/banner.png'],
     'external_dependencies': {
         'python': [],

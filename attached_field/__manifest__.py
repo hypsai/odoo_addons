@@ -18,7 +18,7 @@
     """,
     "author": "Your Company",
     "website": "https://www.yourcompany.com",
-    "depends": ["base", "web"],
+    "depends": ["base", "web", "hypsai"],
     "data": [
         "security/ir.model.access.csv",
     ],

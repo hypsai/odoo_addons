@@ -22,7 +22,7 @@ Example:
 
 Menu: Settings > Technical > OQL
     """,
-    'depends': ['base'],
+    'depends': ['base', 'hypsai'],
     'images': ['static/description/banner.png'],
     "data": [
         "security/ir.model.access.csv",

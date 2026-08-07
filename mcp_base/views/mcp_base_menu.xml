@@ -21,5 +21,22 @@
                   sequence="20">
         </menuitem>
 
+        <menuitem id="menu_hypsai_mcp"
+                  name="MCP Framework"
+                  parent="hypsai.menu_hypsai_root"
+                  sequence="10"/>
+
+        <menuitem id="menu_hypsai_mcp_tools"
+                  name="Tools"
+                  parent="menu_hypsai_mcp"
+                  action="action_mcp_base_tool"
+                  sequence="10"/>
+
+        <menuitem id="menu_hypsai_mcp_acl"
+                  name="Access Rights"
+                  parent="menu_hypsai_mcp"
+                  action="base.ir_access_act"
+                  sequence="20"/>
+
     </data>
 </odoo>

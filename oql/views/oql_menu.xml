@@ -1,5 +1,6 @@
 <odoo>
     <data>
+
         <menuitem id="menu_tech_oql"
                 name="OQL"
                 parent="base.menu_custom"
@@ -26,5 +27,29 @@
                 action="base.ir_access_act"
                 sequence="20">
         </menuitem>
+
+        <menuitem id="menu_hypsai_oql"
+                name="OQL"
+                parent="hypsai.menu_hypsai_root"
+                sequence="20"/>
+
+        <menuitem id="menu_hypsai_oql_terms"
+                name="Terms"
+                parent="menu_hypsai_oql"
+                action="action_open_oql_term_tree"
+                sequence="10"/>
+
+        <menuitem id="menu_hypsai_oql_aliases"
+                name="Aliases"
+                parent="menu_hypsai_oql"
+                action="action_open_oql_alias_tree"
+                sequence="20"/>
+
+        <menuitem id="menu_hypsai_oql_acl"
+                name="Access Rights"
+                parent="menu_hypsai_oql"
+                action="base.ir_access_act"
+                sequence="30"/>
+
     </data>
 </odoo>
