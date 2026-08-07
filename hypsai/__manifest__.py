@@ -1,6 +1,6 @@
 {
     "name": "Hypsai",
-    "version": "1.0.0",
+    "version":"1.0.1",
     "category": "Technical",
     "summary": "Hypsai Base",
     "author": "Hypsai Tech",
