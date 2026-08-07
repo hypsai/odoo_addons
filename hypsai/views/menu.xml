@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <menuitem id="menu_hypsai_root"
+                  name="Hypsai"
+                  parent="base.menu_administration"
+                  sequence="200"/>
+    </data>
+</odoo>
