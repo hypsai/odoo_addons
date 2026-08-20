@@ -44,6 +44,11 @@ class OqlBase(models.AbstractModel):
         return self.oql(oql)
 
     @api.model
+    def search_reado(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):
+        recs = self.search(domain, offset, limit, order)
+        return recs.reado(fields, **read_kwargs)
+
+    @api.model
     def searcho_ids(self, oql_where: str):
         """Search with OQL and return record ids."""
         return self.searcho(oql_where).ids
