@@ -193,6 +193,28 @@ class TestOql(TransactionCase):
         res = self.env["test.oql.product"].searcho("tag_ids.name='Waterproof:GTX' and (tag_ids.name='Weather:Cold')")
         self.assertEqual({"Cold Boot"}, set(res.mapped("spu_name")))
 
+    def test_reado(self):
+        """Test reado: read fields (with alias) on a set of records."""
+        recs = self.env["test.oql.product"].searcho(
+            "(tag_ids.name='Weather:Cold' or tag_ids.name='Weather:Hot')")
+        self.assertEqual(set(recs.mapped("spu_name")), {"Cold Boot", "Hot Boot"})
+
+        # Read a nested field with an alias.
+        res = recs.reado(["tag_ids.name as tag"])
+        self.assertEqual(len(res), len(recs))
+        for row in res:
+            self.assertIn("tag", row)
+            self.assertNotIn("tag_ids.name", row)
+
+        # Read multiple fields, mixing plain and aliased paths.
+        res = recs.reado(["spu_name", "tag_ids.name as tag"])
+        self.assertEqual(len(res), len(recs))
+        names = {row["spu_name"] for row in res}
+        self.assertEqual(names, {"Cold Boot", "Hot Boot"})
+        for row in res:
+            self.assertIn("tag", row)
+            self.assertTrue(any(x in {"Weather:Cold", "Weather:Hot"} for x in set(row["tag"])))
+
     @post_test("oql.const")
     def test_constants_true_false_null(self):
         """Test TRUE, FALSE, NULL constants in OQL queries."""

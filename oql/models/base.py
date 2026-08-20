@@ -35,6 +35,15 @@ class OqlBase(models.AbstractModel):
             raise UserError(str(e))
 
     @api.model
+    def reado(self, fields=None):
+        """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
+        # TODO: Parse `fields` directly and read to improve performance.
+        oql = (f"FROM {self._name} "
+               f"SELECT {", ".join(fields) if fields else "*"} "
+               f"WHERE id IN {self._ids}")
+        return self.oql(oql)
+
+    @api.model
     def searcho_ids(self, oql_where: str):
         """Search with OQL and return record ids."""
         return self.searcho(oql_where).ids
