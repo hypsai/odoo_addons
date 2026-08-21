@@ -2,7 +2,7 @@ from odoo import Command
 from odoo.tests import tagged, TransactionCase
 from ..oql import reader, OqlTransformer
 from ..compatible import set_model_translation, flush_translations
-from .test_model_defs import ensure_model_meta, post_test
+from .test_model_defs import ensure_model_meta, ensure_model_access, post_test
 
 
 @tagged("oql_query", '-at_install', 'post_install')
@@ -14,6 +14,7 @@ class TestOql(TransactionCase):
 
         # 1 Load model meta.
         ensure_model_meta(env)
+        ensure_model_access(env)
         metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
         metaTag = env["ir.model"].search([("model", "=", "test.oql.tag")], limit=1)

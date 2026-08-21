@@ -13,13 +13,18 @@ def post_test(*tags):
     return tagged("-at_install", "post_install", *tags)
 
 
+MODEL_NAMES = ['test.oql.template', 'test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value',
+               'test.oql.tag', 'test.oql.supplierinfo', 'test.oql.category']
+
+
 def ensure_model_meta(env):
     """
     Insert model meta into `ir.model` manually.
+
+    Note: This only creates `ir.model` records. It does NOT touch
+    `ir.model.access`. Use `ensure_model_access` separately to grant access.
     """
-    model_names = ['test.oql.template', 'test.oql.product', 'test.oql.attribute', 'test.oql.attribute.value',
-                   'test.oql.tag', 'test.oql.supplierinfo', 'test.oql.category']
-    for model_name in model_names:
+    for model_name in MODEL_NAMES:
         # Search for existing model record
         meta = env["ir.model"].search([("model", "=", model_name)], limit=1)
 
@@ -37,6 +42,52 @@ def ensure_model_meta(env):
                 'info': description,
                 'transient': is_transient,
                 'order': 'id',  # Default ordering
+            })
+
+
+def ensure_model_access(env, groups=('base.group_system',),
+                        perm_read=True, perm_write=True, perm_create=True, perm_unlink=True):
+    """
+    Insert full `ir.model.access` records for all test models, for the given
+    groups only.
+
+    Why not demo data / security CSV: the test models live under `tests/`, so
+    they are only loaded while running tests. Their ACL must therefore be
+    created at runtime.
+
+    Why admin only by default: the test environment runs as `admin`, which
+    belongs to `base.group_system`. Granting access to `base.group_system`
+    allows the setUp fixtures to create/write records.
+
+    IMPORTANT: do NOT grant access to `base.group_user` here. ACL-denial tests
+    (in `test_acl.py`) create a `test_user` in `base.group_user` and rely on it
+    having NO access, then grant/deny access precisely per test. Giving
+    `base.group_user` access here would leak permissions (field-level ACL uses
+    `BOOL_OR` over groups, so an extra permissive row would make "denied"
+    fields readable).
+
+    :param groups: Groups to grant full access to. Defaults to admin only.
+    """
+    if isinstance(groups, str):
+        groups = (groups,)
+    group_ids = [env.ref(g).id if isinstance(g, str) else g.id for g in groups]
+    for model_name in MODEL_NAMES:
+        meta = env["ir.model"].search([("model", "=", model_name)], limit=1)
+        if not meta:
+            continue
+        for group_id in group_ids:
+            existing = env["ir.model.access"].search([
+                ("model_id", "=", meta.id), ("group_id", "=", group_id)], limit=1)
+            if existing:
+                continue
+            env["ir.model.access"].create({
+                "name": f"test access {model_name}",
+                "model_id": meta.id,
+                "group_id": group_id,
+                "perm_read": perm_read,
+                "perm_write": perm_write,
+                "perm_create": perm_create,
+                "perm_unlink": perm_unlink,
             })
 
 

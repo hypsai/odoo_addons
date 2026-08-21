@@ -6,7 +6,7 @@
 from odoo import Command
 from odoo.tests import tagged, TransactionCase
 from ..alias import AliasNode, AliasField, AliasJMESPath, AliasJinja2
-from .test_model_defs import ensure_model_meta
+from .test_model_defs import ensure_model_meta, ensure_model_access
 
 
 @tagged("oql_alias", '-at_install', 'post_install')
@@ -148,6 +148,7 @@ class TestAliasReading(TransactionCase):
         super().setUp()
         env = self.env
         ensure_model_meta(env)
+        ensure_model_access(env)
 
         # Create test records
         metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
@@ -231,6 +232,7 @@ class TestAliasShorthand(TransactionCase):
         super().setUp()
         env = self.env
         ensure_model_meta(env)
+        ensure_model_access(env)
 
         metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         

@@ -5,7 +5,7 @@
 from odoo.exceptions import AccessError
 from odoo.tests import tagged, TransactionCase
 
-from .test_model_defs import ensure_model_meta, post_test
+from .test_model_defs import ensure_model_meta, ensure_model_access, post_test
 from ..acl import OqlAcl
 from ..compatible import res_users_data, res_users_groups_id
 
@@ -19,6 +19,9 @@ class TestOqlAcl(TransactionCase):
 
         # 1. Load model meta
         ensure_model_meta(env)
+        # Grant full access to admin only, so fixtures can be created without
+        # leaking permissions to `self.test_user` (which is used to test denial).
+        ensure_model_access(env)
         metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
         metaAttributeValue = env["ir.model"].search([("model", "=", "test.oql.attribute.value")], limit=1)
@@ -742,6 +745,9 @@ class TestOqlRecordRule(TransactionCase):
 
         # 1. Load model meta.
         ensure_model_meta(env)
+        # Admin-only access for fixtures; record rules are tested via a
+        # separate `test_user` whose access is granted per test.
+        ensure_model_access(env)
         self.metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         self.metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
         self.metaAttributeValue = env["ir.model"].search([("model", "=", "test.oql.attribute.value")], limit=1)
@@ -1299,6 +1305,10 @@ class TestOqlRecordRule(TransactionCase):
         """UPDATE should succeed when user has model-level write access."""
         self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
                                  perm_oql_fac_default_write=True)
+        # `spu_name` is a related field pointing at `test.oql.template.name`;
+        # writing it triggers `_inverse_related` which writes the template.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
         user_env = self._get_user_env()
         res = user_env["test.oql.product"].oql(
             f"update test.oql.product set spu_name = 'Updated' where id = {self.prod_cold.id}"
@@ -1324,6 +1334,10 @@ class TestOqlRecordRule(TransactionCase):
         field-level ACL ties field write permission to model-level write.
         """
         self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
+                                 perm_create=True, perm_oql_fac_default_write=True)
+        # `spu_name` delegates to `test.oql.template.name`, so creating a
+        # product also creates (and writes) the underlying template record.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
                                  perm_create=True, perm_oql_fac_default_write=True)
         user_env = self._get_user_env()
         res = user_env["test.oql.product"].oql(
@@ -1370,6 +1384,10 @@ class TestOqlRecordRule(TransactionCase):
         env = self.env
         access = self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
                                           perm_oql_fac_default_write=False)
+        # `spu_name` is related to `test.oql.template.name`, so the template
+        # model must also be writable for `_inverse_related` to succeed.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
         # Grant write access to spu_name field only.
         spu_name_field = env["ir.model.fields"].search([
             ('model_id', '=', self.metaProduct.id), ('name', '=', 'spu_name')
@@ -1390,6 +1408,9 @@ class TestOqlRecordRule(TransactionCase):
     def test_acl_update_record_rule_blocks(self):
         """UPDATE should only affect records allowed by ir.rule (write mode)."""
         self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
+        # `spu_name` writes through to `test.oql.template.name`.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
                                  perm_oql_fac_default_write=True)
         # Rule: only Cold Boot is writable.
         self._create_ir_rule(
