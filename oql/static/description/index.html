@@ -107,13 +107,13 @@ products = env['product.product'].search([
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
                 <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-code-fork mr-2"></i>SQL-like Syntax</h5>
-                <p class="text-muted small"><code>FROM</code> <code>SELECT</code> <code>WHERE</code> <code>ORDER BY</code> <code>LIMIT</code> <code>OFFSET</code> &mdash; familiar structure with <code>AS</code> aliases and <code>*</code> wildcard support.</p>
+                <p class="text-muted small">Full CRUD support: <code>SELECT</code>, <code>UPDATE</code>, <code>INSERT</code>, <code>DELETE</code> &mdash; plus <code>FROM</code> <code>WHERE</code> <code>ORDER BY</code> <code>LIMIT</code> <code>OFFSET</code> with <code>AS</code> aliases and <code>*</code> wildcard.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
             <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
                 <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-shield mr-2"></i>Field-Level Security</h5>
-                <p class="text-muted small">Separate OQL ACL layer: control read/write access per field and per alias per user group. Independent of standard Odoo ACL.</p>
+                <p class="text-muted small">Separate OQL ACL layer: control read/write access per field and per alias per user group. Enforces model-level <code>read</code>/<code>write</code>/<code>create</code>/<code>unlink</code> permissions and record rules for all statement types.</p>
             </div>
         </div>
         <div class="col-md-6 col-lg-4 mb-3">
@@ -237,9 +237,9 @@ env['product.product'].searcho(<strong>"EuShoeSize = '40'"</strong>)</pre>
 
                 <div class="col-md-6 mb-3">
                     <div style="background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; height: 100%;">
-                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-code mr-2"></i>Two Ways to Query</h5>
+                        <h5 style="font-weight: 700; color: #4caf50;"><i class="fa fa-code mr-2"></i>Query &amp; Modify</h5>
                         <div style="background-color: #f5f5f5; border-radius: 6px; padding: 12px; margin-top: 10px; overflow-x: auto;">
-                            <pre style="margin: 0; color: #333; font-size: 0.85rem; background: transparent; border: none;">
+                            <pre style="margin: 0; color: #333; font-size: 0.82rem; background: transparent; border: none;">
 <span style="color: #4caf50;"># searcho() &mdash; returns RecordSet
 # Accepts WHERE clause only</span>
 env['product.product'].<strong>searcho</strong>(
@@ -247,13 +247,31 @@ env['product.product'].<strong>searcho</strong>(
 )
 
 <span style="color: #4caf50;"># oql() &mdash; returns List[dict]
-# Full SQL-like syntax</span>
+# Full SQL-like syntax (SELECT)</span>
 env['product.product'].<strong>oql</strong>(
     "from product.product
-     select translate name, list_price, partner_id.name
-     where translate active = true and name = 'Chaussures'"
-     order by list_price desc
-     limit 10 offset 20"
+     select translate name, list_price
+     where translate name = 'Chaussures'
+     order by list_price desc limit 10"
+)
+
+<span style="color: #4caf50;"># UPDATE &mdash; modify records</span>
+env['product.product'].<strong>oql</strong>(
+    "update product.product
+     set list_price = 99.99
+     where name like 'Boot'"
+)
+
+<span style="color: #4caf50;"># INSERT &mdash; insert new record</span>
+env['product.product'].<strong>oql</strong>(
+    "insert into product.product
+     set name = 'New Boot', list_price = 50.00"
+)
+
+<span style="color: #4caf50;"># DELETE &mdash; remove records</span>
+env['product.product'].<strong>oql</strong>(
+    "delete from product.product
+     where active = false"
 )</pre>
                         </div>
                     </div>

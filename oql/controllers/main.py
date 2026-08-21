@@ -22,7 +22,7 @@ class OqlController(http.Controller):
 
     # ---- JSON-RPC endpoints ----
 
-    @http.route('/oql/query', type=jsonrpc, auth='user', csrf=False)
+    @http.route('/oql/query', type=jsonrpc, auth='user', csrf=False, cors='*')
     def oql_query(self, query):
         """Execute OQL query and return result as list of dict."""
         _logger.debug("OQL query from user %s (ID %s): %s",
