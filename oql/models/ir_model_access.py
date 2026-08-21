@@ -7,6 +7,8 @@ from odoo import models, fields
 
 from ..compatible import model_flush
 
+ModelMode = Literal["read", "write", "create", "unlink"]
+
 
 class OqlIrModelAccess(models.Model):
     _inherit = "ir.model.access"
@@ -18,7 +20,7 @@ class OqlIrModelAccess(models.Model):
     perm_oql_aac_default_write = fields.Boolean("OQL Alias Default Write Access", default=True)
     oql_aac_ids = fields.One2many("oql.acl.alias", "mac_id", "OQL Alias ACL")
 
-    def perm_models(self, mode: Literal["read", "write"]) -> Set[str]:
+    def perm_models(self, mode: ModelMode) -> Set[str]:
         """Return model names that have the specified `mode` access."""
         env = self.env
         if env.su:
