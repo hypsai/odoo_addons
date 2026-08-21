@@ -33,21 +33,14 @@ class SelectStmt(Statement):
         self.offset = offset
 
     def execute(self):
-        env = self.from_.env
-        model_name = self.from_._name
-
         # 1 Search records.
         if self.where:
-            domain = self.where.rec_set.domain.domain
-            domain = self.meta.acl[model_name].perm_records(domain, "read")  # Record level ACL
-            where_model = self.from_.with_context(lang=env.user.lang if self.where.translate else None)
+            filtered_recs = self.where.execute(self.from_, self.meta, self.offset, self.limit, self.orderby)
         else:
-            domain = []
-            where_model = self.from_
-        select_recs = where_model.search(domain, self.offset, self.limit, self.orderby)
+            filtered_recs = self.from_.search([], self.offset, self.limit, self.orderby)
 
         # 2 Read fields.
-        rows = self.select.execute(select_recs, self.meta)
+        rows = self.select.execute(filtered_recs, self.meta)
 
         return rows
 

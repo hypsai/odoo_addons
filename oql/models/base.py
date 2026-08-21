@@ -15,20 +15,8 @@ class OqlBase(models.AbstractModel):
     @api.model
     def searcho(self, oql_where: str, offset=0, limit=None, order=None, count=False):
         """Search with OQL."""
-        if count:
-            raise NotImplementedError("searcho(count) not implemented yet.")
-        chips = [f"FROM {self._name}",
-                 f"SELECT {'COUNT(*)' if count else 'id'}",
-                 f"WHERE {oql_where}"]
-        if order:
-            chips.append(f"ORDER BY {order}")
-        if limit:
-            chips.append(f"LIMIT {limit}")
-        if offset:
-            chips.append(f"OFFSET {offset}")
-        oql = '\n'.join(chips)
         try:
-            result = self.oql(oql)
+            result = reader.search(self, oql_where, offset, limit, order, count)
             return self.browse([x["id"] for x in result])
         except Exception as e:
             _logger.debug(f"OQL query error: {e}", exc_info=True)
@@ -37,7 +25,7 @@ class OqlBase(models.AbstractModel):
     @api.model
     def reado(self, fields=None):
         """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
-        return reader.read_fields(self, fields)
+        return reader.read(self, fields)
 
     @api.model
     def search_reado(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):

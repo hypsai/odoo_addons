@@ -2,7 +2,7 @@
 # @Time         : 16:23 2026/6/23
 # @Author       : Chris
 # @Description  :
-from typing import Any
+from typing import Any, Union
 
 from odoo import _
 from odoo import models
@@ -39,6 +39,15 @@ class WhereClause:
     def __init__(self, translate: bool, rec_sets: RecordSets):
         self.translate = translate
         self.rec_set = rec_sets[0]
+
+    def execute(self, model: models.Model, meta: OqlMeta, offset: int, limit: int, orderby: str, count: bool = False) \
+            -> Union[models.Model, int]:
+        env = model.env
+        domain = self.rec_set.domain.domain
+        domain = meta.acl[model._name].perm_records(domain, "read")  # Record level ACL
+        where_model = model.with_context(lang=env.user.lang if self.translate else None)
+        res = where_model.search(domain, offset, limit, orderby, count)  # recs | int
+        return res
 
 
 class SetClause:

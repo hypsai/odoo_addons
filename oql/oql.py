@@ -185,7 +185,7 @@ class OqlTransformer(lark.Transformer):
 
 class OqlReader:
 
-    START_RULES = ["start", "select_clause"]
+    START_RULES = ["start", "select_clause", "where_clause"]
     """Name of the rules that can be use as AST root."""
 
     def __init__(self):
@@ -207,7 +207,13 @@ class OqlReader:
         """Full OQL query."""
         return self.parse(s, transformer, start="start")
 
-    def read_fields(self, recs: models.Model, fields: List[str] = None) -> List[Dict[str, Any]]:
+    def search(self, recs: models.Model, oql_where: str, offset=0, limit=None, order=None, count=False):
+        transformer = OqlTransformer(recs.env)
+        transformer.init_model(recs._name)
+        where: WhereClause = self.parse(f"WHERE {oql_where}", transformer, start="where_clause")
+        return where.execute(recs, transformer.meta, offset, limit, order, count)
+
+    def read(self, recs: models.Model, fields: List[str] = None) -> List[Dict[str, Any]]:
         """
         Read OQL fields from `recs`.
         :param recs: Target records.
@@ -220,10 +226,10 @@ class OqlReader:
 
         # 2 Parse the field list into a `SelectClause` by treating `select_clause` as the root.
         transformer = OqlTransformer(recs.env)
-        transformer.init_model(recs._name)  # Populate `model_name`/`recs` used by `select_clause`/`field_as`.
+        transformer.init_model(recs._name)
         select: SelectClause = self.parse(f"SELECT {fields_s}", transformer, start="select_clause")
 
-        # 4 Read fields aligned with `recs` (mirrors `SelectStmt.execute` step 3).
+        # 3 Read fields aligned with `recs` (mirrors `SelectStmt.execute` step 3).
         return select.execute(recs, transformer.meta)
 
 
