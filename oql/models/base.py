@@ -13,15 +13,37 @@ class OqlBase(models.AbstractModel):
     _inherit = "base"
 
     @api.model
-    def searcho(self, oql_where: str):
+    def searcho(self, oql_where: str, offset=0, limit=None, order=None, count=False):
         """Search with OQL."""
-        prefix = f"FROM {self._name} SELECT id WHERE "
         try:
-            result = self.oql(f"{prefix}{oql_where}")
+            result = reader.search(self, oql_where, offset, limit, order, count)
             return self.browse([x["id"] for x in result])
         except Exception as e:
             _logger.debug(f"OQL query error: {e}", exc_info=True)
             raise UserError(str(e))
+
+    @api.model
+    def reado(self, fields=None):
+        """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
+        return reader.read(self, fields)
+
+    @api.model
+    def search_reado(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):
+        """
+        OQL style `search_read`. Fully compatible with odoo built-in `search_read`.
+        :param domain: Can be:
+            1. OQL where clause
+            2. Odoo domain
+        :param fields: Supports format `["xxx.yyy as zzz", "cccc"]`
+        :param offset:
+        :param limit:
+        :param order:
+        """
+        if isinstance(domain, str):
+            recs = self.searcho(domain, offset, limit, order)
+        else:
+            recs = self.search(domain, offset, limit, order)
+        return recs.reado(fields, **read_kwargs)
 
     @api.model
     def searcho_ids(self, oql_where: str):

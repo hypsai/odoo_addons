@@ -11,7 +11,8 @@ class OQLWorkbenchState(models.Model):
         string='User',
         required=True,
         index=True,
-        default=lambda self: self.env.user
+        default=lambda self: self.env.user,
+        ondelete="cascade",
     )
     state = fields.Text(
         string='Workbench State',

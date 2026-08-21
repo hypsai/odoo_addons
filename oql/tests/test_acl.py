@@ -5,7 +5,7 @@
 from odoo.exceptions import AccessError
 from odoo.tests import tagged, TransactionCase
 
-from .test_model_defs import ensure_model_meta, post_test
+from .test_model_defs import ensure_model_meta, ensure_model_access, post_test
 from ..acl import OqlAcl
 from ..compatible import res_users_data, res_users_groups_id
 
@@ -19,6 +19,9 @@ class TestOqlAcl(TransactionCase):
 
         # 1. Load model meta
         ensure_model_meta(env)
+        # Grant full access to admin only, so fixtures can be created without
+        # leaking permissions to `self.test_user` (which is used to test denial).
+        ensure_model_access(env)
         metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
         metaAttributeValue = env["ir.model"].search([("model", "=", "test.oql.attribute.value")], limit=1)
@@ -742,6 +745,9 @@ class TestOqlRecordRule(TransactionCase):
 
         # 1. Load model meta.
         ensure_model_meta(env)
+        # Admin-only access for fixtures; record rules are tested via a
+        # separate `test_user` whose access is granted per test.
+        ensure_model_access(env)
         self.metaProduct = env["ir.model"].search([("model", "=", "test.oql.product")], limit=1)
         self.metaAttribute = env["ir.model"].search([("model", "=", "test.oql.attribute")], limit=1)
         self.metaAttributeValue = env["ir.model"].search([("model", "=", "test.oql.attribute.value")], limit=1)
@@ -782,19 +788,21 @@ class TestOqlRecordRule(TransactionCase):
     # Helpers
     # ------------------------------------------------------------------
 
-    def _grant_model_access(self, model_meta, perm_read=True, group=None):
-        """Create an ir.model.access record granting read access to a model."""
+    def _grant_model_access(self, model_meta, perm_read=True, perm_write=False,
+                            perm_create=False, perm_unlink=False, group=None,
+                            perm_oql_fac_default_read=True, perm_oql_fac_default_write=False):
+        """Create an ir.model.access record granting access to a model."""
         env = self.env
         return env["ir.model.access"].create({
             'name': f'Test Access {model_meta.model}',
             'model_id': model_meta.id,
             'group_id': (group or self.user_group).id,
             'perm_read': perm_read,
-            'perm_write': False,
-            'perm_create': False,
-            'perm_unlink': False,
-            'perm_oql_fac_default_read': True,
-            'perm_oql_fac_default_write': False,
+            'perm_write': perm_write,
+            'perm_create': perm_create,
+            'perm_unlink': perm_unlink,
+            'perm_oql_fac_default_read': perm_oql_fac_default_read,
+            'perm_oql_fac_default_write': perm_oql_fac_default_write,
         })
 
     def _create_ir_rule(self, model_meta, domain_force, groups=None):
@@ -1276,3 +1284,175 @@ class TestOqlRecordRule(TransactionCase):
         user_env = self._get_user_env()
         res = user_env["test.oql.product"].searcho("id > 0")
         self.assertEqual(len(res), 0)
+
+    # ------------------------------------------------------------------
+    # Tests: ACL for UPDATE / CREATE / DELETE statements
+    # ------------------------------------------------------------------
+
+    @post_test("acl.crud.model")
+    def test_acl_update_no_write_access(self):
+        """UPDATE should raise AccessError when user lacks model-level write access."""
+        # Grant read only.
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_write=False)
+        user_env = self._get_user_env()
+        with self.assertRaises(AccessError):
+            user_env["test.oql.product"].oql(
+                f"update test.oql.product set spu_name = 'X' where id = {self.prod_cold.id}"
+            )
+
+    @post_test("acl.crud.model")
+    def test_acl_update_with_write_access(self):
+        """UPDATE should succeed when user has model-level write access."""
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
+        # `spu_name` is a related field pointing at `test.oql.template.name`;
+        # writing it triggers `_inverse_related` which writes the template.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            f"update test.oql.product set spu_name = 'Updated' where id = {self.prod_cold.id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(self.prod_cold.spu_name, 'Updated')
+
+    @post_test("acl.crud.model")
+    def test_acl_create_no_create_access(self):
+        """CREATE should raise AccessError when user lacks model-level create access."""
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_create=False)
+        user_env = self._get_user_env()
+        with self.assertRaises(AccessError):
+            user_env["test.oql.product"].oql(
+                "insert into test.oql.product set spu_name = 'New'"
+            )
+
+    @post_test("acl.crud.model")
+    def test_acl_create_with_create_access(self):
+        """CREATE should succeed when user has model-level create access.
+
+        Note: CREATE also requires model-level write access because OQL's
+        field-level ACL ties field write permission to model-level write.
+        """
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
+                                 perm_create=True, perm_oql_fac_default_write=True)
+        # `spu_name` delegates to `test.oql.template.name`, so creating a
+        # product also creates (and writes) the underlying template record.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
+                                 perm_create=True, perm_oql_fac_default_write=True)
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            "insert into test.oql.product set spu_name = 'Created'"
+        )
+        self.assertEqual(len(res), 1)
+
+    @post_test("acl.crud.model")
+    def test_acl_delete_no_unlink_access(self):
+        """DELETE should raise AccessError when user lacks model-level unlink access."""
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_unlink=False)
+        user_env = self._get_user_env()
+        with self.assertRaises(AccessError):
+            user_env["test.oql.product"].oql(
+                f"delete from test.oql.product where id = {self.prod_cold.id}"
+            )
+
+    @post_test("acl.crud.model")
+    def test_acl_delete_with_unlink_access(self):
+        """DELETE should succeed when user has model-level unlink access."""
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_unlink=True)
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            f"delete from test.oql.product where id = {self.prod_cold.id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertFalse(self.prod_cold.exists())
+
+    @post_test("acl.crud.field")
+    def test_acl_update_field_no_write_access(self):
+        """UPDATE should raise AccessError when user lacks field-level write access."""
+        # Grant model write but deny field-level write by default.
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=False)
+        user_env = self._get_user_env()
+        with self.assertRaises(AccessError):
+            user_env["test.oql.product"].oql(
+                f"update test.oql.product set spu_name = 'X' where id = {self.prod_cold.id}"
+            )
+
+    @post_test("acl.crud.field")
+    def test_acl_update_field_with_write_access(self):
+        """UPDATE should succeed when user has field-level write access on the target field."""
+        env = self.env
+        access = self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
+                                          perm_oql_fac_default_write=False)
+        # `spu_name` is related to `test.oql.template.name`, so the template
+        # model must also be writable for `_inverse_related` to succeed.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
+        # Grant write access to spu_name field only.
+        spu_name_field = env["ir.model.fields"].search([
+            ('model_id', '=', self.metaProduct.id), ('name', '=', 'spu_name')
+        ], limit=1)
+        env["oql.acl.field"].create({
+            'mac_id': access.id,
+            'field_id': spu_name_field.id,
+            'perm_write': True,
+        })
+        user_env = self._get_user_env()
+        res = user_env["test.oql.product"].oql(
+            f"update test.oql.product set spu_name = 'Field OK' where id = {self.prod_cold.id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(self.prod_cold.spu_name, 'Field OK')
+
+    @post_test("acl.crud.record_rule")
+    def test_acl_update_record_rule_blocks(self):
+        """UPDATE should only affect records allowed by ir.rule (write mode)."""
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
+        # `spu_name` writes through to `test.oql.template.name`.
+        self._grant_model_access(self.metaTemplate, perm_read=True, perm_write=True,
+                                 perm_oql_fac_default_write=True)
+        # Rule: only Cold Boot is writable.
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+        user_env = self._get_user_env()
+        # Try to update Hot Boot — should be blocked by record rule (0 records updated).
+        res = user_env["test.oql.product"].oql(
+            f"update test.oql.product set spu_name = 'Hacked' where id = {self.prod_hot.id}"
+        )
+        self.assertEqual(len(res), 0)
+        # Hot Boot name unchanged.
+        self.assertEqual(self.prod_hot.spu_name, 'Hot Boot')
+        # Update Cold Boot — should succeed.
+        res = user_env["test.oql.product"].oql(
+            f"update test.oql.product set spu_name = 'Cold Updated' where id = {self.prod_cold.id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertEqual(self.prod_cold.spu_name, 'Cold Updated')
+
+    @post_test("acl.crud.record_rule")
+    def test_acl_delete_record_rule_blocks(self):
+        """DELETE should only affect records allowed by ir.rule (unlink mode)."""
+        self._grant_model_access(self.metaProduct, perm_read=True, perm_unlink=True)
+        # Rule: only Cold Boot can be unlinked.
+        self._create_ir_rule(
+            self.metaProduct,
+            "[('spu_name', '=', 'Cold Boot')]",
+            groups=[(4, self.user_group.id)],
+        )
+        user_env = self._get_user_env()
+        # Try to delete Hot Boot — blocked by record rule.
+        res = user_env["test.oql.product"].oql(
+            f"delete from test.oql.product where id = {self.prod_hot.id}"
+        )
+        self.assertEqual(len(res), 0)
+        self.assertTrue(self.prod_hot.exists())
+        # Delete Cold Boot — allowed.
+        res = user_env["test.oql.product"].oql(
+            f"delete from test.oql.product where id = {self.prod_cold.id}"
+        )
+        self.assertEqual(len(res), 1)
+        self.assertFalse(self.prod_cold.exists())

@@ -1,11 +1,18 @@
 ?start: query
 
-query: select_stmt
+query: select_stmt | update_stmt | insert_stmt | delete_stmt
 
 select_stmt: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
+update_stmt: update_clause SET [TRANSLATE] set_clause [where_clause] [limit_clause]
+insert_stmt: insert_clause SET [TRANSLATE] set_clause
+delete_stmt: delete_clause [where_clause] [limit_clause]
 
 from_clause: "from"i model
+update_clause: "update"i model
+insert_clause: "insert"i "into"i model
+delete_clause: "delete"i "from"i model
 select_clause: "select"i [TRANSLATE] ("*" | fields)
+set_clause: assignment ("," assignment)*
 where_clause: "where"i [TRANSLATE] expr
 limit_clause: "limit"i INT
 offset_clause: "offset"i INT
@@ -38,6 +45,8 @@ model: dot_names  // Dot-style model name
 field: dot_names  // Dot-style field access
 field_as: dot_names ["as"i dot_names]  // Dot-style field with dot-style alias
 orderby_field: CNAME [ASC | DESC]  // Plain field with order direction
+
+assignment: CNAME "=" _value
 
 _value: string
      | INT
@@ -91,6 +100,7 @@ ORDER_BY: /order\s+by/i
 ASC: "asc"i
 DESC: "desc"i
 TRANSLATE: "translate"i
+SET: "set"i
 
 // Imports
 %import common.LETTER
