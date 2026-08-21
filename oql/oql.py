@@ -3,11 +3,12 @@
 # @Author       : Chris
 # @Description  :
 import os.path
-from typing import Optional
+from typing import Optional, Any
 
 import odoo.fields
 from odoo import models, _
 
+from .acl import ModelMode
 from .clause import SelectClause, SetClause, WhereClause
 from .field import FieldAccess
 from .libs import lark
@@ -39,20 +40,20 @@ class OqlTransformer(lark.Transformer):
         self.recs = None
         self._meta = OqlMeta(env)
 
+    @property
+    def meta(self):
+        return self._meta
+
     def query(self, stmt: Statement):
         stmt.meta = self._meta
         return stmt.execute()
 
-    def _init_model(self, model_name: str):
+    def init_model(self, model_name: str, mode: ModelMode = "read"):
         """Initialize model for non-SELECT statements."""
         acl = self._meta.acl
-        acl[model_name].check("read", True)
+        acl[model_name].check(mode, True)
         self.model_name = model_name
         self.recs = self.env[model_name].sudo()
-
-    def from_clause(self, model: str):
-        self._init_model(model)
-        return self.recs
 
     def update_stmt(self, model_name: str, _set, translate, set_clause: SetClause,
                     where: Optional[WhereClause] = None, limit=None):
@@ -64,11 +65,27 @@ class OqlTransformer(lark.Transformer):
     def delete_stmt(self, model_name: str, where: Optional[WhereClause] = None, limit=None):
         return DeleteStmt(self.recs, where, limit)
 
+    def from_clause(self, model: str):
+        self.init_model(model, "read")
+        return self.recs
+
     def select_clause(self, translate: Optional[str], fields="*"):
         if fields == "*":
             fields = self._meta.acl[self.model_name].perm_fields("read")
             fields = [FieldAccess(self.recs, [x], self._meta) for x in fields]
         return SelectClause(bool(translate), fields)
+
+    def update_clause(self, model: str):
+        self.init_model(model, "write")
+        return self.recs
+
+    def insert_clause(self, model: str):
+        self.init_model(model, "create")
+        return self.recs
+
+    def delete_clause(self, model: str):
+        self.init_model(model, "unlink")
+        return self.recs
 
     def set_clause(self, *assignments):
         return SetClause(list(assignments))
@@ -120,9 +137,7 @@ class OqlTransformer(lark.Transformer):
         return list(fields)
 
     def model(self, names: Tuple[str]):
-        model_name = '.'.join(names)
-        self._init_model(model_name)
-        return model_name
+        return '.'.join(names)
 
     def field(self, names: Tuple[str]):
         return FieldAccess(self.recs, names, self._meta)
@@ -169,19 +184,47 @@ class OqlTransformer(lark.Transformer):
 
 
 class OqlReader:
+
+    START_RULES = ["start", "select_clause"]
+    """Name of the rules that can be use as AST root."""
+
     def __init__(self):
         fp = os.path.join(os.path.dirname(__file__), "oql.lark")
-        self.lark = lark.Lark.open(fp, parser="lalr")
+        self.lark = lark.Lark.open(fp, parser="lalr", start=self.START_RULES)
         self.parser = self.lark.parser
 
-    def query(self, s: str, transformer: lark.Transformer):
-        tree = self.parser.parse(s)
+    def parse(self, s: str, transformer: lark.Transformer, start: Optional[str] = None):
+        """Parse `s` with an optional start rule and transform with `transformer`."""
+        tree = self.parser.parse(s, start)
         try:
             result = transformer.transform(tree)
         except VisitError as ve:
             # Re-raise the original exception with its original traceback
             raise ve.orig_exc.with_traceback(ve.orig_exc.__traceback__)
         return result
+
+    def query(self, s: str, transformer: lark.Transformer):
+        """Full OQL query."""
+        return self.parse(s, transformer, start="start")
+
+    def read_fields(self, recs: models.Model, fields: List[str] = None) -> List[Dict[str, Any]]:
+        """
+        Read OQL fields from `recs`.
+        :param recs: Target records.
+        :param fields: OQL style fields. Can be:
+            1. None: meas all fields.
+            2. Field list: ["xxx.yyy as zzz", "ccc"]
+        """
+        # 1 Normalize `fields` to a comma-joined select list.
+        fields_s = ", ".join(fields) if fields else "*"
+
+        # 2 Parse the field list into a `SelectClause` by treating `select_clause` as the root.
+        transformer = OqlTransformer(recs.env)
+        transformer.init_model(recs._name)  # Populate `model_name`/`recs` used by `select_clause`/`field_as`.
+        select: SelectClause = self.parse(f"SELECT {fields_s}", transformer, start="select_clause")
+
+        # 4 Read fields aligned with `recs` (mirrors `SelectStmt.execute` step 3).
+        return select.execute(recs, transformer.meta)
 
 
 reader = OqlReader()  # Global reader.

@@ -3,11 +3,14 @@
 query: select_stmt | update_stmt | insert_stmt | delete_stmt
 
 select_stmt: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
-update_stmt: "update"i model SET [TRANSLATE] set_clause [where_clause] [limit_clause]
-insert_stmt: "insert"i "into"i model SET [TRANSLATE] set_clause
-delete_stmt: "delete"i "from"i model [where_clause] [limit_clause]
+update_stmt: update_clause SET [TRANSLATE] set_clause [where_clause] [limit_clause]
+insert_stmt: insert_clause SET [TRANSLATE] set_clause
+delete_stmt: delete_clause [where_clause] [limit_clause]
 
 from_clause: "from"i model
+update_clause: "update"i model
+insert_clause: "insert"i "into"i model
+delete_clause: "delete"i "from"i model
 select_clause: "select"i [TRANSLATE] ("*" | fields)
 set_clause: assignment ("," assignment)*
 where_clause: "where"i [TRANSLATE] expr

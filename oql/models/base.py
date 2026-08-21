@@ -37,11 +37,7 @@ class OqlBase(models.AbstractModel):
     @api.model
     def reado(self, fields=None):
         """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
-        # TODO: Parse `fields` directly and read to improve performance.
-        oql = (f"FROM {self._name} "
-               f"SELECT {", ".join(fields) if fields else "*"} "
-               f"WHERE id IN {self._ids}")
-        return self.oql(oql)
+        return reader.read_fields(self, fields)
 
     @api.model
     def search_reado(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):

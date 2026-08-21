@@ -2,11 +2,12 @@
 # @Time         : 16:23 2026/6/23
 # @Author       : Chris
 # @Description  :
-from typing import Any, List, Tuple
+from typing import Any
 
 from odoo import _
-from odoo import fields, models
+from odoo import models
 
+from .compatible import zip_c
 from .field import FieldAccess
 from .meta import OqlMeta
 from .recs import *
@@ -16,6 +17,22 @@ class SelectClause:
     def __init__(self, translate: bool, fas: List[FieldAccess]):
         self.translate = translate
         self.fas = fas
+
+    def execute(self, recs: models.Model, meta: OqlMeta) -> List[Dict[str, Any]]:
+        env = recs.env
+        model_name = recs._name  # noqa
+        fas = self.fas
+        # 1 Ensure `id` is in result.
+        if not any(f.path == "id" for f in fas):
+            fas = [FieldAccess(recs, ["id"], meta)] + fas
+
+        # 3 Read fields.
+        recs = recs.with_context(lang=env.user.lang if self.translate else None)
+        rows = [{
+            f.as_: val for f, val in zip_c(fas, val_row, strict=True)
+        } for val_row in zip_c(*(f.read(recs) for f in fas), strict=True)]
+
+        return rows
 
 
 class WhereClause:
