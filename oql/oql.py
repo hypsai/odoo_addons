@@ -53,16 +53,16 @@ class OqlTransformer(lark.Transformer):
         acl = self._meta.acl
         acl[model_name].check(mode, True)
         self.model_name = model_name
-        self.recs = self.env[model_name].sudo()
+        self.recs = self.env[model_name]
 
-    def update_stmt(self, model_name: str, _set, translate, set_clause: SetClause,
+    def update_stmt(self, model: models.Model, _set, translate, set_clause: SetClause,
                     where: Optional[WhereClause] = None, limit=None):
         return UpdateStmt(self.recs, translate, set_clause, where, limit)
 
-    def insert_stmt(self, model_name: str, _set, translate, set_clause: SetClause):
+    def insert_stmt(self, model: models.Model, _set, translate, set_clause: SetClause):
         return CreateStmt(self.recs, translate, set_clause)
 
-    def delete_stmt(self, model_name: str, where: Optional[WhereClause] = None, limit=None):
+    def delete_stmt(self, model: models.Model, where: Optional[WhereClause] = None, limit=None):
         return DeleteStmt(self.recs, where, limit)
 
     def from_clause(self, model: str):

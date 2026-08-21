@@ -26,7 +26,8 @@ class SelectClause:
         if not any(f.path == "id" for f in fas):
             fas = [FieldAccess(recs, ["id"], meta)] + fas
 
-        # 3 Read fields.
+        # 2 Read fields.
+        recs = recs.sudo()
         recs = recs.with_context(lang=env.user.lang if self.translate else None)
         rows = [{
             f.as_: val for f, val in zip_c(fas, val_row, strict=True)
