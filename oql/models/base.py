@@ -45,7 +45,20 @@ class OqlBase(models.AbstractModel):
 
     @api.model
     def search_reado(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):
-        recs = self.search(domain, offset, limit, order)
+        """
+        OQL style `search_read`. Fully compatible with odoo built-in `search_read`.
+        :param domain: Can be:
+            1. OQL where clause
+            2. Odoo domain
+        :param fields: Supports format `["xxx.yyy as zzz", "cccc"]`
+        :param offset:
+        :param limit:
+        :param order:
+        """
+        if isinstance(domain, str):
+            recs = self.searcho(domain, offset, limit, order)
+        else:
+            recs = self.search(domain, offset, limit, order)
         return recs.reado(fields, **read_kwargs)
 
     @api.model
