@@ -1,6 +1,6 @@
 {
     "name": "OQL - Odoo Query Language",
-    "version":"16.0.1.9.20",
+    "version":"16.0.1.9.21",
     "author": "Hypsai Tech",
     "website": "https://github.com/hypsai/odoo_addons/tree/main/oql",
     "license": "LGPL-3",
@@ -22,7 +22,7 @@ Example:
 
 Menu: Settings > Technical > OQL
     """,
-    'depends': ['base'],
+    'depends': ['base', 'hypsai'],
     'images': ['static/description/banner.png'],
     "data": [
         "security/ir.model.access.csv",

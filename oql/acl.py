@@ -15,6 +15,9 @@ from .util import KeyPassingDefaultDict
 _logger = logging.getLogger(__name__)
 
 
+ModelMode = Literal["read", "write", "create", "unlink"]
+
+
 class OqlAcl:
     """Access control checker for the user bound to a given `env`."""
 
@@ -33,7 +36,7 @@ class OqlAcl:
             raise AccessError(_("You are not allowed to %s field '%s' of '%s' (%s) records.",
                                 mode, field, document_kind, model))
 
-    def perm_models(self, mode: Literal["read", "write"]) -> Set[str]:
+    def perm_models(self, mode: ModelMode) -> Set[str]:
         return self._mode2models[mode]
 
     def perm_paths(self, model: str, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
@@ -99,7 +102,7 @@ class OqlModelAcl:
             return [OqlFieldAcl(x, self) for x in field_name]
         return OqlFieldAcl(field_name, self)
 
-    def check(self, mode: Literal["read", "write"], raises: bool = False):
+    def check(self, mode: ModelMode, raises: bool = False):
         """Check access right of current model."""
         return self.env["ir.model.access"].check(self.model_name, mode, raises)
 
@@ -142,7 +145,7 @@ class OqlModelAcl:
     def perm_paths(self, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
         return self.acl.perm_paths(self.model_name, paths, mode)
 
-    def perm_records(self, domain, mode: Literal["read", "write"]) -> list:
+    def perm_records(self, domain, mode: ModelMode) -> list:
         """Return domain."""
         perm_domain = self.env['ir.rule']._compute_domain(self.model_name, mode=mode)
         if perm_domain:
