@@ -22,7 +22,6 @@ class OqlBase(models.AbstractModel):
             _logger.debug(f"OQL query error: {e}", exc_info=True)
             raise UserError(str(e))
 
-    @api.model
     def reado(self, fields=None):
         """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
         return reader.read(self, fields)
