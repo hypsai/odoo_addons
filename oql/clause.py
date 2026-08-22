@@ -46,7 +46,11 @@ class WhereClause:
         domain = self.rec_set.domain.domain
         # domain = meta.acl[model._name].perm_records(domain, "read")  # Record level ACL, use odoo's built-in ACL here.
         where_model = model.with_context(lang=env.user.lang if self.translate else None)
-        res = where_model.search(domain, offset, limit, orderby, count)  # recs | int
+        if count:
+            # Odoo 17 and over do not support `count` parameter in `search`, so use `search_count` here.
+            res = where_model.search_count(domain)
+        else:
+            res = where_model.search(domain, offset, limit, orderby)  # recs
         return res
 
 
