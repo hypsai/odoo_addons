@@ -210,7 +210,7 @@ class OqlReader:
     def search(self, recs: models.Model, oql_where: str, offset=0, limit=None, order=None, count=False):
         transformer = OqlTransformer(recs.env)
         transformer.init_model(recs._name)
-        where: WhereClause = self.parse(f"WHERE {oql_where}", transformer, start="where_clause")
+        where: WhereClause = self.parse(f"WHERE TRANSLATE {oql_where}", transformer, start="where_clause")
         return where.execute(recs, transformer.meta, offset, limit, order, count)
 
     def read(self, recs: models.Model, fields: List[str] = None) -> List[Dict[str, Any]]:
@@ -227,7 +227,7 @@ class OqlReader:
         # 2 Parse the field list into a `SelectClause` by treating `select_clause` as the root.
         transformer = OqlTransformer(recs.env)
         transformer.init_model(recs._name)
-        select: SelectClause = self.parse(f"SELECT {fields_s}", transformer, start="select_clause")
+        select: SelectClause = self.parse(f"SELECT TRANSLATE {fields_s}", transformer, start="select_clause")
 
         # 3 Read fields aligned with `recs` (mirrors `SelectStmt.execute` step 3).
         return select.execute(recs, transformer.meta)

@@ -44,7 +44,7 @@ class WhereClause:
             -> Union[models.Model, int]:
         env = model.env
         domain = self.rec_set.domain.domain
-        domain = meta.acl[model._name].perm_records(domain, "read")  # Record level ACL
+        # domain = meta.acl[model._name].perm_records(domain, "read")  # Record level ACL, use odoo's built-in ACL here.
         where_model = model.with_context(lang=env.user.lang if self.translate else None)
         res = where_model.search(domain, offset, limit, orderby, count)  # recs | int
         return res
