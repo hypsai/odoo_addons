@@ -18,7 +18,7 @@ class SelectClause:
         self.translate = translate
         self.fas = fas
 
-    def execute(self, recs: models.Model, meta: OqlMeta) -> List[Dict[str, Any]]:
+    def execute(self, recs: models.Model, meta: OqlMeta, load='_classic_read') -> List[Dict[str, Any]]:
         env = recs.env
         model_name = recs._name  # noqa
         fas = self.fas
@@ -31,7 +31,7 @@ class SelectClause:
         recs = recs.with_context(lang=env.user.lang if self.translate else None)
         rows = [{
             f.as_: val for f, val in zip_c(fas, val_row, strict=True)
-        } for val_row in zip_c(*(f.read(recs) for f in fas), strict=True)]
+        } for val_row in zip_c(*(f.read(recs, load) for f in fas), strict=True)]
 
         return rows
 

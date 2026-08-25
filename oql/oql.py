@@ -213,13 +213,14 @@ class OqlReader:
         where: WhereClause = self.parse(f"WHERE TRANSLATE {oql_where}", transformer, start="where_clause")
         return where.execute(recs, transformer.meta, offset, limit, order, count)
 
-    def read(self, recs: models.Model, fields: List[str] = None) -> List[Dict[str, Any]]:
+    def read(self, recs: models.Model, fields: List[str] = None, load='_classic_read') -> List[Dict[str, Any]]:
         """
         Read OQL fields from `recs`.
         :param recs: Target records.
         :param fields: OQL style fields. Can be:
             1. None: meas all fields.
             2. Field list: ["xxx.yyy as zzz", "ccc"]
+        :param load: Counterpart of odoo `read`'s `load` parameter.
         """
         # 1 Normalize `fields` to a comma-joined select list.
         fields_s = ", ".join(fields) if fields else "*"
@@ -230,7 +231,7 @@ class OqlReader:
         select: SelectClause = self.parse(f"SELECT TRANSLATE {fields_s}", transformer, start="select_clause")
 
         # 3 Read fields aligned with `recs` (mirrors `SelectStmt.execute` step 3).
-        return select.execute(recs, transformer.meta)
+        return select.execute(recs, transformer.meta, load)
 
 
 reader = OqlReader()  # Global reader.
