@@ -30,7 +30,7 @@ class OqlBase(models.AbstractModel):
                 _logger.debug(f"OQL query error: {e}", exc_info=True)
                 raise UserError(str(e))
         else:
-            recs = self.searcho(domain, offset, limit, order)
+            recs = self.search(domain, offset, limit, order)
         return recs
 
     def reado(self, fields=None):
