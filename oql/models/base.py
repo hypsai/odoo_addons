@@ -38,9 +38,7 @@ class OqlBase(models.AbstractModel):
 
     def reado(self, fields=None, load='_classic_read'):
         """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
-        if load == '_classic_read':  # OQL supports classic read only.
-            return reader.read(self, fields)
-        return self.read(fields, load)
+        return reader.read(self, fields, load)
 
     @api.model
     def search_reado(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):

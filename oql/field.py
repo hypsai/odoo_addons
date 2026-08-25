@@ -91,9 +91,10 @@ class FieldAccess:
                                % (prefix, name))
         # Validate (.) term statement.
         rear = p_recs
+        rear_field: Optional[fields.Field] = None
         if (next_ or tail_alias) and not isinstance(rear, Model):
             rear_field_name = plain_names[-1]
-            rear_field: fields.Field = pp_recs._fields[rear_field_name]
+            rear_field = pp_recs._fields[rear_field_name]
             raise Exception(_(f"Invalid field path `{model._name}` -> `{'.'.join(names[:i])}` (.) `{names[i]}`. "
                               f"Expect relational field before (.), got `{rear_field.type}`."))
         # Initialize instance.
@@ -105,6 +106,7 @@ class FieldAccess:
         self.x2m = b_x2m
         self.next: List[FieldAccess] = next_
         self._non_searchable_fields = non_searchable_fields
+        self._rear_field: Optional[fields.Field] = rear_field
         self._tail_alias: Optional[AliasNode] = tail_alias  # Complex alias at tail.
         self._as = as_
         self._is_root = _is_root
@@ -152,7 +154,7 @@ class FieldAccess:
     def eval_una(self, opr: str):
         return self._eval(True, opr, None)
 
-    def read(self, recs) -> list:
+    def read(self, recs, load='_classic_read') -> list:
         """Read value from recs. Result is aligned with `recs`.
         Note: If there is any X2Many field on the field path, the result item will be list type."""
         # Check
@@ -164,9 +166,15 @@ class FieldAccess:
         tail_alias = self._tail_alias
         if tail_alias:
             res = [tail_alias.read(read_object(x, path)) for x in recs]
-        else:
+        elif self._rear_field and not self._rear_field.relational:
+            # Optimize reading performance for non-relational rear field.
             res = [x.mapped(path) for x in recs]
-        if not self.x2m:
+        else:
+            # Use `Model.read` instead of `Model.map` to align with odoo's building `read` behavior.
+            chips = path.rsplit('.', 1)
+            prefix_path, field = ("", chips[0]) if len(chips) == 1 else chips
+            res = [[y[field] for y in read_object(x, prefix_path).read([field], load)] for x in recs]
+        if not self.x2m:  # Flat result for non-x2many path.
             res = [x[0] if x else None for x in res]
         return res
 
