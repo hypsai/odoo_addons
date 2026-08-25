@@ -13,6 +13,9 @@ class OqlBase(models.AbstractModel):
     _inherit = "base"
 
     @api.model
+    @api.returns('self',
+                 upgrade=lambda self, value, args, offset=0, limit=None, order=None, count=False: value if count else self.browse(value),
+                 downgrade=lambda self, value, args, offset=0, limit=None, order=None, count=False: value if count else value.ids)
     def searcho(self, domain: Union[str, list], offset=0, limit=None, order=None, count=False):
         """OQL style `search_read`. Fully compatible with odoo built-in `search_read`.
         :param domain: Can be:
@@ -33,9 +36,11 @@ class OqlBase(models.AbstractModel):
             recs = self.search(domain, offset, limit, order)
         return recs
 
-    def reado(self, fields=None):
+    def reado(self, fields=None, load='_classic_read'):
         """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
-        return reader.read(self, fields)
+        if load == '_classic_read':  # OQL supports classic read only.
+            return reader.read(self, fields)
+        return self.read(fields, load)
 
     @api.model
     def search_reado(self, domain=None, fields=None, offset=0, limit=None, order=None, **read_kwargs):
