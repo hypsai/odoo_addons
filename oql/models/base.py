@@ -24,13 +24,13 @@ class OqlBase(models.AbstractModel):
         :param count:
         """
         if isinstance(domain, str):
-            recs = self.searcho(domain, offset, limit, order)
-        else:
             try:
                 recs = reader.search(self, domain, offset, limit, order, count)
             except Exception as e:
                 _logger.debug(f"OQL query error: {e}", exc_info=True)
                 raise UserError(str(e))
+        else:
+            recs = self.searcho(domain, offset, limit, order)
         return recs
 
     def reado(self, fields=None):
