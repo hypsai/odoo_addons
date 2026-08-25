@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from odoo import models, api
 from odoo.exceptions import UserError
@@ -13,14 +13,25 @@ class OqlBase(models.AbstractModel):
     _inherit = "base"
 
     @api.model
-    def searcho(self, oql_where: str, offset=0, limit=None, order=None, count=False):
-        """Search with OQL."""
-        try:
-            result = reader.search(self, oql_where, offset, limit, order, count)
-            return self.browse([x["id"] for x in result])
-        except Exception as e:
-            _logger.debug(f"OQL query error: {e}", exc_info=True)
-            raise UserError(str(e))
+    def searcho(self, domain: Union[str, list], offset=0, limit=None, order=None, count=False):
+        """OQL style `search_read`. Fully compatible with odoo built-in `search_read`.
+        :param domain: Can be:
+            1. OQL where clause
+            2. Odoo domain
+        :param offset:
+        :param limit:
+        :param order:
+        :param count:
+        """
+        if isinstance(domain, str):
+            recs = self.searcho(domain, offset, limit, order)
+        else:
+            try:
+                recs = reader.search(self, domain, offset, limit, order, count)
+            except Exception as e:
+                _logger.debug(f"OQL query error: {e}", exc_info=True)
+                raise UserError(str(e))
+        return recs
 
     def reado(self, fields=None):
         """OQL style `read` counterpart. `fields` could be like ["xxx.yyy as zzz", "cccc"]"""
@@ -38,16 +49,17 @@ class OqlBase(models.AbstractModel):
         :param limit:
         :param order:
         """
-        if isinstance(domain, str):
-            recs = self.searcho(domain, offset, limit, order)
-        else:
-            recs = self.search(domain, offset, limit, order)
+        recs = self.searcho(domain, offset, limit, order)
         return recs.reado(fields, **read_kwargs)
 
     @api.model
-    def searcho_ids(self, oql_where: str):
-        """Search with OQL and return record ids."""
-        return self.searcho(oql_where).ids
+    def searcho_ids(self, domain: Union[str, list]):
+        """Search with OQL and return record ids.
+        :param domain: Can be:
+            1. OQL where clause
+            2. Odoo domain
+        """
+        return self.searcho(domain).ids
 
     @api.model
     def hinto(self, partial_oql_where: str, cursor: int = None, limit=100, offset=0) -> dict:
