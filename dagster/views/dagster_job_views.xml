@@ -1,0 +1,42 @@
+<odoo>
+    <data>
+        <record id="dagster_job_tree_view" model="ir.ui.view">
+            <field name="name">dagster.job.tree</field>
+            <field name="model">dagster.job</field>
+            <field name="arch" type="xml">
+                <tree string="Jobs" editable="bottom">
+                    <field name="name"/>
+                    <field name="key"/>
+                    <field name="run_config_tmpl_hints_html"/>
+                    <button name="action_open_detail"
+                            type="object"
+                            string="Detail"
+                            class="btn-primary"
+                            icon="fa-external-link"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="dagster_job_from_view" model="ir.ui.view">
+            <field name="name">dagster.job.form</field>
+            <field name="model">dagster.job</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="key"/>
+                        </group>
+                        <group string="Run Config Template (Yaml)">
+                            <div class="o_row">
+                                <span class="mr-1">Variables:</span>
+                                <field name="run_config_tmpl_hints_html" nolabel="1"/>
+                            </div>
+                            <field name="run_config_tmpl" widget="yaml" options="{'fontSize': '15px'}" nolabel="1" colspan="99"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>

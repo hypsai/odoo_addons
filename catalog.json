@@ -40,6 +40,11 @@
       "supported_versions": ["15.0"],
       "description": "Attached Field - Attach a picker field to any model for intuitive record selection",
       "port": 7
+    },
+    "dagster": {
+      "supported_versions": ["15.0"],
+      "description": "Odoo Dagster client integration",
+      "port": 8
     }
   }
 }

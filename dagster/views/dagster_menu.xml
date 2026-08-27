@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="action_open_dagster_job_list" model="ir.actions.act_window">
+            <field name="name">Dagster Job List</field>
+            <field name="res_model">dagster.job</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+        <menuitem id="menu_dagster"
+                  name="Dagster"
+                  sequence="10"/>
+        <menuitem id="menu_dagster_job"
+                  name="Jobs"
+                  parent="menu_dagster"
+                  action="action_open_dagster_job_list"
+                  sequence="15"/>
+    </data>
+</odoo>
