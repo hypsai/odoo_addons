@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Dagster',
-    "version":"1.0.0",
+    "version":"1.0.1",
 
     'summary': 'Generic Dagster job/run management plugin, independent of any business module.',
 
@@ -33,7 +33,7 @@
     'license': 'LGPL-3',
 
     'category': 'Productivity',
-    'version': '0.1',
+    'version':'1.0.1',
 
     'depends': ['base', 'web', 'web_widget_yaml'],
 
