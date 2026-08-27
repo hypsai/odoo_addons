@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Dagster',
-    "version":"15.0.1.0.1",
+    "version":"15.0.1.0.2",
 
     'summary': 'Generic Dagster job/run management plugin, independent of any business module.',
 
@@ -33,9 +33,9 @@
     'license': 'LGPL-3',
 
     'category': 'Productivity',
-    'version':'15.0.1.0.1',
+    'version':'15.0.1.0.2',
 
-    'depends': ['base', 'web', 'web_widget_yaml'],
+    'depends': ['base', 'web', 'hypsai', 'web_widget_yaml'],
 
     'external_dependencies': {
         'python': ['yaml'],
