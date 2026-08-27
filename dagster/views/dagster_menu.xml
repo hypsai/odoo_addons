@@ -8,6 +8,7 @@
         </record>
         <menuitem id="menu_dagster"
                   name="Dagster"
+                  parent="hypsai.menu_hypsai_root"
                   sequence="10"/>
         <menuitem id="menu_dagster_job"
                   name="Jobs"

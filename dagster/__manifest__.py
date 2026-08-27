@@ -35,7 +35,7 @@
     'category': 'Productivity',
     'version':'1.0.1',
 
-    'depends': ['base', 'web', 'web_widget_yaml'],
+    'depends': ['base', 'web', 'hypsai', 'web_widget_yaml'],
 
     'external_dependencies': {
         'python': ['yaml'],
