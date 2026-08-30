@@ -185,6 +185,26 @@ odoo.define('oql.oql_editor_widget', function (require) {
             }
         },
 
+        /**
+         * Push the current editor value into the record before the view
+         * saves. This is mandatory for this widget: it only notifies changes
+         * on blur (and even then with a delay), so Odoo's save flow (which
+         * calls widget.commitChanges() on every field of an in-edit list row
+         * before saving the line, see FieldX2Many.commitChanges /
+         * BasicRenderer.commitChanges) would otherwise save the stale value
+         * and re-render the row with the previous value.
+         *
+         * @override
+         * @returns {Promise}
+         */
+        commitChanges: function () {
+            var newValue = this._getValue();
+            if (newValue !== this.value) {
+                return this._setValue(newValue);
+            }
+            return Promise.resolve();
+        },
+
         // ==========================================
         // Editor initialization
         // ==========================================
