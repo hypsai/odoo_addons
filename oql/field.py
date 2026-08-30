@@ -89,12 +89,18 @@ class FieldAccess:
             raise RuntimeError(_(f"Neither `%s(.%s)` is a field nor an alias nor a term. "
                                  f"Or you don't have access right to it.")
                                % (prefix, name))
+        rear_field: Optional[fields.Field] = None
+        if plain_names:
+            rear_field_name = plain_names[-1]
+            if pp_recs is None:
+                if len(plain_names) == 1:
+                    rear_field = model._fields[rear_field_name]  # noqa
+            else:
+                rear_field = pp_recs._fields[rear_field_name]  # noqa
+
         # Validate (.) term statement.
         rear = p_recs
-        rear_field: Optional[fields.Field] = None
         if (next_ or tail_alias) and not isinstance(rear, Model):
-            rear_field_name = plain_names[-1]
-            rear_field = pp_recs._fields[rear_field_name]
             raise Exception(_(f"Invalid field path `{model._name}` -> `{'.'.join(names[:i])}` (.) `{names[i]}`. "
                               f"Expect relational field before (.), got `{rear_field.type}`."))
         # Initialize instance.
@@ -146,6 +152,39 @@ class FieldAccess:
     def is_field(self) -> bool:
         """Whether this is a plain field access. e.g. `name`, `price`."""
         return len(self.names) == 1 and not self._tail_alias and not self.next
+
+    @property
+    def is_flat(self):
+        """Whether the `next` chain is singular."""
+        if len(self.next) == 0:
+            return True
+        elif len(self.next) == 1:
+            return self.next[0].is_flat
+        else:
+            return False
+
+    @property
+    def is_empty(self):
+        return False  # Hard coded.
+
+    @property
+    def rear_model(self) -> Optional[models.Model]:
+        """Model of last field on path. If last field is not relational, returns `None`."""
+        return self._rear_model
+
+    @property
+    def chain_rear_model(self):
+        """The full chain's rear model. For flat chain only."""
+        if len(self.next) == 0:
+            return self.rear_model
+        elif len(self.next) == 1:
+            return self.next[0].chain_rear_model
+        else:
+            raise Exception(f"`chain_rear_model` is only available for flat chain.")
+
+    @property
+    def rear_field(self) -> Optional[fields.Field]:
+        return self._rear_field
 
     def eval_bin(self, opr: str, value):
         opr = " ".join(opr.split())  # Normalize spaces
