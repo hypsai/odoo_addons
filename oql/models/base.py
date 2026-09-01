@@ -105,6 +105,25 @@ class OqlBase(models.AbstractModel):
         """
         pass
 
+    @api.model
+    def oql_hintx(self, hintable_oql: str):
+        """
+        Hint OQL at specified hint points.
+        :param hintable_oql: Partial OQL with hint points.
+          Grammar: 'Partial OQL ?hint_options'
+            hint_options: A JSON dict that contains keys:
+              name: str. Name for the hint point. It will be used as key in hint result.
+              keywords: List[str]. A list of keywords used search for possible candidates.
+              limit: int. Max hint count.
+              offset: Optional[int]. Used for paging when there are too many hint items.
+          e.g.  'FROM product.product SELECT ?{"name": "sel_field", "keywords": ["code", "de"], "limit": 10}'
+                'FROM product.?{"name": "model", "keywords": ["te"], "limit": 5}'
+                'FROM product.product SELECT id where default_code like ?{"name": "default_code", "keywords": ["danner"], "limit": 40}'
+          * Note: hint point can only be placed at the end of a partial OQL.
+        :return: {hint_point_name: {hints: [{type: ..., value: ..., desc: ...}]}}
+        """
+        raise NotImplementedError("Install `oql_pro` from odoo app store or implement with a custom addon.")
+
     def _valid_field_parameter(self, field, name):
         if name == "oql_model":
             return True
