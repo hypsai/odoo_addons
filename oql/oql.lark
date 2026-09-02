@@ -55,9 +55,36 @@ _value: string
      | TRUE
      | FALSE
      | NULL
-     | array
+     | set
+     | object
+     | array_cmd
 
-array: "(" [_value ("," _value)* [","]] ")"
+ set: "(" _value_list ")"  // SQL array, unordered
+ _value_list: _value ("," _value)* [","] |
+
+// Odoo ORM special writing format. (Nested JSON object with commands)
+// * Note: content rules end with an empty alternative (`|`) instead of using
+// * maybe-there `[...]`, because lark pads the empty branch of `[x]` with `_EMPTY`
+// * placeholders, which surface as `None` children. See `load_grammar.EBNF_to_BNF.maybe`.
+array_int: "[" _int_list "]"  // Relation ids.
+array_cmd: "[" _cmd_list "]"  // Odoo ORM commands.
+object: "{" _member_list "}"  // JSON-like object, keys without quotes
+member: CNAME ":" _value  // Key-value pair, key is a bare name
+_int_list: INT ("," INT)* [","] |
+_cmd_list: cmd ("," cmd)* [","] |
+_member_list: member ("," member)* [","] |
+cmd: cmd_link
+        | cmd_unlink
+        | cmd_create
+        | cmd_delete
+        | cmd_update
+        | cmd_set
+cmd_link: "link"i INT
+cmd_unlink: "unlink"i INT
+cmd_create: "create"i object
+cmd_delete: "delete"i INT
+cmd_update: "update"i INT object
+cmd_set: "set"i array_int
 
 string: ESCAPED_STRING
 

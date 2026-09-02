@@ -6,7 +6,7 @@ import os.path
 from typing import Optional, Any, Set
 
 import odoo.fields
-from odoo import models, _
+from odoo import models, _, Command
 
 from .acl import ModelMode, FieldMode
 from .clause import SelectClause, SetClause, WhereClause
@@ -181,8 +181,44 @@ class OqlTransformer(lark.Transformer):
     def NULL(self, value):
         return None
 
+    def set(self, *values):
+        return values
+
     def array(self, *values):
         return values
+
+    def array_int(self, *values):
+        return list(values)
+
+    def array_cmd(self, *cmds):
+        return list(cmds)
+
+    def object(self, *members):
+        return dict(members)
+
+    def member(self, key: str, value):
+        return key, value
+
+    def cmd(self, cmd):
+        return cmd
+
+    def cmd_link(self, _id: int):
+        return Command.link(_id)
+
+    def cmd_unlink(self, _id: int):
+        return Command.unlink(_id)
+
+    def cmd_delete(self, _id: int):
+        return Command.delete(_id)
+
+    def cmd_create(self, values: dict):
+        return Command.create(values)
+
+    def cmd_update(self, _id: int, values: dict):
+        return Command.update(_id, values)
+
+    def cmd_set(self, ids: list):
+        return Command.set(ids)
 
     def _check_perms(self):
         errs = []
