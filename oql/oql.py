@@ -46,7 +46,7 @@ class OqlTransformer(lark.Transformer):
     def meta(self):
         return self._meta
 
-    def query(self, stmt: Statement):
+    def query(self, ctx_clause: Optional[Any], stmt: Statement):
         self._check_perms()
         stmt.meta = self._meta
         return stmt.execute()
@@ -67,6 +67,13 @@ class OqlTransformer(lark.Transformer):
 
     def delete_stmt(self, model: models.Model, where: Optional[WhereClause] = None, limit=None):
         return DeleteStmt(model, where, limit)
+
+    def ctx_clause(self, *assignments: Tuple[str, Any]):
+        env = self.env
+        context = dict(env.context)
+        context.update(assignments)
+        env = env(context=context)
+        self.env = env
 
     def from_clause(self, model: str):
         self.init_model(model, "read")
@@ -134,6 +141,9 @@ class OqlTransformer(lark.Transformer):
         if opr != "=":
             raise Exception(f"Assignment operator must be `=`, got `{opr}`")
         return fa, value
+
+    def assignment_simple(self, key: str, value):
+        return key, value
 
     def fields(self, *fields):
         return list(fields)
