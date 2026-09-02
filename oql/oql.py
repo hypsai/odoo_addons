@@ -3,12 +3,12 @@
 # @Author       : Chris
 # @Description  :
 import os.path
-from typing import Optional, Any
+from typing import Optional, Any, Set
 
 import odoo.fields
 from odoo import models, _
 
-from .acl import ModelMode
+from .acl import ModelMode, FieldMode
 from .clause import SelectClause, SetClause, WhereClause
 from .field import FieldAccess
 from .libs import lark
@@ -39,12 +39,15 @@ class OqlTransformer(lark.Transformer):
         self.model_name = None
         self.recs = None
         self._meta = OqlMeta(env)
+        self._fas_read: List[FieldAccess] = []
+        self._fas_write: List[FieldAccess] = []
 
     @property
     def meta(self):
         return self._meta
 
     def query(self, stmt: Statement):
+        self._check_perms()
         stmt.meta = self._meta
         return stmt.execute()
 
@@ -55,15 +58,15 @@ class OqlTransformer(lark.Transformer):
         self.model_name = model_name
         self.recs = self.env[model_name]
 
-    def update_stmt(self, model: models.Model, _set, translate, set_clause: SetClause,
+    def update_stmt(self, model: models.Model, set_clause: SetClause,
                     where: Optional[WhereClause] = None, limit=None):
-        return UpdateStmt(self.recs, translate, set_clause, where, limit)
+        return UpdateStmt(model, set_clause, where, limit)
 
-    def insert_stmt(self, model: models.Model, _set, translate, set_clause: SetClause):
-        return CreateStmt(self.recs, translate, set_clause)
+    def insert_stmt(self, model: models.Model, set_clause: SetClause):
+        return CreateStmt(model, set_clause)
 
     def delete_stmt(self, model: models.Model, where: Optional[WhereClause] = None, limit=None):
-        return DeleteStmt(self.recs, where, limit)
+        return DeleteStmt(model, where, limit)
 
     def from_clause(self, model: str):
         self.init_model(model, "read")
@@ -87,11 +90,8 @@ class OqlTransformer(lark.Transformer):
         self.init_model(model, "unlink")
         return self.recs
 
-    def set_clause(self, *assignments):
-        return SetClause(list(assignments))
-
-    def assignment(self, name: str, value):
-        return (name, value)
+    def set_clause(self, translate: Optional[str], *assignments):
+        return SetClause(bool(translate), assignments)
 
     def where_clause(self, translate: Optional[str], rec_sets: RecordSets):
         return WhereClause(bool(translate), rec_sets)
@@ -130,6 +130,11 @@ class OqlTransformer(lark.Transformer):
     def dot_expr(self, field: FieldAccess):
         return field.eval_una("bool")
 
+    def assignment(self, fa: FieldAccess, opr, value):
+        if opr != "=":
+            raise Exception(f"Assignment operator must be `=`, got `{opr}`")
+        return fa, value
+
     def fields(self, *fields):
         return list(fields)
 
@@ -140,10 +145,20 @@ class OqlTransformer(lark.Transformer):
         return '.'.join(names)
 
     def field(self, names: Tuple[str]):
-        return FieldAccess(self.recs, names, self._meta)
+        fa = FieldAccess(self.recs, names, self._meta)
+        self._fas_read.append(fa)
+        return fa
+
+    def field_assi(self, names: Tuple[str]):
+        """Field assignment."""
+        fa = FieldAccess(self.recs, names, self._meta)
+        self._fas_write.append(fa)
+        return fa
 
     def field_as(self, field: Tuple[str], as_: Optional[Tuple[str]]):
-        return FieldAccess(self.recs, field, self._meta, as_='.'.join(as_) if as_ else None)
+        fa = FieldAccess(self.recs, field, self._meta, as_='.'.join(as_) if as_ else None)
+        self._fas_read.append(fa)
+        return fa
 
     def orderby_field(self, name: str, dir_: str):
         return name, dir_ or "asc"
@@ -168,6 +183,35 @@ class OqlTransformer(lark.Transformer):
 
     def array(self, *values):
         return values
+
+    def _check_perms(self):
+        errs = []
+        # 1. Field accesses.
+        errs.extend(self._check_fas_perm(self._fas_read, "read"))
+        errs.extend(self._check_fas_perm(self._fas_write, "write"))
+        # 2. Report.
+        if errs:
+            raise Exception(_("Permissions denied:\n%s") % ('\n'.join(errs), ))
+
+    def _check_fas_perm(self, fas: List[FieldAccess], mode: FieldMode):
+        acl = self.meta.acl
+        # 1. Gather paths.
+        model2fas: Dict[str, Set[str]] = defaultdict(set)
+        for fa in fas:
+            for node in fa.nodes:
+                if node.path:
+                    model2fas[node.model_name].add(node.path)
+        # 2. Check.
+        denied: List[Tuple[str, Set[str]]] = []
+        for model, paths in model2fas.items():
+            ok_paths = acl[model].perm_paths(paths, "read")
+            if len(paths) != len(ok_paths):
+                bad_paths = paths - ok_paths
+                denied.append((model, bad_paths))
+        # 3. Compose error report.
+        if denied:
+            return [_("%s `%s` fields: %s") % (mode, model, ", ".join(paths)) for model, paths in denied]
+        return []
 
     @classmethod
     def _type_check_bin(cls, left, opr, right, left_expr: str, right_expr: str):

@@ -3,7 +3,8 @@
 # @Author       : Chris
 # @Description  :
 import copy
-from typing import Optional
+from collections import deque
+from typing import Optional, Deque
 
 from odoo import models, _
 
@@ -12,7 +13,8 @@ from .compatible import NEG2POS_OPR
 from .compatible import is_api_model
 from .meta import OqlMeta
 from .recs import *
-from .util import tn, read_object
+from .util import tn, read_object, write_object
+from .acl import FieldMode
 
 _logger = logging.getLogger(__name__)
 
@@ -33,7 +35,6 @@ class FieldAccess:
         self.meta = meta
         model = model.browse()  # Make model data-inconscient.
         env = model.env
-        acl = meta.acl
         # Parse
         names = list(names)
         as_ = as_ or '.'.join(names)
@@ -49,7 +50,6 @@ class FieldAccess:
             name = names[i]
             # Model Field
             if hasattr(p_recs, name):
-                acl.check_field(p_recs, name, "read")
                 f_meta = p_recs._fields[name]
                 # Check X2Many
                 if not b_x2m:
@@ -117,6 +117,10 @@ class FieldAccess:
         self._tail_alias: Optional[AliasNode] = tail_alias  # Complex alias at tail.
         self._as = as_
         self._is_root = _is_root
+
+    @property
+    def model_name(self):
+        return self.model._name  # noqa
 
     @property
     def as_(self):
@@ -187,6 +191,18 @@ class FieldAccess:
     def rear_field(self) -> Optional[fields.Field]:
         return self._rear_field
 
+    @property
+    def nodes(self) -> List["FieldAccess"]:
+        """All field access nodes on the chain. In BFS order."""
+        nodes = []
+        q: Deque[FieldAccess] = deque()
+        q.append(self)
+        while len(q) > 0:
+            node = q.popleft()
+            nodes.append(node)
+            q.extend(node.next)
+        return nodes
+
     def eval_bin(self, opr: str, value):
         opr = " ".join(opr.split())  # Normalize spaces
         return self._eval(False, opr, value)
@@ -217,6 +233,10 @@ class FieldAccess:
         if not self.x2m:  # Flat result for non-x2many path.
             res = [x[0] if x else None for x in res]
         return res
+
+    def write(self, recs, value):
+        for rec in recs:
+            write_object(rec, self.path, value)
 
     def _eval(self, una: bool, opr: str, value):
         """
@@ -316,6 +336,11 @@ class FieldAccess:
         else:
             flatted_fas.append(copy.copy(self))
         return flatted_fas
+
+    def check_perm(self, mode: FieldMode):
+        acl = self.meta.acl
+        mac = acl[self.model_name]
+        return mac.check_path(self.path, mode)
 
     def __str__(self):
         return f"{type(self).__name__}({self.path}, next[{len(self.next)}])"
