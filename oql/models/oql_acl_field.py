@@ -64,4 +64,12 @@ class OqlAclField(models.Model):
         if mode == "read" and "id" not in field_names:
             field_names.add("id")  # ID is always readable.
 
+        # Check ORM groups permission.
+        _fields: Dict[str, fields.Field] = self.env[model]._fields  # noqa
+        for field_name in list(field_names):
+            f_meta: fields.Field = _fields.get(field_name)
+            if f_meta and f_meta.groups:
+                if not self.user_has_groups(f_meta.groups):
+                    field_names.remove(field_name)
+
         return field_names
