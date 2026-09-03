@@ -138,8 +138,8 @@ class OqlTransformer(lark.Transformer):
     def dot_expr(self, field: FieldAccess):
         return field.eval_una("bool")
 
-    def function(self, name: str, *args):
-        return FuncCall(name, list(args))
+    def function(self, agg, name: str, *args):
+        return FuncCall(name, list(args), agg)
 
     def assignment(self, fa: FieldAccess, opr, value):
         if opr != "=":
@@ -158,8 +158,8 @@ class OqlTransformer(lark.Transformer):
     def model(self, names: Tuple[str]):
         return '.'.join(names)
 
-    def field(self, names: Tuple[str]):
-        fa = FieldAccess(self.recs, names, self._meta)
+    def field(self, agg, names: Tuple[str]):
+        fa = FieldAccess(self.recs, names, self._meta, is_agg=agg)
         self._fas_read.append(fa)
         return fa
 
@@ -199,14 +199,11 @@ class OqlTransformer(lark.Transformer):
     def set(self, *values):
         return values
 
-    def array(self, *values):
-        return values
+    def array(self, *items):
+        return list(items)
 
     def array_int(self, *values):
         return list(values)
-
-    def array_cmd(self, *cmds):
-        return list(cmds)
 
     def object(self, *members):
         return dict(members)

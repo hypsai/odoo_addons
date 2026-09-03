@@ -41,7 +41,7 @@ nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
 // ------ Function ------
-function: CNAME "(" _func_args ")"  // Function call, e.g. `lower(name)`, `action_confirm()``
+function: [AGG] CNAME "(" _func_args ")"  // Function call, e.g. `lower(name)`, `action_confirm()``
 _func_args: _func_arg ("," _func_arg)* [","] |
 _func_arg: _value | field | function | "*"  // `count(*)` equals `count()` (`*` is filtered from the tree)
 
@@ -50,7 +50,7 @@ orderby_fields: orderby_field ("," orderby_field)*  // Order by field list
 
 dot_names: CNAME ("." CNAME)*  // Dot-style names
 model: dot_names  // Dot-style model name
-field: dot_names  // Dot-style field access
+field: [AGG] dot_names  // Dot-style field access
 field_assi: dot_names  // Dot-style field for assignment expression
 field_as: field ["as"i dot_names]  // Dot-style field with dot-style alias
         | function ["as"i dot_names]  // Function call with alias, e.g. `count(tag_ids) as cnt`
@@ -66,11 +66,14 @@ _value: string
      | FALSE
      | NULL
      | set
+     | array
      | object
-     | array_cmd
 
- set: "(" _value_list ")"  // SQL array, unordered
- _value_list: _value ("," _value)* [","] |
+set: "(" _value_list ")"  // SQL array, unordered
+_value_list: _value ("," _value)* [","] |
+array: "[" _array_items "]"  // Python array, ordered. Items may be ORM commands, e.g. `[link 1, create {name: 'x'}]`
+_array_items: _array_item ("," _array_item)* [","] |
+_array_item: _value | cmd
 
 // ------ Odoo ORM special writing format ------
 // (Nested JSON object with commands)
@@ -78,11 +81,9 @@ _value: string
 // * maybe-there `[...]`, because lark pads the empty branch of `[x]` with `_EMPTY`
 // * placeholders, which surface as `None` children. See `load_grammar.EBNF_to_BNF.maybe`.
 array_int: "[" _int_list "]"  // Relation ids.
-array_cmd: "[" _cmd_list "]"  // Odoo ORM commands.
 object: "{" _member_list "}"  // JSON-like object, keys without quotes
-member: CNAME ":" _value  // Key-value pair, key is a bare name
+member: CNAME ":" _value  // Key-value pair, key is a bare name (`array` covers ORM commands)
 _int_list: INT ("," INT)* [","] |
-_cmd_list: cmd ("," cmd)* [","] |
 _member_list: member ("," member)* [","] |
 cmd: cmd_link
         | cmd_unlink
@@ -139,6 +140,7 @@ ASC: "asc"i
 DESC: "desc"i
 TRANSLATE: "translate"i
 SET: "set"i
+AGG: "@"
 
 // Imports
 %import common.LETTER

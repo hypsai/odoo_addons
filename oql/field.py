@@ -8,6 +8,7 @@ from typing import Deque, Optional
 
 from odoo import models, _
 
+from .base import IRecsReader
 from .acl import FieldMode
 from .alias import AliasNode, AliasField
 from .compatible import NEG2POS_OPR
@@ -19,7 +20,7 @@ from .util import tn, read_object, write_object
 _logger = logging.getLogger(__name__)
 
 
-class FieldAccess:
+class FieldAccess(IRecsReader):
 
     model: models.Model
     """Accessing target model."""
@@ -31,7 +32,7 @@ class FieldAccess:
     """Pre-selector domain, select some records for further filtering."""
 
     def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None,
-                 as_: str = None, _is_root=True):
+                 as_: str = None, is_agg: Optional[bool] = None, _is_root=True):
         self.meta = meta
         model = model.browse()  # Make model data-inconscient.
         env = model.env
@@ -117,6 +118,11 @@ class FieldAccess:
         self._tail_alias: Optional[AliasNode] = tail_alias  # Complex alias at tail.
         self._as = as_
         self._is_root = _is_root
+        self._is_agg = bool(is_agg)
+
+    @property
+    def is_agg(self):
+        return self._is_agg
 
     @property
     def model_name(self):
@@ -125,6 +131,10 @@ class FieldAccess:
     @property
     def as_(self):
         return self._as
+
+    @as_.setter
+    def as_(self, value: str):
+        self._as = value
 
     @property
     def path(self):
@@ -232,6 +242,8 @@ class FieldAccess:
             res = [[y[field] for y in read_object(x, prefix_path).read([field], load)] for x in recs]
         if not self.x2m:  # Flat result for non-x2many path.
             res = [x[0] if x else None for x in res]
+        if self.is_agg:
+            res = [res]
         return res
 
     def write(self, recs, value):
