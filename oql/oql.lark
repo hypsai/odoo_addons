@@ -21,10 +21,12 @@ orderby_clause: ORDER_BY orderby_fields
 
 ?expr: or_expr
 
+// ------ Logic Expression ------
 ?or_expr: and_expr | or_expr "or"i and_expr
 ?and_expr: not_expr | and_expr "and"i not_expr
 ?not_expr: "not"i not_expr | _opr_expr
 
+// ------ Operator Expression ------
 _opr_expr: bin_expr
          | una_expr
          | get_expr
@@ -38,6 +40,11 @@ get_expr: field "[" _value "]"  // For Many2one relation, e.g. partner[1]
 nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
+// ------ Function ------
+function: CNAME "(" _func_args ")"  // Function call, e.g. `lower(name)`, `action_confirm()``
+_func_args: _func_arg ("," _func_arg)* [","] |
+_func_arg: _value | field | function | "*"  // `count(*)` equals `count()` (`*` is filtered from the tree)
+
 fields: field_as ("," field_as)*  // Field list
 orderby_fields: orderby_field ("," orderby_field)*  // Order by field list
 
@@ -45,7 +52,8 @@ dot_names: CNAME ("." CNAME)*  // Dot-style names
 model: dot_names  // Dot-style model name
 field: dot_names  // Dot-style field access
 field_assi: dot_names  // Dot-style field for assignment expression
-field_as: dot_names ["as"i dot_names]  // Dot-style field with dot-style alias
+field_as: field ["as"i dot_names]  // Dot-style field with dot-style alias
+        | function ["as"i dot_names]  // Function call with alias, e.g. `count(tag_ids) as cnt`
 orderby_field: CNAME [ASC | DESC]  // Plain field with order direction
 
 assignment: field_assi BIN_OPR _value
@@ -64,7 +72,8 @@ _value: string
  set: "(" _value_list ")"  // SQL array, unordered
  _value_list: _value ("," _value)* [","] |
 
-// Odoo ORM special writing format. (Nested JSON object with commands)
+// ------ Odoo ORM special writing format ------
+// (Nested JSON object with commands)
 // * Note: content rules end with an empty alternative (`|`) instead of using
 // * maybe-there `[...]`, because lark pads the empty branch of `[x]` with `_EMPTY`
 // * placeholders, which surface as `None` children. See `load_grammar.EBNF_to_BNF.maybe`.

@@ -3,7 +3,7 @@
 # @Author       : Chris
 # @Description  :
 import os.path
-from typing import Optional, Any, Set
+from typing import Optional, Any, Set, Union
 
 import odoo.fields
 from odoo import models, _, Command
@@ -11,6 +11,7 @@ from odoo import models, _, Command
 from .acl import ModelMode, FieldMode
 from .clause import SelectClause, SetClause, WhereClause
 from .field import FieldAccess
+from .func import FuncCall
 from .libs import lark
 from .libs.lark.exceptions import VisitError
 from .meta import OqlMeta
@@ -137,6 +138,9 @@ class OqlTransformer(lark.Transformer):
     def dot_expr(self, field: FieldAccess):
         return field.eval_una("bool")
 
+    def function(self, name: str, *args):
+        return FuncCall(name, list(args))
+
     def assignment(self, fa: FieldAccess, opr, value):
         if opr != "=":
             raise Exception(f"Assignment operator must be `=`, got `{opr}`")
@@ -165,10 +169,11 @@ class OqlTransformer(lark.Transformer):
         self._fas_write.append(fa)
         return fa
 
-    def field_as(self, field: Tuple[str], as_: Optional[Tuple[str]]):
-        fa = FieldAccess(self.recs, field, self._meta, as_='.'.join(as_) if as_ else None)
-        self._fas_read.append(fa)
-        return fa
+    def field_as(self, field: Union[FieldAccess, FuncCall], as_: Optional[Tuple[str]]):
+        """Field or function call, with optional dot-style alias."""
+        if as_:
+            field.as_ = '.'.join(as_)
+        return field
 
     def orderby_field(self, name: str, dir_: str):
         return name, dir_ or "asc"

@@ -4,17 +4,17 @@
 # @Description  :
 import copy
 from collections import deque
-from typing import Optional, Deque
+from typing import Deque, Optional
 
 from odoo import models, _
 
+from .acl import FieldMode
 from .alias import AliasNode, AliasField
 from .compatible import NEG2POS_OPR
 from .compatible import is_api_model
 from .meta import OqlMeta
 from .recs import *
 from .util import tn, read_object, write_object
-from .acl import FieldMode
 
 _logger = logging.getLogger(__name__)
 
