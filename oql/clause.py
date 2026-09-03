@@ -11,23 +11,27 @@ from .compatible import zip_c
 from .field import FieldAccess
 from .meta import OqlMeta
 from .recs import *
+from .base import IRecsReader
 
 
 class SelectClause:
-    def __init__(self, translate: bool, fas: List[FieldAccess]):
+    def __init__(self, translate: bool, fas: List[IRecsReader]):
         self.translate = translate
         self.fas = fas
+        # Check agg.
+        agg_readers = [x for x in fas if x.is_agg]
+        if agg_readers and len(agg_readers) != len(fas):
+            raise Exception(f"Mixture of aggregate and non-aggregate readers is invalid. Agg readers: {agg_readers}")
 
     def execute(self, recs: models.Model, meta: OqlMeta, load='_classic_read') -> List[Dict[str, Any]]:
         env = recs.env
         model_name = recs._name  # noqa
         fas = self.fas
         # 1 Ensure `id` is in result.
-        if not any(f.path == "id" for f in fas):
+        if all(f.as_ != "id" for f in fas):
             fas = [FieldAccess(recs, ["id"], meta)] + fas
 
         # 2 Read fields.
-        recs = recs.sudo()
         recs = recs.with_context(lang=env.user.lang if self.translate else None)
         rows = [{
             f.as_: val for f, val in zip_c(fas, val_row, strict=True)

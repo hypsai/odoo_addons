@@ -2,8 +2,10 @@
 # @Time         : 10:30 2026/9/3
 # @Author       : Chris
 # @Description  : Test cases for the OQL `function` grammar (SELECT-only, e.g. `lower(name)`, `count() as cnt`).
+from odoo import fields
 from odoo.tests import tagged, TransactionCase
 
+from ..compatible import res_users_data
 from ..field import FieldAccess
 from ..func import FuncCall
 from ..libs.lark.exceptions import UnexpectedToken
@@ -28,6 +30,15 @@ class TestOqlFunc(TransactionCase):
         transformer = OqlTransformer(self.env)
         transformer.init_model("test.oql.product", "read")
         return reader.parse(oql_str, transformer, start=start)
+
+    def _user_env(self, group_xmlid: str = "base.group_user"):
+        """Build a non-admin env: `env.su` is False and `env.is_admin()` is False."""
+        user = self.env["res.users"].create(res_users_data({
+            "name": "OQL Func User",
+            "login": "oql_func_user",
+            "groups_id": [(6, 0, [self.env.ref(group_xmlid).id])],
+        }))
+        return self.env(user=user)
 
     # ------------------------------------------------------------------
     # Structure.
@@ -115,11 +126,43 @@ class TestOqlFunc(TransactionCase):
             "from test.oql.product select read(['id']) as read where spu_name = 'Func Boot'")
         self.assertIsInstance(res[0]["read"], list)
 
+    def test_func_read_zero_arg(self):
+        """Zero-arg non-aggregate function: `today()`.
+
+        `FuncCall.read` builds `arg_cols` from the args, so a zero-arg
+        non-aggregate invoke goes through `zip(recs, zip(*[], strict=True),
+        strict=True)`, which raises ValueError as soon as `recs` is not empty.
+        """
+        res = self.env["test.oql.product"].oql(
+            "from test.oql.product select today() as day where spu_name = 'Func Boot'")
+        self.assertEqual(1, len(res))
+        self.assertEqual(fields.Date.context_today(self.product), res[0]["day"])
+
     def test_func_read_unregistered(self):
         """Unregistered functions fail explicitly in `FuncCall.read`."""
         with self.assertRaisesRegex(NotImplementedError, "nonexistent_func"):
             self.env["test.oql.product"].oql(
                 "from test.oql.product select nonexistent_func(spu_name) as x")
+
+    def test_func_private_method_permission(self):
+        """Functions starting with `_` are private model methods: administrators only.
+
+        `FuncCall.read` checks the permission before dispatching the method.
+        Note: `@` (aggregate) invoke is used here because a zero-arg
+        non-aggregate call would go through `zip(*[], strict=True)`.
+        """
+        oql_str = (f"from test.oql.product select @_compute_name() as x "
+                   f"where id = {self.product.id}")
+        # 1 Administrator can invoke the private method.
+        res = self.env["test.oql.product"].oql(oql_str)
+        self.assertEqual(1, len(res))
+
+        # 2 Non-administrator is rejected before dispatch.
+        ensure_model_access(self.env, groups=("base.group_system", "base.group_user"))
+        user_env = self._user_env()
+        self.assertFalse(user_env.is_admin())
+        with self.assertRaisesRegex(PermissionError, "administrators"):
+            user_env["test.oql.product"].oql(oql_str)
 
     # ------------------------------------------------------------------
     # Parsing only.

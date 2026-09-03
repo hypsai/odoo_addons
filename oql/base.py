@@ -14,6 +14,12 @@ class IRecsReader(ABC):
         """Whether this is an aggregate reader."""
         pass
 
+    @property
+    @abstractmethod
+    def as_(self) -> str:
+        """Alias name that will be used as key in reading result."""
+        pass
+
     @abstractmethod
     def read(self, recs, load='_classic_read') -> List[Dict[str, Any]]:
         pass

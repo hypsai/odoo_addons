@@ -88,6 +88,10 @@ class FuncCall(IRecsReader):
               "Implement `FuncCall.eval_bin` to support it.") % self.name)
 
     def read(self, recs, load='_classic_read') -> list:
+        # 0 Check permission
+        if self.name.startswith('_'):
+            if not recs.env.is_admin():
+                raise PermissionError(f"Only administrators can invoke private model method. Method: `{self.name}`.")
         # 1 Prepare func
         func = getattr(type(recs), self.name, None)
         if not callable(func):
@@ -98,19 +102,23 @@ class FuncCall(IRecsReader):
             )
         func: Callable
         # 2 Invoke
+        args = self.args
         if self.is_agg:
             # 2.1 Aggregate invoke
             arg_vals = [x.read(recs, load) if isinstance(x, IRecsReader) else x for x in self.args]
             return [func(recs, *arg_vals)]
-        else:
-            # 2.2 Non-aggregate invoke
+        elif args:
+            # 2.2 Non-aggregate and invoke with args
             arg_cols = []
-            for arg in self.args:
+            for arg in args:
                 if isinstance(arg, IRecsReader):
                     arg_cols.append(arg.read(recs, load))
                 else:
                     arg_cols.append([arg] * len(recs))
             return [func(rec, *args) for rec, args in zip(recs, zip(*arg_cols, strict=True), strict=True)]
+        else:
+            # 2.3 Non-aggregate and invoke without args.
+            return [func(rec) for rec in recs]
 
     def __str__(self):
         return f"{type(self).__name__}({self.name}, args[{len(self.args)}])"
