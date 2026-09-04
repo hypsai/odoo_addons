@@ -2,11 +2,13 @@
 # @Time         : 11:43 2026/9/3
 # @Author       : Chris
 # @Description  :
-from typing import List, Any, Dict, Tuple, Callable, Optional
+from collections import deque
+from typing import List, Any, Dict, Tuple, Callable, Optional, Deque
 
 from odoo import _, models, fields
 
 from .base import IRecsReader
+from .field import FieldAccess
 
 _global: Dict[str, Tuple[Callable, bool]] = {}  # {name: (func, is_agg)}
 
@@ -119,6 +121,20 @@ class FuncCall(IRecsReader):
         else:
             # 2.3 Non-aggregate and invoke without args.
             return [func(rec) for rec in recs]
+
+    def get_fas(self) -> List[FieldAccess]:
+        """Get `FieldAccess` objects recursively."""
+        fas = []
+        q: Deque[FuncCall] = deque()
+        q.append(self)
+        while len(q):
+            node = q.popleft()
+            for arg in node.args:
+                if isinstance(arg, FieldAccess):
+                    fas.append(arg)
+                elif isinstance(arg, FuncCall):
+                    q.append(arg)
+        return fas
 
     def __str__(self):
         return f"{type(self).__name__}({self.name}, args[{len(self.args)}])"

@@ -3,7 +3,26 @@
 # @Author       : Chris
 # @Description  :
 from abc import ABC, abstractmethod
+from enum import IntEnum
 from typing import List, Dict, Any
+
+from odoo import models
+
+
+class UnitKind(IntEnum):
+    FIELD = 1
+    ALIAS = 2
+
+
+class AclUnit:
+    def __init__(self, model: models.Model, name: str, kind: UnitKind):
+        self.model = model
+        self.name = name
+        self.kind = kind
+
+    @property
+    def key(self):
+        return self.model._name, self.name, self.kind
 
 
 class IRecsReader(ABC):

@@ -2,6 +2,7 @@
 # @Time         : 17:50 2025/10/15
 # @Author       : Chris
 # @Description  :
+import copy
 import os.path
 from typing import Optional, Any, Set, Union
 
@@ -9,6 +10,7 @@ import odoo.fields
 from odoo import models, _, Command
 
 from .acl import ModelMode, FieldMode
+from .base import UnitKind, AclUnit
 from .clause import SelectClause, SetClause, WhereClause
 from .field import FieldAccess
 from .func import FuncCall
@@ -17,7 +19,7 @@ from .libs.lark.exceptions import VisitError
 from .meta import OqlMeta
 from .recs import *
 from .stmt import Statement, SelectStmt, UpdateStmt, CreateStmt, DeleteStmt
-from .util import tn
+from .util import tn, groupby
 
 _logger = logging.getLogger(__name__)
 
@@ -138,8 +140,10 @@ class OqlTransformer(lark.Transformer):
     def dot_expr(self, field: FieldAccess):
         return field.eval_una("bool")
 
-    def function(self, agg, name: str, *args):
-        return FuncCall(name, list(args), agg)
+    def func(self, agg, name: str, *args):
+        func = FuncCall(name, list(args), agg)
+        self._fas_read.extend(func.get_fas())
+        return func
 
     def assignment(self, fa: FieldAccess, opr, value):
         if opr != "=":
@@ -243,23 +247,43 @@ class OqlTransformer(lark.Transformer):
 
     def _check_fas_perm(self, fas: List[FieldAccess], mode: FieldMode):
         acl = self.meta.acl
-        # 1. Gather paths.
-        model2fas: Dict[str, Set[str]] = defaultdict(set)
-        for fa in fas:
-            for node in fa.nodes:
-                if node.path:
-                    model2fas[node.model_name].add(node.path)
-        # 2. Check.
-        denied: List[Tuple[str, Set[str]]] = []
-        for model, paths in model2fas.items():
-            ok_paths = acl[model].perm_paths(paths, "read")
-            if len(paths) != len(ok_paths):
-                bad_paths = paths - ok_paths
-                denied.append((model, bad_paths))
-        # 3. Compose error report.
-        if denied:
-            return [_("%s `%s` fields: %s") % (mode, model, ", ".join(paths)) for model, paths in denied]
-        return []
+        units = [y for x in fas for y in x.chain_acl_units]
+        units = self._unique_acl_units(units)
+        errs = []
+        for model, units_model in groupby(units, lambda x: x.model):
+            mac = acl[model._name]
+            for kind, units_kind in groupby(units_model, lambda x: x.kind):
+                units_kind: List[AclUnit]
+                if kind == UnitKind.FIELD:
+                    # self._extend_acl_errs(errs, mode, model, kind, units, mac.perm_fields(mode))
+                    pass
+                elif kind == UnitKind.ALIAS:
+                    self._extend_acl_errs(errs, mode, model, kind, units, mac.perm_aliases(mode))
+        return errs
+
+    @classmethod
+    def _unique_acl_units(cls, units: List[AclUnit]) -> List[AclUnit]:
+        key2unit: Dict[Tuple[str, str, UnitKind], AclUnit] = {}
+        for unit in units:
+            key = unit.key
+            old = key2unit.get(key)
+            if old:
+                pass  # TODO: Merge
+            else:
+                key2unit[key] = copy.copy(unit)
+        return list(key2unit.values())
+
+    @classmethod
+    def _extend_acl_errs(cls, errs: List[str], mode: FieldMode, model: models.Model, kind: UnitKind,
+                         units: List[AclUnit], allowed: Set[str]):
+        denied_units = [x for x in units if x.name not in allowed]
+        if denied_units:
+            errs.append(_("%s `%s` %s: %s") % (
+                mode,
+                model._name,
+                kind.name,
+                ", ".join(x.name for x in units),
+            ))
 
     @classmethod
     def _type_check_bin(cls, left, opr, right, left_expr: str, right_expr: str):

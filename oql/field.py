@@ -8,9 +8,9 @@ from typing import Deque, Optional
 
 from odoo import models, _
 
-from .base import IRecsReader
 from .acl import FieldMode
 from .alias import AliasNode, AliasField
+from .base import IRecsReader, AclUnit, UnitKind
 from .compatible import NEG2POS_OPR
 from .compatible import is_api_model
 from .meta import OqlMeta
@@ -46,7 +46,9 @@ class FieldAccess(IRecsReader):
         b_x2m = False
         non_searchable_fields = []
         tail_alias = None
+        units: List[AclUnit] = []
         i = 0
+        j_alias_span_end = 0  # Alias will expand dot-path into `names`, this `j` is the index right after the expansion span.
         while i < len(names):
             name = names[i]
             # Model Field
@@ -59,10 +61,13 @@ class FieldAccess(IRecsReader):
                 # Check availability in search criteria.
                 if not f_meta._description_searchable:
                     non_searchable_fields.append(name)
+                plain_names.append(name)
+                if i >= j_alias_span_end:
+                    # Alias expansion span is not ACL unit, so we just add field outside the span.
+                    units.append(AclUnit(p_recs, name, UnitKind.FIELD))
+                i += 1
                 pp_recs = p_recs
                 p_recs = p_recs[name]
-                plain_names.append(name)
-                i += 1
                 continue
             # Alias
             alias = meta.get_alias(p_recs._name, name)
@@ -72,13 +77,17 @@ class FieldAccess(IRecsReader):
                         raise Exception(f"Complex alias `{name}` can only be tail of field path. Path: `{'.'.join(names)}`")
                     tail_alias = alias
                     b_x2m = True  # Treat complex alais as X2Many field.
+                    units.append(AclUnit(p_recs, name, UnitKind.ALIAS))
                     break
                 else:
                     assert isinstance(alias, AliasField), \
                         f"Only `{AliasField.__name__}` could be non-complex alias. Not `{type(alias).__name__}`."
                     chips = alias.path.split('.')
                     i += 1
+                    # Expand alias name path into `names`
                     names[i:i] = chips
+                    j_alias_span_end = i + len(chips)
+                    units.append(AclUnit(p_recs, name, UnitKind.ALIAS))
                     continue
             # Term
             domains = meta.get_domains(name)
@@ -119,6 +128,7 @@ class FieldAccess(IRecsReader):
         self._as = as_
         self._is_root = _is_root
         self._is_agg = bool(is_agg)
+        self._acl_units = units
 
     @property
     def is_agg(self):
@@ -203,7 +213,7 @@ class FieldAccess(IRecsReader):
 
     @property
     def nodes(self) -> List["FieldAccess"]:
-        """All field access nodes on the chain. In BFS order."""
+        """All field access nodes on the chain (`self` included). In BFS order."""
         nodes = []
         q: Deque[FieldAccess] = deque()
         q.append(self)
@@ -212,6 +222,11 @@ class FieldAccess(IRecsReader):
             nodes.append(node)
             q.extend(node.next)
         return nodes
+
+    @property
+    def chain_acl_units(self) -> List[AclUnit]:
+        """All ACL units on the chain."""
+        return [y for x in self.nodes for y in x._acl_units]
 
     def eval_bin(self, opr: str, value):
         opr = " ".join(opr.split())  # Normalize spaces

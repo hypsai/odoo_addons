@@ -41,9 +41,9 @@ nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
 // ------ Function ------
-function: [AGG] CNAME "(" _func_args ")"  // Function call, e.g. `lower(name)`, `action_confirm()``
+func: [AGG] CNAME "(" _func_args ")"  // Function call, e.g. `lower(name)`, `action_confirm()``
 _func_args: _func_arg ("," _func_arg)* [","] |
-_func_arg: _value | field | function | "*"  // `count(*)` equals `count()` (`*` is filtered from the tree)
+_func_arg: _value | field | func | "*"  // `count(*)` equals `count()` (`*` is filtered from the tree)
 
 fields: field_as ("," field_as)*  // Field list
 orderby_fields: orderby_field ("," orderby_field)*  // Order by field list
@@ -53,7 +53,7 @@ model: dot_names  // Dot-style model name
 field: [AGG] dot_names  // Dot-style field access
 field_assi: dot_names  // Dot-style field for assignment expression
 field_as: field ["as"i dot_names]  // Dot-style field with dot-style alias
-        | function ["as"i dot_names]  // Function call with alias, e.g. `count(tag_ids) as cnt`
+        | func ["as"i dot_names]  // Function call with alias, e.g. `count(tag_ids) as cnt`
 orderby_field: CNAME [ASC | DESC]  // Plain field with order direction
 
 assignment: field_assi BIN_OPR _value

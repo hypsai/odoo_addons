@@ -42,7 +42,8 @@ class OqlAcl:
         return self._mode2models[mode]
 
     def perm_paths(self, model: str, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
-        """Find out dot-style paths on `model` that current user has access to."""
+        """Find out dot-style paths on `model` that current user has access to.
+        * Note this method only checks actual field paths, aliases are NOT included."""
         env = self.env
 
         # BFS check, layer by model.
@@ -134,7 +135,7 @@ class OqlModelAcl:
         alias_recs = self.env["oql.alias.line"].sudo().search(
             [("model_id.name", "=", self.model_name), ("alias", "not in", list(ok_aliases))])
         for alias_rec in alias_recs:
-            node = AliasNode.parse(alias_recs.alias, alias_rec.mode, alias_rec.path)
+            node = AliasNode.parse(alias_rec.alias, alias_rec.mode, alias_rec.path)
             paths = set(node.fields)
             if not paths:  # For safety reason, decline access right inheritance if node doesn't provide paths.
                 continue
@@ -145,6 +146,7 @@ class OqlModelAcl:
         return ok_aliases
 
     def perm_paths(self, paths: Iterable[str], mode: FieldMode) -> Set[str]:
+        """Note this method only checks actual field paths, aliases are NOT included."""
         return self.acl.perm_paths(self.model_name, paths, mode)
 
     def perm_records(self, domain, mode: ModelMode) -> list:
