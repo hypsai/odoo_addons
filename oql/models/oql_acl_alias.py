@@ -22,8 +22,8 @@ class OqlAclAlias(models.Model):
     mac_id = fields.Many2one("ir.model.access", "Model Access", required=True, ondelete="cascade")
     alias_id = fields.Many2one("oql.alias.line", "Alias", required=True, ondelete="cascade",
                                domain="[('model_id', '=', model_id)]")
-    perm_read = fields.Boolean("Read Access")
-    perm_write = fields.Boolean("Write Access")
+    perm_read = fields.Boolean("Read Access", required=True, default=False)
+    perm_write = fields.Boolean("Write Access", required=True, default=False)
 
     # Aux
     model_id = fields.Many2one(related="mac_id.model_id")
