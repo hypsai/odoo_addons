@@ -10,23 +10,27 @@ from .compatible import zip_c
 from .field import FieldAccess
 from .meta import OqlMeta
 from .recs import *
+from .base import IRecsReader
 
 
 class SelectClause:
-    def __init__(self, translate: bool, fas: List[FieldAccess]):
+    def __init__(self, translate: bool, fas: List[IRecsReader]):
         self.translate = translate
         self.fas = fas
+        # Check agg.
+        agg_readers = [x for x in fas if x.is_agg]
+        if agg_readers and len(agg_readers) != len(fas):
+            raise Exception(f"Mixture of aggregate and non-aggregate readers is invalid. Agg readers: {agg_readers}")
 
     def execute(self, recs: models.Model, meta: OqlMeta, load='_classic_read') -> List[Dict[str, Any]]:
         env = recs.env
         model_name = recs._name  # noqa
         fas = self.fas
         # 1 Ensure `id` is in result.
-        if not any(f.path == "id" for f in fas):
+        if all(f.as_ != "id" for f in fas):
             fas = [FieldAccess(recs, ["id"], meta)] + fas
 
         # 2 Read fields.
-        recs = recs.sudo()
         recs = recs.with_context(lang=env.user.lang if self.translate else None)
         rows = [{
             f.as_: val for f, val in zip_c(fas, val_row, strict=True)
@@ -57,8 +61,15 @@ class WhereClause:
 class SetClause:
     """Holds field=value assignments for UPDATE/CREATE statements."""
 
-    def __init__(self, assignments: List[Tuple[str, Any]]):
-        self.assignments = assignments
+    def __init__(self, translate: bool, assignments: Iterable[Tuple[FieldAccess, Any]]):
+        self.translate = translate
+        self.assignments = tuple(assignments)
+
+    def execute(self, recs: models.Model):
+        env = recs.env
+        recs = recs.with_context(lang=env.user.lang if self.translate else None)
+        for fa, val in self.assignments:
+            fa.write(recs, val)
 
     def to_vals(self, model: models.Model, meta: OqlMeta) -> dict:
         """Convert assignments to an Odoo vals dict, checking field-level write ACL."""
@@ -66,21 +77,21 @@ class SetClause:
         acl = meta.acl
         model_name = model._name
         _fields = model._fields
-        for field_name, value in self.assignments:
-            f_meta: fields.Field = _fields.get(field_name)
+        for fa, value in self.assignments:
+            f_meta: fields.Field = _fields.get(fa.path)
             if not f_meta:
-                raise Exception(_("Field `%s` not found on model `%s`.") % (field_name, model_name))
+                raise Exception(_("Field `%s` not found on model `%s`.") % (fa.path, model_name))
             # Check field-level write access.
-            acl.check_field(model, field_name, "write")
+            acl.check_field(model, fa.path, "write")
             # Convert value based on field type.
             if f_meta.type in ('one2many', 'many2many'):
                 if value is None:
-                    vals[field_name] = [(5,)]  # Clear all.
+                    vals[fa.path] = [(5,)]  # Clear all.
                 elif isinstance(value, (list, tuple)):
-                    vals[field_name] = [(6, 0, list(value))]
+                    vals[fa.path] = [(6, 0, list(value))]
                 else:
                     raise Exception(_("Expected array of ids for x2many field `%s`, got `%s`.")
-                                    % (field_name, type(value).__name__))
+                                    % (fa.path, type(value).__name__))
             else:
-                vals[field_name] = value
+                vals[fa.path] = value
         return vals

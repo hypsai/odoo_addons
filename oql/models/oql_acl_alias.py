@@ -1,10 +1,11 @@
 # @Time         : 20:33 2026/5/9
 # @Author       : Chris
 # @Description  :
-from typing import Literal, Set
+from typing import FrozenSet
 
-from odoo import fields, models, api
+from odoo import fields, models, api, tools
 
+from ..acl import FieldMode
 from ..compatible import model_flush
 
 
@@ -20,8 +21,8 @@ class OqlAclAlias(models.Model):
     mac_id = fields.Many2one("ir.model.access", "Model Access", required=True, ondelete="cascade")
     alias_id = fields.Many2one("oql.alias.line", "Alias", required=True, ondelete="cascade",
                                domain="[('model_id', '=', model_id)]")
-    perm_read = fields.Boolean("Read Access")
-    perm_write = fields.Boolean("Write Access")
+    perm_read = fields.Boolean("Read Access", required=True, default=False)
+    perm_write = fields.Boolean("Write Access", required=True, default=False)
 
     # Aux
     model_id = fields.Many2one(related="mac_id.model_id")
@@ -30,14 +31,23 @@ class OqlAclAlias(models.Model):
                          "Alias must be unique in a model's alias access collection.")]
 
     @api.model
-    def perm_aliases(self, model: str, mode: Literal["read", "write"]) -> Set[str]:
+    def perm_aliases(self, model: str, mode: FieldMode) -> FrozenSet[str]:
         """Check field access rights of the given model, and return all the fields that have given `mode` access right."""
         if self.env.su:
             # User root have all accesses
-            return set(self.env["oql.alias.line"].search([("model_id.model", "=", model)]).mapped("alias"))
+            return frozenset(self.env["oql.alias.line"].search([("model_id.model", "=", model)]).mapped("alias"))
+        return self._perm_aliases(model, mode)
 
+    @api.model
+    @tools.ormcache('frozenset(self.env.user.groups_id.ids)', 'model', 'mode')
+    def _perm_aliases(self, model, mode):
+        """For caching.
+        :type model: str
+        :type mode: FieldMode
+        :rtype: FrozenSet[str]
+        """
         model_flush(self.env["ir.model.access"])
-        model_flush(self, self._fields)
+        model_flush(self, self._fields)  # noqa
 
         sql = f"""
         SELECT d.alias
@@ -51,6 +61,32 @@ class OqlAclAlias(models.Model):
         HAVING BOOL_OR(b.perm_{mode} AND COALESCE(e.perm_{mode}, b.perm_oql_aac_default_{mode}, FALSE))
         """
         self.env.cr.execute(sql, (self.env.uid, model))
-        field_names = {row[0] for row in self.env.cr.fetchall()}
+        field_names = frozenset(row[0] for row in self.env.cr.fetchall())
 
         return field_names
+
+    # ---- Cache invalidation ----
+    # Odoo 15: clear_caches() clears the shared registry cache (see the note
+    # in res_users.py "clear_caches methods pretty much just end up calling
+    # Registry._clear_cache"). The result of `_perm_aliases` depends on this
+    # table, so invalidate on any write here. `ir.model.access` changes are
+    # already handled in ir_model_access.py.
+    #
+    # Without these hooks an override row would not take effect until some
+    # other cache clearing happens (e.g. an `ir.model.access` write).
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        self.clear_caches()
+        return records
+
+    def write(self, vals):
+        result = super().write(vals)
+        self.clear_caches()
+        return result
+
+    def unlink(self):
+        result = super().unlink()
+        self.clear_caches()
+        return result

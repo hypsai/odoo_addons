@@ -50,8 +50,19 @@
                         return 'keyword';
                     }
 
+                    // WITH CONTEXT clause (ctx_clause, multi-word keyword)
+                    if (stream.match(/^with\s+context/i)) {
+                        return 'keyword';
+                    }
+
                     // SQL-like keywords (case-insensitive)
                     if (stream.match(/^\b(from|select|where|limit|offset|order|by|as)\b/i)) {
+                        return 'keyword';
+                    }
+
+                    // DML statements and ORM command keywords (case-insensitive)
+                    // `set`, `update`, `delete` are both statements and commands inside `[...]`
+                    if (stream.match(/^\b(update|insert|into|delete|set|create|link|unlink)\b/i)) {
                         return 'keyword';
                     }
 
@@ -100,8 +111,8 @@
                         return 'variable';
                     }
 
-                    // Brackets and punctuation
-                    if (stream.match(/^[\[\](){}.,*]/)) {
+                    // Brackets and punctuation (`:` separates object keys from values)
+                    if (stream.match(/^[\[\](){}.,*:]/)) {
                         return 'bracket';
                     }
 
