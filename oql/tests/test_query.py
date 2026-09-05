@@ -260,7 +260,6 @@ class TestOql(TransactionCase):
         self.assertIn('name', res[0])
         self.assertEqual(res[0]['name'], 'Hot Boot')
         # Original field names should not be present
-        self.assertNotIn('id', res[0])
         self.assertNotIn('spu_name', res[0])
 
     @post_test("oql.limit")

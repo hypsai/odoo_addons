@@ -108,6 +108,19 @@ def get_field_type(field_def: fields.Field) -> Union[type, str]:
     return field_type2python_type(field_def.type)
 
 
+def _read_object(obj, chips: List[str]):
+    """
+    Read object field with dot style path.
+    """
+    p = obj
+    for chip in chips:
+        if hasattr(p, chip):
+            p = getattr(p, chip)
+        else:
+            raise KeyError(f"`{type(obj)}.{'.'.join(chips)}` not exist, missing field `{type(p)}.{chip}`.")
+    return p
+
+
 def read_object(obj, path: str):
     """
     Read object field with dot style path.
@@ -115,13 +128,20 @@ def read_object(obj, path: str):
     if not path:  # Empty path means obj itself.
         return obj
     chips = path.split('.')
-    p = obj
-    for chip in chips:
-        if hasattr(p, chip):
-            p = getattr(p, chip)
-        else:
-            raise KeyError(f"`{type(obj)}.{path}` not exist, missing field `{type(p)}.{chip}`.")
-    return p
+    return _read_object(obj, chips)
+
+
+def write_object(obj, path: str, value):
+    """
+    Write object field with dot style path.
+    """
+    if not path:  # Empty path means obj itself.
+        raise ValueError("`path` can't be emtpy.")
+    chips = path.split('.')
+    target = _read_object(obj, chips[:-1])
+    if target is None or target is False:
+        raise Exception(f"`{obj}`{'.'+'.'.join(chips[:-1]) if chips else ''} is `{target}`, which is not writable.")
+    setattr(target, chips[-1], value)
 
 
 def groupby(iterable, key, convert_item=None, returns_dict=False):
