@@ -1,18 +1,19 @@
 ?start: query
 
-query: select_stmt | update_stmt | insert_stmt | delete_stmt
+query: [ctx_clause] (select_stmt | update_stmt | insert_stmt | delete_stmt)
 
 select_stmt: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
-update_stmt: update_clause SET [TRANSLATE] set_clause [where_clause] [limit_clause]
-insert_stmt: insert_clause SET [TRANSLATE] set_clause
+update_stmt: update_clause set_clause [where_clause] [limit_clause]
+insert_stmt: insert_clause set_clause
 delete_stmt: delete_clause [where_clause] [limit_clause]
 
+ctx_clause: "with"i "context"i assignment_simple ("," assignment_simple)*
 from_clause: "from"i model
 update_clause: "update"i model
 insert_clause: "insert"i "into"i model
 delete_clause: "delete"i "from"i model
 select_clause: "select"i [TRANSLATE] ("*" | fields)
-set_clause: assignment ("," assignment)*
+set_clause: "set"i [TRANSLATE] assignment ("," assignment)*
 where_clause: "where"i [TRANSLATE] expr
 limit_clause: "limit"i INT
 offset_clause: "offset"i INT
@@ -20,10 +21,12 @@ orderby_clause: ORDER_BY orderby_fields
 
 ?expr: or_expr
 
+// ------ Logic Expression ------
 ?or_expr: and_expr | or_expr "or"i and_expr
 ?and_expr: not_expr | and_expr "and"i not_expr
 ?not_expr: "not"i not_expr | _opr_expr
 
+// ------ Operator Expression ------
 _opr_expr: bin_expr
          | una_expr
          | get_expr
@@ -37,16 +40,24 @@ get_expr: field "[" _value "]"  // For Many2one relation, e.g. partner[1]
 nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
+// ------ Function ------
+func: [AGG] CNAME "(" _func_args ")"  // Function call, e.g. `lower(name)`, `action_confirm()``
+_func_args: _func_arg ("," _func_arg)* [","] |
+_func_arg: _value | field | func | "*"  // `count(*)` equals `count()` (`*` is filtered from the tree)
+
 fields: field_as ("," field_as)*  // Field list
 orderby_fields: orderby_field ("," orderby_field)*  // Order by field list
 
 dot_names: CNAME ("." CNAME)*  // Dot-style names
 model: dot_names  // Dot-style model name
-field: dot_names  // Dot-style field access
-field_as: dot_names ["as"i dot_names]  // Dot-style field with dot-style alias
+field: [AGG] dot_names  // Dot-style field access
+field_assi: dot_names  // Dot-style field for assignment expression
+field_as: field ["as"i dot_names]  // Dot-style field with dot-style alias
+        | func ["as"i dot_names]  // Function call with alias, e.g. `count(tag_ids) as cnt`
 orderby_field: CNAME [ASC | DESC]  // Plain field with order direction
 
-assignment: CNAME "=" _value
+assignment: field_assi BIN_OPR _value
+assignment_simple: CNAME "=" _value
 
 _value: string
      | INT
@@ -54,15 +65,43 @@ _value: string
      | TRUE
      | FALSE
      | NULL
+     | set
      | array
+     | object
 
-array: "(" [_value ("," _value)* [","]] ")"
+set: "(" _value_list ")"  // SQL array, unordered
+_value_list: _value ("," _value)* [","] |
+array: "[" _array_items "]"  // Python array, ordered. Items may be ORM commands, e.g. `[link 1, create {name: 'x'}]`
+_array_items: _array_item ("," _array_item)* [","] |
+_array_item: _value | cmd
+
+// ------ Odoo ORM special writing format ------
+// (Nested JSON object with commands)
+// * Note: content rules end with an empty alternative (`|`) instead of using
+// * maybe-there `[...]`, because lark pads the empty branch of `[x]` with `_EMPTY`
+// * placeholders, which surface as `None` children. See `load_grammar.EBNF_to_BNF.maybe`.
+array_int: "[" _int_list "]"  // Relation ids.
+object: "{" _member_list "}"  // JSON-like object, keys without quotes
+member: CNAME ":" _value  // Key-value pair, key is a bare name (`array` covers ORM commands)
+_int_list: INT ("," INT)* [","] |
+_member_list: member ("," member)* [","] |
+cmd: cmd_link
+        | cmd_unlink
+        | cmd_create
+        | cmd_delete
+        | cmd_update
+        | cmd_set
+cmd_link: "link"i INT
+cmd_unlink: "unlink"i INT
+cmd_create: "create"i object
+cmd_delete: "delete"i INT
+cmd_update: "update"i INT object
+cmd_set: "set"i array_int
 
 string: ESCAPED_STRING
 
 // Operators
 UNA_OPR: "_sizeof_"i
-
 BIN_OPR: "="
         | "!="
         | "<>"
@@ -101,6 +140,7 @@ ASC: "asc"i
 DESC: "desc"i
 TRANSLATE: "translate"i
 SET: "set"i
+AGG: "@"
 
 // Imports
 %import common.LETTER

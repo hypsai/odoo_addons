@@ -80,6 +80,9 @@ class AliasNode(ABC):
         :return: Scalar or object.
         """
         try:
+            # SUDO-REMARK: Alias has its own ACL. Since permission check is performed at query entrance,
+            # so we assert user has access right to this alias.
+            rec = rec.sudo()
             return self._read(rec, _check)
         except Exception as e:
             raise Exception(f"{type(self).__name__} query failed for alias '{self.alias}': {str(e)}") from e

@@ -45,10 +45,9 @@ class SelectStmt(Statement):
 
 
 class UpdateStmt(Statement):
-    def __init__(self, from_: models.Model, translate, set_clause: SetClause,
+    def __init__(self, from_: models.Model, set_clause: SetClause,
                  where: Optional[WhereClause] = None, limit=None):
         self.from_ = from_
-        self.translate = bool(translate)
         self.set_clause = set_clause
         self.where = where
         self.limit = limit
@@ -73,18 +72,15 @@ class UpdateStmt(Statement):
 
         # 3 Build vals and write.
         if recs:
-            vals = self.set_clause.to_vals(self.from_, self.meta)
-            write_recs = recs.with_context(lang=env.user.lang if self.translate else None)
-            write_recs.write(vals)
+            self.set_clause.execute(recs)
 
         # 4 Return updated record ids.
         return [{"id": rid} for rid in recs.ids]
 
 
 class CreateStmt(Statement):
-    def __init__(self, from_: models.Model, translate, set_clause: SetClause):
+    def __init__(self, from_: models.Model, set_clause: SetClause):
         self.from_ = from_
-        self.translate = bool(translate)
         self.set_clause = set_clause
 
     def execute(self):
@@ -97,7 +93,7 @@ class CreateStmt(Statement):
 
         # 2 Build vals and create.
         vals = self.set_clause.to_vals(self.from_, self.meta)
-        create_model = self.from_.with_context(lang=env.user.lang if self.translate else None)
+        create_model = self.from_.with_context(lang=env.user.lang if self.set_clause.translate else None)
         rec = create_model.create(vals)
 
         # 3 Return created record ids.
