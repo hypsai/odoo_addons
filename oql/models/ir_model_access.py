@@ -4,7 +4,7 @@
 # @Description  :
 from typing import Literal, Set
 
-from odoo import models, fields
+from odoo import models, fields, api
 
 from ..compatible import model_flush
 
@@ -17,9 +17,34 @@ class OqlIrModelAccess(models.Model):
     perm_oql_fac_default_read = fields.Boolean("OQL Field Default Read Access", default=True)
     perm_oql_fac_default_write = fields.Boolean("OQL Field Default Write Access", default=True)
     oql_fac_ids = fields.One2many("oql.acl.field", "mac_id", "OQL Field ACL")
-    perm_oql_aac_default_read = fields.Boolean("OQL Alias Default Read Access", default=True)
-    perm_oql_aac_default_write = fields.Boolean("OQL Alias Default Write Access", default=True)
+    perm_oql_aac_default_read = fields.Boolean("OQL Alias Default Read Access", default=False)
+    perm_oql_aac_default_write = fields.Boolean("OQL Alias Default Write Access", default=False)
     oql_aac_ids = fields.One2many("oql.acl.alias", "mac_id", "OQL Alias ACL")
+
+    # ---- Cache invalidation ----
+    # `oql.acl.field._perm_fields` / `oql.acl.alias._perm_aliases` results
+    # depend on `ir.model.access` rows (group, perms, active, oql defaults),
+    # so any change here must invalidate them. Odoo 15's clear_caches()
+    # clears the shared registry cache, so this also covers other caches.
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        self.env['oql.acl.field'].clear_caches()
+        self.env['oql.acl.alias'].clear_caches()
+        return records
+
+    def write(self, vals):
+        result = super().write(vals)
+        self.env['oql.acl.field'].clear_caches()
+        self.env['oql.acl.alias'].clear_caches()
+        return result
+
+    def unlink(self):
+        result = super().unlink()
+        self.env['oql.acl.field'].clear_caches()
+        self.env['oql.acl.alias'].clear_caches()
+        return result
 
     def perm_models(self, mode: ModelMode) -> Set[str]:
         """Return model names that have the specified `mode` access."""
