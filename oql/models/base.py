@@ -1,10 +1,11 @@
 import logging
-from typing import List, Optional, Union
+from typing import List, Optional, Union, override, Set
 
 from odoo import models, api
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, AccessError
 
 from ..oql import reader, OqlTransformer, OqlDomain
+from odoo.tools.translate import _
 
 _logger = logging.getLogger(__name__)
 
@@ -105,10 +106,24 @@ class OqlBase(models.AbstractModel):
         """
         pass
 
-    def _valid_field_parameter(self, field, name):
-        if name == "oql_model":
-            return True
-        return super()._valid_field_parameter(field, name)
+    @api.model
+    def oql_hintx(self, hintable_oql: str):
+        """
+        Hint OQL at specified hint points.
+        :param hintable_oql: Partial OQL with hint points.
+          Grammar: 'Partial OQL ?hint_options'
+            hint_options: A JSON dict that contains keys:
+              name: str. Name for the hint point. It will be used as key in hint result.
+              keywords: List[str]. A list of keywords used search for possible candidates.
+              limit: int. Max hint count.
+              offset: Optional[int]. Used for paging when there are too many hint items.
+          e.g.  'FROM product.product SELECT ?{"name": "sel_field", "keywords": ["code", "de"], "limit": 10}'
+                'FROM product.?{"name": "model", "keywords": ["te"], "limit": 5}'
+                'FROM product.product SELECT id where default_code like ?{"name": "default_code", "keywords": ["danner"], "limit": 40}'
+          * Note: hint point can only be placed at the end of a partial OQL.
+        :return: {hint_point_name: {hints: [{type: ..., value: ..., desc: ...}]}}
+        """
+        raise NotImplementedError("Install `oql_pro` from odoo app store or implement with a custom addon.")
 
     def __oql_bin__(self,
                     domain: Optional[OqlDomain],
@@ -127,3 +142,93 @@ class OqlBase(models.AbstractModel):
         :return: `None` means fall through to built-in logic for `opr`.
         """
         pass
+
+    @api.model
+    @override
+    def check_field_access_rights(self, operation, fields) -> List[str]:
+        """Align Odoo's native field access check with `oql.acl.field`.
+
+        `oql.acl.field` becomes the single source of truth for field
+        read/write, with precedence: oql override > field.groups > oql
+        default. Native ORM operations (read, write, create, prefetch,
+        fields_get...) and OQL queries then share the exact same per-field
+        permission evaluation.
+        """
+        # 1 Special code path for oql `perm_fields`.
+        if self.env.context.get("_oql_field_acl_escape", False):
+            return super().check_field_access_rights(operation, fields)
+
+        # 2 Superuser owns everything.
+        if self.env.su:
+            return fields or list(self._fields)  # noqa
+
+        # 3 OQL access checker takes control.
+        if operation != "read" and operation != "write":
+            raise Exception(f"Unknown field operation `{operation}`.")
+        allowed: Set[str] = self.env['oql.acl.field'].perm_fields(self._name, operation)
+        if fields:
+            denied = [x for x in fields if x not in allowed]
+            if denied:
+                self._odoo_access_raise(operation, denied)
+            return fields
+        return list(allowed)
+
+    def _odoo_access_raise(self, operation, invalid_fields):
+        """Code from this method is completely copied from odoo server's source code.
+        !!! Do not modify it manually !!!
+        """
+        _logger.info('Access Denied by ACLs for operation: %s, uid: %s, model: %s, fields: %s',
+                     operation, self._uid, self._name, ', '.join(invalid_fields))
+
+        description = self.env['ir.model']._get(self._name).name
+        if not self.env.user.has_group('base.group_no_one'):
+            raise AccessError(
+                _('You do not have enough rights to access the fields "%(fields)s" on %(document_kind)s (%(document_model)s). ' \
+                  'Please contact your system administrator.\n\n(Operation: %(operation)s)') % {
+                    'fields': ','.join(list(invalid_fields)),
+                    'document_kind': description,
+                    'document_model': self._name,
+                    'operation': operation,
+                })
+
+        def format_groups(field):
+            if field.groups == '.':
+                return _("always forbidden")
+
+            anyof = self.env['res.groups']
+            noneof = self.env['res.groups']
+            if field.groups:  # !!! This is a line added to bypass empty field groups issue specially in OQL integration.
+                for g in field.groups.split(','):
+                    if g.startswith('!'):
+                        noneof |= self.env.ref(g[1:])
+                    else:
+                        anyof |= self.env.ref(g)
+            strs = []
+            if anyof:
+                strs.append(_("allowed for groups %s") % ', '.join(
+                    anyof.sorted(lambda g: g.id)
+                    .mapped(lambda g: repr(g.display_name))
+                ))
+            if noneof:
+                strs.append(_("forbidden for groups %s") % ', '.join(
+                    noneof.sorted(lambda g: g.id)
+                    .mapped(lambda g: repr(g.display_name))
+                ))
+            return '; '.join(strs)
+
+        raise AccessError(_("""The requested operation can not be completed due to security restrictions.
+
+        Document type: %(document_kind)s (%(document_model)s)
+        Operation: %(operation)s
+        User: %(user)s
+        Fields:
+        %(fields_list)s""") % {
+            'document_model': self._name,
+            'document_kind': description or self._name,
+            'operation': operation,
+            'user': self._uid,
+            'fields_list': '\n'.join(
+                '- %s (%s)' % (f, format_groups(self._fields[f]))
+                for f in sorted(invalid_fields)
+            )
+        })

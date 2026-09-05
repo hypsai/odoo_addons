@@ -2,23 +2,26 @@
 # @Author       : Chris
 # @Description  :
 import copy
-from typing import Optional
+from collections import deque
+from typing import Deque, Optional
 
 from odoo import models
 
+from .acl import FieldMode
 from .alias import AliasNode, AliasField
+from .base import IRecsReader, AclUnit, UnitKind
 from .compatible import NEG2POS_OPR
 from .compatible import is_api_model
 from .meta import OqlMeta
 from .recs import *
-from .util import tn, read_object
+from .util import tn, read_object, write_object
 from odoo.fields import Domain
 from odoo.tools.translate import _
 
 _logger = logging.getLogger(__name__)
 
 
-class FieldAccess:
+class FieldAccess(IRecsReader):
 
     model: models.Model
     """Accessing target model."""
@@ -30,11 +33,10 @@ class FieldAccess:
     """Pre-selector domain, select some records for further filtering."""
 
     def __init__(self, model: models.Model, names: Iterable[str], meta: OqlMeta, pre_domain: OqlDomain = None,
-                 as_: str = None, _is_root=True):
+                 as_: str = None, is_agg: Optional[bool] = None, _is_root=True):
         self.meta = meta
         model = model.browse()  # Make model data-inconscient.
         env = model.env
-        acl = meta.acl
         # Parse
         names = list(names)
         as_ = as_ or '.'.join(names)
@@ -45,12 +47,13 @@ class FieldAccess:
         b_x2m = False
         non_searchable_fields = []
         tail_alias = None
+        units: List[AclUnit] = []
         i = 0
+        j_alias_span_end = 0  # Alias will expand dot-path into `names`, this `j` is the index right after the expansion span.
         while i < len(names):
             name = names[i]
             # Model Field
             if hasattr(p_recs, name):
-                acl.check_field(p_recs, name, "read")
                 f_meta = p_recs._fields[name]
                 # Check X2Many
                 if not b_x2m:
@@ -59,10 +62,13 @@ class FieldAccess:
                 # Check availability in search criteria.
                 if not f_meta._description_searchable:
                     non_searchable_fields.append(name)
+                plain_names.append(name)
+                if i >= j_alias_span_end:
+                    # Alias expansion span is not ACL unit, so we just add field outside the span.
+                    units.append(AclUnit(p_recs, name, UnitKind.FIELD))
+                i += 1
                 pp_recs = p_recs
                 p_recs = p_recs[name]
-                plain_names.append(name)
-                i += 1
                 continue
             # Alias
             alias = meta.get_alias(p_recs._name, name)
@@ -72,13 +78,17 @@ class FieldAccess:
                         raise Exception(f"Complex alias `{name}` can only be tail of field path. Path: `{'.'.join(names)}`")
                     tail_alias = alias
                     b_x2m = True  # Treat complex alais as X2Many field.
+                    units.append(AclUnit(p_recs, name, UnitKind.ALIAS))
                     break
                 else:
                     assert isinstance(alias, AliasField), \
                         f"Only `{AliasField.__name__}` could be non-complex alias. Not `{type(alias).__name__}`."
                     chips = alias.path.split('.')
                     i += 1
+                    # Expand alias name path into `names`
                     names[i:i] = chips
+                    j_alias_span_end = i + len(chips)
+                    units.append(AclUnit(p_recs, name, UnitKind.ALIAS))
                     continue
             # Term
             domains = meta.get_domains(name)
@@ -118,10 +128,24 @@ class FieldAccess:
         self._tail_alias: Optional[AliasNode] = tail_alias  # Complex alias at tail.
         self._as = as_
         self._is_root = _is_root
+        self._is_agg = bool(is_agg)
+        self._acl_units = units
+
+    @property
+    def is_agg(self):
+        return self._is_agg
+
+    @property
+    def model_name(self):
+        return self.model._name  # noqa
 
     @property
     def as_(self):
         return self._as
+
+    @as_.setter
+    def as_(self, value: str):
+        self._as = value
 
     @property
     def path(self):
@@ -188,6 +212,23 @@ class FieldAccess:
     def rear_field(self) -> Optional[fields.Field]:
         return self._rear_field
 
+    @property
+    def nodes(self) -> List["FieldAccess"]:
+        """All field access nodes on the chain (`self` included). In BFS order."""
+        nodes = []
+        q: Deque[FieldAccess] = deque()
+        q.append(self)
+        while len(q) > 0:
+            node = q.popleft()
+            nodes.append(node)
+            q.extend(node.next)
+        return nodes
+
+    @property
+    def chain_acl_units(self) -> List[AclUnit]:
+        """All ACL units on the chain."""
+        return [y for x in self.nodes for y in x._acl_units]
+
     def eval_bin(self, opr: str, value):
         opr = " ".join(opr.split())  # Normalize spaces
         return self._eval(False, opr, value)
@@ -217,7 +258,13 @@ class FieldAccess:
             res = [[y[field] for y in read_object(x, prefix_path).read([field], load)] for x in recs]
         if not self.x2m:  # Flat result for non-x2many path.
             res = [x[0] if x else None for x in res]
+        if self.is_agg:
+            res = [res]
         return res
+
+    def write(self, recs, value):
+        for rec in recs:
+            write_object(rec, self.path, value)
 
     def _eval(self, una: bool, opr: str, value):
         """
@@ -317,6 +364,11 @@ class FieldAccess:
         else:
             flatted_fas.append(copy.copy(self))
         return flatted_fas
+
+    def check_perm(self, mode: FieldMode):
+        acl = self.meta.acl
+        mac = acl[self.model_name]
+        return mac.check_path(self.path, mode)
 
     def __str__(self):
         return f"{type(self).__name__}({self.path}, next[{len(self.next)}])"

@@ -1,21 +1,24 @@
 # @Time         : 17:50 2025/10/15
 # @Author       : Chris
 # @Description  :
+import copy
 import os.path
-from typing import Optional, Any
+from typing import Optional, Any, Set, Union
 
 import odoo.fields
-from odoo import models
+from odoo import models, Command
 
-from .acl import ModelMode
+from .acl import ModelMode, FieldMode
+from .base import UnitKind, AclUnit
 from .clause import SelectClause, SetClause, WhereClause
 from .field import FieldAccess
+from .func import FuncCall
 from .libs import lark
 from .libs.lark.exceptions import VisitError
 from .meta import OqlMeta
 from .recs import *
 from .stmt import Statement, SelectStmt, UpdateStmt, CreateStmt, DeleteStmt
-from .util import tn
+from .util import tn, groupby
 from odoo.tools.translate import _
 
 _logger = logging.getLogger(__name__)
@@ -39,12 +42,15 @@ class OqlTransformer(lark.Transformer):
         self.model_name = None
         self.recs = None
         self._meta = OqlMeta(env)
+        self._fas_read: List[FieldAccess] = []
+        self._fas_write: List[FieldAccess] = []
 
     @property
     def meta(self):
         return self._meta
 
-    def query(self, stmt: Statement):
+    def query(self, ctx_clause: Optional[Any], stmt: Statement):
+        self._check_perms()
         stmt.meta = self._meta
         return stmt.execute()
 
@@ -55,15 +61,22 @@ class OqlTransformer(lark.Transformer):
         self.model_name = model_name
         self.recs = self.env[model_name]
 
-    def update_stmt(self, model: models.Model, _set, translate, set_clause: SetClause,
+    def update_stmt(self, model: models.Model, set_clause: SetClause,
                     where: Optional[WhereClause] = None, limit=None):
-        return UpdateStmt(self.recs, translate, set_clause, where, limit)
+        return UpdateStmt(model, set_clause, where, limit)
 
-    def insert_stmt(self, model: models.Model, _set, translate, set_clause: SetClause):
-        return CreateStmt(self.recs, translate, set_clause)
+    def insert_stmt(self, model: models.Model, set_clause: SetClause):
+        return CreateStmt(model, set_clause)
 
     def delete_stmt(self, model: models.Model, where: Optional[WhereClause] = None, limit=None):
-        return DeleteStmt(self.recs, where, limit)
+        return DeleteStmt(model, where, limit)
+
+    def ctx_clause(self, *assignments: Tuple[str, Any]):
+        env = self.env
+        context = dict(env.context)
+        context.update(assignments)
+        env = env(context=context)
+        self.env = env
 
     def from_clause(self, model: str):
         self.init_model(model, "read")
@@ -87,11 +100,8 @@ class OqlTransformer(lark.Transformer):
         self.init_model(model, "unlink")
         return self.recs
 
-    def set_clause(self, *assignments):
-        return SetClause(list(assignments))
-
-    def assignment(self, name: str, value):
-        return (name, value)
+    def set_clause(self, translate: Optional[str], *assignments):
+        return SetClause(bool(translate), assignments)
 
     def where_clause(self, translate: Optional[str], rec_sets: RecordSets):
         return WhereClause(bool(translate), rec_sets)
@@ -130,6 +140,19 @@ class OqlTransformer(lark.Transformer):
     def dot_expr(self, field: FieldAccess):
         return field.eval_una("bool")
 
+    def func(self, agg, name: str, *args):
+        func = FuncCall(name, list(args), agg)
+        self._fas_read.extend(func.get_fas())
+        return func
+
+    def assignment(self, fa: FieldAccess, opr, value):
+        if opr != "=":
+            raise Exception(f"Assignment operator must be `=`, got `{opr}`")
+        return fa, value
+
+    def assignment_simple(self, key: str, value):
+        return key, value
+
     def fields(self, *fields):
         return list(fields)
 
@@ -139,11 +162,22 @@ class OqlTransformer(lark.Transformer):
     def model(self, names: Tuple[str]):
         return '.'.join(names)
 
-    def field(self, names: Tuple[str]):
-        return FieldAccess(self.recs, names, self._meta)
+    def field(self, agg, names: Tuple[str]):
+        fa = FieldAccess(self.recs, names, self._meta, is_agg=agg)
+        self._fas_read.append(fa)
+        return fa
 
-    def field_as(self, field: Tuple[str], as_: Optional[Tuple[str]]):
-        return FieldAccess(self.recs, field, self._meta, as_='.'.join(as_) if as_ else None)
+    def field_assi(self, names: Tuple[str]):
+        """Field assignment."""
+        fa = FieldAccess(self.recs, names, self._meta)
+        self._fas_write.append(fa)
+        return fa
+
+    def field_as(self, field: Union[FieldAccess, FuncCall], as_: Optional[Tuple[str]]):
+        """Field or function call, with optional dot-style alias."""
+        if as_:
+            field.as_ = '.'.join(as_)
+        return field
 
     def orderby_field(self, name: str, dir_: str):
         return name, dir_ or "asc"
@@ -166,8 +200,90 @@ class OqlTransformer(lark.Transformer):
     def NULL(self, value):
         return None
 
-    def array(self, *values):
+    def set(self, *values):
         return values
+
+    def array(self, *items):
+        return list(items)
+
+    def array_int(self, *values):
+        return list(values)
+
+    def object(self, *members):
+        return dict(members)
+
+    def member(self, key: str, value):
+        return key, value
+
+    def cmd(self, cmd):
+        return cmd
+
+    def cmd_link(self, _id: int):
+        return Command.link(_id)
+
+    def cmd_unlink(self, _id: int):
+        return Command.unlink(_id)
+
+    def cmd_delete(self, _id: int):
+        return Command.delete(_id)
+
+    def cmd_create(self, values: dict):
+        return Command.create(values)
+
+    def cmd_update(self, _id: int, values: dict):
+        return Command.update(_id, values)
+
+    def cmd_set(self, ids: list):
+        return Command.set(ids)
+
+    def _check_perms(self):
+        errs = []
+        # 1. Field accesses.
+        errs.extend(self._check_fas_perm(self._fas_read, "read"))
+        errs.extend(self._check_fas_perm(self._fas_write, "write"))
+        # 2. Report.
+        if errs:
+            raise Exception(_("Permissions denied:\n%s") % ('\n'.join(errs), ))
+
+    def _check_fas_perm(self, fas: List[FieldAccess], mode: FieldMode):
+        acl = self.meta.acl
+        units = [y for x in fas for y in x.chain_acl_units]
+        units = self._unique_acl_units(units)
+        errs = []
+        for model, units_model in groupby(units, lambda x: x.model):
+            mac = acl[model._name]
+            for kind, units_kind in groupby(units_model, lambda x: x.kind):
+                units_kind: List[AclUnit]
+                if kind == UnitKind.FIELD:
+                    # self._extend_acl_errs(errs, mode, model, kind, units, mac.perm_fields(mode))
+                    pass
+                elif kind == UnitKind.ALIAS:
+                    self._extend_acl_errs(errs, mode, model, kind, units, mac.perm_aliases(mode))
+        return errs
+
+    @classmethod
+    def _unique_acl_units(cls, units: List[AclUnit]) -> List[AclUnit]:
+        key2unit: Dict[Tuple[str, str, UnitKind], AclUnit] = {}
+        for unit in units:
+            key = unit.key
+            old = key2unit.get(key)
+            if old:
+                pass  # TODO: Merge
+            else:
+                key2unit[key] = copy.copy(unit)
+        return list(key2unit.values())
+
+    @classmethod
+    def _extend_acl_errs(cls, errs: List[str], mode: FieldMode, model: models.Model, kind: UnitKind,
+                         units: List[AclUnit], allowed: Set[str]):
+        denied_units = [x for x in units if x.name not in allowed]
+        if denied_units:
+            errs.append(_("%s `%s` %s: %s") % (
+                mode,
+                model._name,
+                kind.name,
+                ", ".join(x.name for x in units),
+            ))
 
     @classmethod
     def _type_check_bin(cls, left, opr, right, left_expr: str, right_expr: str):

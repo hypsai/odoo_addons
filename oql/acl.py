@@ -18,6 +18,7 @@ _logger = logging.getLogger(__name__)
 
 
 ModelMode = Literal["read", "write", "create", "unlink"]
+FieldMode = Literal["read", "write"]
 
 
 class OqlAcl:
@@ -32,9 +33,9 @@ class OqlAcl:
         return self._model2acl[model_name]
 
     def check_field(self, recs: models.Model, field: str, mode: Literal["read", "write"]):
-        model = recs._name
+        model = recs._name  # noqa
         if not self[model][field].check(mode):
-            document_kind = self.env['ir.model']._get(model).name or model
+            document_kind = self.env['ir.model']._get(model).name or model  # noqa
             raise AccessError(_("You are not allowed to %s field '%s' of '%s' (%s) records.",
                                 mode, field, document_kind, model))
 
@@ -42,7 +43,8 @@ class OqlAcl:
         return self._mode2models[mode]
 
     def perm_paths(self, model: str, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
-        """Find out dot-style paths on `model` that current user has access to."""
+        """Find out dot-style paths on `model` that current user has access to.
+        * Note this method only checks actual field paths, aliases are NOT included."""
         env = self.env
 
         # BFS check, layer by model.
@@ -108,7 +110,7 @@ class OqlModelAcl:
         """Check access right of current model."""
         return self.env["ir.model.access"].check(self.model_name, mode, raises)
 
-    def check_path(self, path: str, mode: Literal["read", "write"]) -> bool:
+    def check_path(self, path: str, mode: FieldMode) -> bool:
         return path in self.perm_paths([path], mode)
 
     def perm_fields(self, mode: Literal["read", "write"]) -> Set["str"]:
@@ -125,7 +127,7 @@ class OqlModelAcl:
                 ok_fields.add(f_meta.name)
         return ok_fields
 
-    def perm_aliases(self, mode: Literal["read", "write"]) -> Set[str]:
+    def perm_aliases(self, mode: FieldMode) -> Set[str]:
         """Return aliases that have the specified `mode` access."""
         # Check direct access rights configured for aliases on current model.
         ok_aliases = self._mode2aliases[mode]
@@ -134,7 +136,7 @@ class OqlModelAcl:
         alias_recs = self.env["oql.alias.line"].sudo().search(
             [("model_id.name", "=", self.model_name), ("alias", "not in", list(ok_aliases))])
         for alias_rec in alias_recs:
-            node = AliasNode.parse(alias_recs.alias, alias_rec.mode, alias_rec.path)
+            node = AliasNode.parse(alias_rec.alias, alias_rec.mode, alias_rec.path)
             paths = set(node.fields)
             if not paths:  # For safety reason, decline access right inheritance if node doesn't provide paths.
                 continue
@@ -144,7 +146,8 @@ class OqlModelAcl:
 
         return ok_aliases
 
-    def perm_paths(self, paths: Iterable[str], mode: Literal["read", "write"]) -> Set[str]:
+    def perm_paths(self, paths: Iterable[str], mode: FieldMode) -> Set[str]:
+        """Note this method only checks actual field paths, aliases are NOT included."""
         return self.acl.perm_paths(self.model_name, paths, mode)
 
     def perm_records(self, domain, mode: ModelMode) -> list:
