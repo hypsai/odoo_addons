@@ -206,6 +206,10 @@ def _func_now(self: models.Model):
     return fields.Datetime.now()
 
 
+def _func_ref(self: models.Model, name: str):
+    return self.env.ref(name)
+
+
 def _agg_column(self: models.Model, values):
     """Normalize an aggregate arg: a field-path literal or a read value column."""
     if isinstance(values, str):
@@ -255,6 +259,7 @@ _global["month"] = (_func_month, False)
 _global["day"] = (_func_day, False)
 _global["today"] = (_func_today, False)
 _global["now"] = (_func_now, False)
+_global["ref"] = (_func_ref, False)
 
 # === Aggregate ===
 _global["count"] = (_func_count, True)

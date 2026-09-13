@@ -67,7 +67,8 @@ class UpdateStmt(Statement):
 
         # 2 Build vals and write.
         if recs:
-            self.set_clause.execute(recs)
+            vals = self.set_clause.execute()
+            recs.sudo(False).write(vals)  # Downgrade.
 
         # 4 Return updated record ids.
         return [{"id": rid} for rid in recs.ids]
@@ -90,9 +91,9 @@ class CreateStmt(Statement):
         acl = self.meta.acl[model_name]
 
         # 1 Build vals and create.
-        vals = self.set_clause.to_vals(self.from_, self.meta)
+        vals = self.set_clause.execute()
         create_model = self.from_.with_context(lang=env.user.lang if self.set_clause.translate else None)
-        recs = create_model.create(vals)
+        recs = create_model.sudo(False).create(vals)
 
         # 2 Check record level ACL
         domain = acl.perm_records([("id", "in", recs.ids)], "create")
