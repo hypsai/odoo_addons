@@ -1,5 +1,6 @@
 from . import test_acl_field
 from . import test_acl_alias
+from . import test_acl_chain
 from . import test_acl_model
 from . import test_acl_term
 from . import test_acl_records
