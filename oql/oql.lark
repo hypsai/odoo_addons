@@ -40,26 +40,25 @@ get_expr: field "[" _value "]"  // For Many2one relation, e.g. partner[1]
 nul_expr: field "is"i ("null"i | "not"i "null"i)
 dot_expr: field
 
-// ------ Function ------
-func: [AGG] CNAME "(" _func_args ")"  // Function call, e.g. `lower(name)`, `action_confirm()`
+// ------ Unbound Function: SQL style function ------
+ubd_func: [AGG] CNAME "(" _func_args ")"  // Unbound function call, e.g. `lower(name)`
 _func_args: _func_arg ("," _func_arg)* [","] |
-_func_arg: _value | field | func | "*"  // `*` == empty (`count(*)` = `count()`)
+_func_arg: _value | sel_chain | ubd_func | "*"  // `*` == empty (`count(*)` = `count()`)
 
 // ------ Select item: chained access like Python ------
-// Steps `.attr` / method `(...)` / `[n]` may interleave: `tag_ids[0].name`,
-// `partner.mapped('name')`. A bare `name(...)` head binds to current records.
-fields: field_as ("," field_as)*  // Field list
-field_as: sel_expr ["as"i dot_names]  // Optional dot-style alias
-?sel_expr: sel_chain
-sel_chain: [AGG] CNAME sel_step*  // `@` marks aggregate head calls / fields
-?sel_step: attr_step | call_step | index_step
-attr_step: "." CNAME
-call_step: "(" _func_args ")"
-index_step: "[" INT "]"  // Subscript, i.e. `__getitem__`
+// e.g. product_ids[0].product_tmpl_ids.@name.lower()
+sel_chain: (attr_step | "." call_step) ("." _member_step | index_step)*
+_member_step: attr_step | call_step
+attr_step: [AGG] CNAME
+call_step: [AGG] CNAME "(" _func_args ")"
+index_step: "[" INT "]"
 
 // ------ Model / Field ------
 dot_names: CNAME ("." CNAME)*  // Dot-style names
 model: dot_names  // Dot-style model name
+fields: field_as ("," field_as)*  // Field list
+field_as: _recs_reader ["as"i dot_names]  // Optional dot-style alias
+_recs_reader: sel_chain | ubd_func
 field: [AGG] dot_names  // Dot-style field access (for WHERE / function args)
 field_assi: dot_names  // Dot-style field for assignment expression
 orderby_field: CNAME [ASC | DESC]  // Plain field with order direction

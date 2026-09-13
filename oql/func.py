@@ -1,18 +1,18 @@
 # @Time         : 11:43 2026/9/3
 # @Author       : Chris
-# @Description  :
-from collections import deque
-from typing import List, Any, Dict, Tuple, Callable, Optional, Deque
+# @Description  : Unbound static functions.
+from typing import List, Any, Dict, Tuple, Callable, Optional
 
 from odoo import _, models, fields
 
-from .base import IRecsReader, AclUnit, FieldMode, UnitKind
-from .field import FieldAccess
+from .base import IRecsReader, AclUnit, FieldMode
+from .util import degrade_acl
 
-_global: Dict[str, Tuple[Callable, bool]] = {}  # {name: (func, is_agg)}
+_global: Dict[str, Tuple[Callable[[models.Model, ...], Any], bool]] = {}  # {name: (func, is_agg)}
+"""models.Model is used for context accessing."""
 
 
-def register(name: str, func, is_agg: bool = False, force: bool = False):
+def register(name: str, func: Callable[[models.Model, ...], Any], is_agg: bool = False, force: bool = False):
     if not force:
         registered = _global.get(name)
         if registered and func is not registered[0]:
@@ -20,7 +20,34 @@ def register(name: str, func, is_agg: bool = False, force: bool = False):
     _global[name] = (func, is_agg)
 
 
-class FuncCall(IRecsReader):
+def resolve_call(name: str, is_agg: Optional[bool], args) -> Tuple[Optional[Callable[[models.Model, ...], Any]], bool]:
+    """Resolve a call's aggregate-ness and its registered global function.
+
+    * `is_agg is None`: infer from the global registry.
+    * explicit `is_agg` inconsistent with the registry: drop the global func.
+    Also validates that every `IRecsReader` arg matches the call's aggregate-ness.
+    """
+    g_func = None
+    t_func = _global.get(name)
+    if t_func:
+        g_func, g_is_agg = t_func
+        if is_agg is None:
+            is_agg = g_is_agg
+        elif bool(g_is_agg) ^ bool(is_agg):
+            g_func = None  # Registry disagrees with the explicit marker, discard it.
+    is_agg = bool(is_agg)
+    bad_args = [x for x in args if isinstance(x, IRecsReader) and x.is_agg ^ is_agg]
+    if bad_args:
+        raise Exception(_("Function `%s(...)`: %s function can't be called on %s args %s") % (
+            name,
+            _("Aggregate") if is_agg else _("Non-aggregate"),
+            _("non-aggregate") if is_agg else _("aggregate"),
+            bad_args,
+        ))
+    return g_func, is_agg
+
+
+class UnboundFuncCall(IRecsReader):
     """Function call node in OQL. e.g. `lower(name)`, `count(tag_ids)`, `count(*)`.
 
     Note: Only the grammar and the parse-tree structure are defined for now.
@@ -34,37 +61,20 @@ class FuncCall(IRecsReader):
     name: str
     """Function name. e.g. `lower`, `count`."""
 
-    args: List[Any]
+    args: Tuple[Any]
     """Arguments. `FieldAccess` for field arguments, plain values for literals.
     `count(*)` and `count()` are both parsed as empty args."""
 
-    def __init__(self, model: models.Model, name: str, args: List[Any], is_agg: Optional[bool] = None):
-        self.model = model
+    def __init__(self, name: str, args: Tuple[Any], is_agg: Optional[bool] = None):
         self.name = name
         self.args = args
         self._as = name
-        self._is_agg = is_agg
-        # Preload global func.
-        t_func = _global.get(name)
-        g_func = None
-        if t_func:
-            g_func, g_is_agg = t_func
-            if is_agg is None:
-                is_agg = g_is_agg
-            elif g_is_agg ^ is_agg:
-                g_func = None  # Global function is inconsistent with `is_agg` param, discard global func.
-        is_agg = bool(is_agg)
-        self._g_func: Optional[Callable] = g_func
-        self._is_agg: bool = is_agg
-        # Check args.
-        bad_args = [x for x in args if isinstance(x, IRecsReader) and x.is_agg ^ is_agg]
-        if bad_args:
-            raise Exception(_("%s: %s function can't be called on %s args %s") % (
-                self,
-                _("Aggregate") if is_agg else _("Non-aggregate"),
-                _("non-aggregate") if is_agg else _("aggregate"),
-                bad_args,
-            ))
+        # Resolve global func + aggregate-ness, and check arg consistency.
+        self._g_func: Optional[Callable]
+        self._is_agg: bool
+        self._g_func, self._is_agg = resolve_call(name, is_agg, args)
+        if not self._g_func:
+            raise Exception(_("Function %s(...) not implemented") % name)
 
     @property
     def is_agg(self) -> bool:
@@ -87,27 +97,18 @@ class FuncCall(IRecsReader):
     def eval_bin(self, opr: str, value):
         raise NotImplementedError(
             _("Function `%s(...)` in expressions is not implemented yet. "
-              "Implement `FuncCall.eval_bin` to support it.") % self.name)
+              "Implement `UnboundFuncCall.eval_bin` to support it.") % self.name)
 
     def read(self, recs, load='_classic_read') -> list:
         # 1 Prepare func
-        func = getattr(type(recs), self.name, None)
-        if not callable(func):
-            func = self._g_func
-        if not func:
-            raise NotImplementedError(
-                _("Function `%s(...)` not implemented. ") % self.name
-            )
-        # Degrade to odoo built-in ACL. Since it's hard to get static ACL units
-        # from arbitrary method, we can't check permissions ahead with OQL ACL checker.
-        recs = recs.sudo(False)
-        func: Callable
+        func = self._g_func
+        recs = recs.sudo(False)  # recs are used for context accessing only.
         # 2 Invoke
         args = self.args
         if self.is_agg:
             # 2.1 Aggregate invoke
             arg_vals = [x.read(recs, load) if isinstance(x, IRecsReader) else x for x in self.args]
-            return [func(recs, *arg_vals)]
+            return [func(recs, *degrade_acl(arg_vals))]
         elif args:
             # 2.2 Non-aggregate and invoke with args
             arg_cols = []
@@ -116,13 +117,12 @@ class FuncCall(IRecsReader):
                     arg_cols.append(arg.read(recs, load))
                 else:
                     arg_cols.append([arg] * len(recs))
-            return [func(rec, *args) for rec, args in zip(recs, zip(*arg_cols, strict=True), strict=True)]
+            return [func(rec, *degrade_acl(args)) for rec, args in zip(recs, zip(*arg_cols, strict=True), strict=True)]
         else:
             # 2.3 Non-aggregate and invoke without args.
             return [func(rec) for rec in recs]
 
     def gather_acl_units(self, res: List[AclUnit], mode: FieldMode):
-        res.append(AclUnit(self.model, self.name, UnitKind.METHOD, "invoke"))
         for arg in self.args:
             if isinstance(arg, IRecsReader):
                 arg.gather_acl_units(res, mode)
@@ -205,6 +205,10 @@ def _func_now(self: models.Model):
     return fields.Datetime.now()
 
 
+def _func_ref(self: models.Model, name: str):
+    return self.env.ref(name)
+
+
 def _agg_column(self: models.Model, values):
     """Normalize an aggregate arg: a field-path literal or a read value column."""
     if isinstance(values, str):
@@ -254,6 +258,7 @@ _global["month"] = (_func_month, False)
 _global["day"] = (_func_day, False)
 _global["today"] = (_func_today, False)
 _global["now"] = (_func_now, False)
+_global["ref"] = (_func_ref, False)
 
 # === Aggregate ===
 _global["count"] = (_func_count, True)
