@@ -112,35 +112,10 @@ class SetClause(Clause):
         self.assignments = tuple(assignments)
         self.env = env
 
-    def execute(self, recs: models.Model):
-        env = recs.env
-        recs = recs.with_context(lang=env.user.lang if self.translate else None)
-        for fa, val in self.assignments:
-            fa.write(recs, val)
-
-    def to_vals(self, model: models.Model, meta: OqlMeta) -> dict:
-        """Convert assignments to an Odoo vals dict, checking field-level write ACL."""
+    def execute(self):
         vals = {}
-        acl = meta.acl
-        model_name = model._name
-        _fields = model._fields
-        for fa, value in self.assignments:
-            f_meta: fields.Field = _fields.get(fa.path)
-            if not f_meta:
-                raise Exception(_("Field `%s` not found on model `%s`.") % (fa.path, model_name))
-            # Check field-level write access.
-            acl.check_field(model, fa.path, "write")
-            # Convert value based on field type.
-            if f_meta.type in ('one2many', 'many2many'):
-                if value is None:
-                    vals[fa.path] = [(5,)]  # Clear all.
-                elif isinstance(value, (list, tuple)):
-                    vals[fa.path] = [(6, 0, list(value))]
-                else:
-                    raise Exception(_("Expected array of ids for x2many field `%s`, got `%s`.")
-                                    % (fa.path, type(value).__name__))
-            else:
-                vals[fa.path] = value
+        for fa, val in self.assignments:
+            vals[fa.path] = self._r_execute(val)
         return vals
 
     def gather_acl_units(self, res: List[AclUnit]):
@@ -149,9 +124,22 @@ class SetClause(Clause):
             self._r_gather_val_acl(fa.rear_field, value, res)
 
     @classmethod
+    def _r_execute(cls, node):
+        if isinstance(node, list):
+            return [cls._r_execute(x) for x in node]
+        elif isinstance(node, tuple):
+            return tuple(cls._r_execute(x) for x in node)
+        elif isinstance(node, dict):
+            return {cls._r_execute(k): cls._r_execute(v) for k, v in node.items()}
+        else:
+            return node
+
+    @classmethod
     def _r_gather_val_acl(cls, field: fields.Field, node, res: List[AclUnit]):
         if isinstance(node, tuple) and len(node) == 3:
-            raise NotImplementedError("Not supported yet.")
+            pass
         elif isinstance(node, list):
             for item in node:
                 cls._r_gather_val_acl(field, item, res)
+        elif isinstance(node, IRecsReader):
+            node.gather_acl_units(res, "read")

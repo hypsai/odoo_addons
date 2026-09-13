@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 # @Description  : Test cases for OQL chained SELECT expressions, e.g.
-#   `attribute_value_ids[0].name`, `attribute_value_ids.mapped('name')`, `read(['id'])[0].id`.
+#   `attribute_value_ids[0].name`, `attribute_value_ids.mapped('name')`, `.read(['id'])[0].id`.
 from odoo.tests import tagged, TransactionCase
 
-from ..chain import Chain, StepAttr, StepCall, StepHead, StepIndex
+from ..chain import Chain, StepAttr, StepCall, StepIndex
 from ..field import FieldAccess
-from ..func import FuncCall
 from ..libs.lark.exceptions import UnexpectedToken
 from ..oql import reader, OqlTransformer
 from .test_model_defs import ensure_model_meta, ensure_model_access
@@ -67,27 +66,27 @@ class TestOqlChain(TransactionCase):
         self.assertEqual("first_val", clause.fas[0].as_)
 
     def test_struct_method_chain(self):
-        """A method call keeps its literal args in the `StepCall` step."""
+        """A method call carries its name and literal args in one `StepCall`."""
         clause = self._transform_clause("select attribute_value_ids.mapped('name') as names")
         chain = clause.fas[0]
         self.assertIsInstance(chain, Chain)
-        self.assertEqual(3, len(chain.steps))
+        self.assertEqual(2, len(chain.steps))
         self.assertIsInstance(chain.steps[0], StepAttr)
         self.assertEqual("attribute_value_ids", chain.steps[0].name)
-        self.assertIsInstance(chain.steps[1], StepAttr)
+        self.assertIsInstance(chain.steps[1], StepCall)
         self.assertEqual("mapped", chain.steps[1].name)
-        self.assertIsInstance(chain.steps[2], StepCall)
-        self.assertEqual(["name"], chain.steps[2].args)
+        self.assertEqual(("name",), chain.steps[1].args)
 
     def test_struct_head_chain(self):
-        """`read(['id'])[0].id` carries the head call as a `StepHead(FuncCall)` step."""
-        clause = self._transform_clause("select read(['id'])[0].id")
+        """`.read(['id'])[0].id` folds the dotted bound-call head into a `StepCall`."""
+        clause = self._transform_clause("select .read(['id'])[0].id")
         chain = clause.fas[0]
         self.assertIsInstance(chain, Chain)
         head = chain.steps[0]
-        self.assertIsInstance(head, StepHead)
-        self.assertIsInstance(head.func, FuncCall)
-        self.assertEqual("read", head.func.name)
+        self.assertIsInstance(head, StepCall)
+        self.assertEqual("read", head.name)
+        self.assertEqual((['id'],), head.args)
+        self.assertFalse(head.is_agg)
         self.assertEqual(2, len(chain.steps[1:]))
         self.assertIsInstance(chain.steps[1], StepIndex)
         self.assertEqual(0, chain.steps[1].index)
@@ -100,20 +99,32 @@ class TestOqlChain(TransactionCase):
         clause = self._transform_clause("select attribute_value_ids.name")
         self.assertIsInstance(clause.fas[0], FieldAccess)
 
-    def test_struct_head_only_stays_func(self):
-        """A head call without further steps stays a `FuncCall`."""
-        clause = self._transform_clause("select count() as cnt")
-        self.assertIsInstance(clause.fas[0], FuncCall)
+    def test_struct_head_only_call_is_chain(self):
+        """A bound-call head without further steps is a single-step `Chain`."""
+        clause = self._transform_clause("select .read(['id']) as x")
+        chain = clause.fas[0]
+        self.assertIsInstance(chain, Chain)
+        self.assertEqual(1, len(chain.steps))
+        self.assertIsInstance(chain.steps[0], StepCall)
+        self.assertFalse(chain.is_agg)
 
-    def test_struct_agg_head_cannot_chain(self):
-        """An aggregate head call yields one value, so steps after it are rejected."""
-        with self.assertRaisesRegex(Exception, "can't be followed by chain steps"):
-            self._transform_clause("select count()[0] as x")
+    def test_struct_agg_step_mark(self):
+        """`@` marks a step aggregate; the chain still continues after it."""
+        clause = self._transform_clause("select @attribute_value_ids.mapped('name') as x")
+        chain = clause.fas[0]
+        self.assertIsInstance(chain, Chain)
+        self.assertTrue(chain.steps[0].is_agg)
+        self.assertIsInstance(chain.steps[1], StepCall)
 
-    def test_struct_agg_mark_only_prefixes(self):
-        """`@` may only prefix a plain field or a plain head call."""
-        with self.assertRaisesRegex(Exception, "can only prefix"):
-            self._transform_clause("select @attribute_value_ids[0].name as x")
+    def test_struct_agg_mark_on_step(self):
+        """`@` attaches to a single step, not to the whole chain."""
+        clause = self._transform_clause("select @attribute_value_ids[0].name as x")
+        chain = clause.fas[0]
+        self.assertIsInstance(chain, Chain)
+        self.assertTrue(chain.steps[0].is_agg)
+        self.assertIsInstance(chain.steps[1], StepIndex)
+        self.assertIsInstance(chain.steps[2], StepAttr)
+        self.assertFalse(chain.steps[2].is_agg)
 
     # ------------------------------------------------------------------
     # Evaluation.
@@ -179,10 +190,10 @@ class TestOqlChain(TransactionCase):
         self.assertEqual([], res[0]["names"])
 
     def test_eval_head_call_chain(self):
-        """`read([...])[0].field` chains on the per-record head call result."""
+        """`.read([...])[0].field` chains on the per-record bound-call result."""
         res = self._query(
-            f"from test.oql.product select read(['id'])[0].id as rid, "
-            f"read(['id', 'spu_name'])[0].spu_name as sn "
+            f"from test.oql.product select .read(['id'])[0].id as rid, "
+            f".read(['id', 'spu_name'])[0].spu_name as sn "
             f"where id = {self.p_red_blue.id}")
         self.assertEqual(self.p_red_blue.id, res[0]["rid"])
         self.assertEqual("Cold Boot", res[0]["sn"])
@@ -199,16 +210,16 @@ class TestOqlChain(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_error_index_out_of_range(self):
-        """Indexing an x2m set out of range fails with a chain-aware message."""
-        sql = (f"from test.oql.product select attribute_value_ids[1].name "
+        """Indexing a plain (list) value out of range fails with a chain-aware message."""
+        sql = (f"from test.oql.product select attribute_value_ids.mapped('name')[1] as x "
                f"where id = {self.p_green.id}")
         with self.assertRaises(Exception) as cm:
             self._query(sql)
         self.assertIn("can't index", str(cm.exception))
 
     def test_error_index_empty_set(self):
-        """Indexing an empty x2m set fails with a chain-aware message."""
-        sql = (f"from test.oql.product select attribute_value_ids[0].name "
+        """Indexing an empty (list) value fails with a chain-aware message."""
+        sql = (f"from test.oql.product select attribute_value_ids.mapped('name')[0] as x "
                f"where id = {self.p_empty.id}")
         with self.assertRaises(Exception) as cm:
             self._query(sql)
@@ -233,7 +244,7 @@ class TestOqlChain(TransactionCase):
             "select attribute_value_ids[0].name.lower() as low",
             "select attribute_value_ids.mapped('name') as names",
             "select spu_name.lower().replace('boot', 'sock')",
-            "select read(['id'])[0].id as rid",
+            "select .read(['id'])[0].id as rid",
         ):
             reader.parser.parse(oql_str, "select_clause")
 

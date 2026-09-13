@@ -12,10 +12,10 @@ from odoo.exceptions import AccessError
 
 from .acl import ModelMode, FieldMode
 from .base import UnitKind, AclUnit, IAcl, IRecsReader
-from .chain import Chain, StepAttr, StepCall, StepHead, StepIndex
+from .chain import Chain, StepAttr, StepCall, StepIndex, Step
 from .clause import SelectClause, SetClause, WhereClause, OrderbyClause
 from .field import FieldAccess
-from .func import FuncCall
+from .func import UnboundFuncCall
 from .expr import UnaExpr, BinExpr, AndExpr, OrExpr, Expr
 from .libs import lark
 from .libs.lark.exceptions import VisitError
@@ -126,39 +126,31 @@ class OqlTransformer(lark.Transformer):
     def dot_expr(self, field: FieldAccess):
         return UnaExpr("bool", field)
 
-    def func(self, agg, name: str, *args):
-        func = FuncCall(self.recs, name, list(args), agg)
-        return func
+    def ubd_func(self, agg, name: str, *args):
+        return UnboundFuncCall(name, args, agg)
 
-    def attr_step(self, name: str):
-        return StepAttr(name)
+    def attr_step(self, agg, name: str):
+        return StepAttr(name, is_agg=bool(agg))
+
+    def call_step(self, agg, name: str, *args):
+        return StepCall(name, args, bool(agg) if agg is not None else None)
 
     def index_step(self, num: int):
         return StepIndex(num)
 
-    def call_step(self, *args):
-        return StepCall(list(args))
-
-    def sel_chain(self, agg, name: str, *steps):
-        """Fold a select chain: pure dotted fields -> `FieldAccess`, bare head
-        calls -> `FuncCall`, mixed attr/call/index chains -> `Chain`."""
-        if not steps or all(isinstance(s, StepAttr) for s in steps):
-            names = [name] + [s.name for s in steps]
-            return FieldAccess(self.recs, names, self._meta, is_agg=bool(agg))
-        if isinstance(steps[0], StepCall):
-            fcall = FuncCall(self.recs, name, steps[0].args, agg)
-            if len(steps) == 1:
-                return fcall
-            if fcall.is_agg:
-                raise Exception(_("Aggregate head call `%s(...)` yields one value, "
-                                  "it can't be followed by chain steps.") % name)
-            # e.g. `read(['id'])[0].id`: eval the head call, then chain on.
-            return Chain(self.recs, self._meta,
-                         [StepHead(fcall), *steps[1:]])
-        if agg:
-            raise Exception(_("Aggregate marker `@` can only prefix a plain "
-                              "field or a receiver-less head call."))
-        return Chain(self.recs, self._meta, [StepAttr(name), *steps])
+    def sel_chain(self, head: Step, *steps: Step):
+        """Fold a select chain (left-associative): a pure dotted path becomes a
+        `FieldAccess`, everything else (attrs / calls / subscripts) a `Chain`.
+        The first step's input is the base `recs`; each step's `@` marks it
+        aggregate — fold the whole input instead of for-in over every row.
+        """
+        path = (head, *steps)
+        if all(isinstance(s, StepAttr) for s in path):
+            # Optimize performance for pure field path access.
+            names = [s.name for s in path]
+            return FieldAccess(self.recs, names, self._meta,
+                               is_agg=any(s.is_agg for s in path))
+        return Chain(self.recs, self._meta, path)
 
     def assignment(self, fa: FieldAccess, opr, value):
         if opr != "=":
@@ -187,7 +179,7 @@ class OqlTransformer(lark.Transformer):
         return fa
 
     def field_as(self, field: IRecsReader, as_: Optional[Tuple[str]]):
-        """Select item (`FieldAccess` / `FuncCall` / `Chain`), with optional alias."""
+        """Select item (`FieldAccess` / `Chain`), with optional alias."""
         if as_:
             field.as_ = '.'.join(as_)
         return field
@@ -393,7 +385,7 @@ class OqlReader:
                 mode,
                 model,
                 kind.name,
-                ", ".join(x.name for x in units),
+                ", ".join(x.name for x in denied_units),
             ))
 
 

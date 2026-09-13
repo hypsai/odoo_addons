@@ -175,6 +175,20 @@ def check_path_searchable(model: models.Model, path: str):
     return True
 
 
+def degrade_acl(data):
+    """Degrade ACL to odoo built-in ACL control, because static ACL analysis
+    is impossible for method calls."""
+    if isinstance(data, models.Model):
+        return data.sudo(False)
+    elif isinstance(data, list):
+        return [degrade_acl(x) for x in data]
+    elif isinstance(data, tuple):
+        return tuple(degrade_acl(x) for x in data)
+    elif isinstance(data, dict):
+        return {k: degrade_acl(v) for k, v in data.items()}
+    return data
+
+
 class KeyPassingDefaultDict(defaultdict):
     def __init__(self, factory: Callable[[Any], Any]):
         super().__init__(factory)

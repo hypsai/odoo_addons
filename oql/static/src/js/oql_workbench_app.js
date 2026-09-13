@@ -174,7 +174,16 @@
         execute: function() {
             var self = this;
             var query = this.editor ? this.editor.getValue() : '';
-            
+
+            // Navicat-like behavior: if there is a selection, execute only the
+            // selected text; otherwise execute the whole editor content.
+            if (this.editor && typeof this.editor.getSelection === 'function') {
+                var selection = this.editor.getSelection();
+                if (selection && selection.trim()) {
+                    query = selection;
+                }
+            }
+
             if (!query.trim()) {
                 this.showResult(null, 'Please enter a query');
                 return Promise.resolve();
