@@ -62,7 +62,7 @@
 
                     // DML statements and ORM command keywords (case-insensitive)
                     // `set`, `update`, `delete` are both statements and commands inside `[...]`
-                    if (stream.match(/^\b(update|insert|into|delete|set|create|link|unlink)\b/i)) {
+                    if (stream.match(/^\b(update|insert|into|values|delete|set|create|link|unlink)\b/i)) {
                         return 'keyword';
                     }
 

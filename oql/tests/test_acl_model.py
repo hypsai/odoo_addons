@@ -136,7 +136,7 @@ class TestOqlAclModel(OqlAclProductCase):
         user_env = self.user_env()
         with self.assertRaises(AccessError):
             user_env["test.oql.product"].oql(
-                "insert into test.oql.product set spu_name = 'New'"
+                "insert into test.oql.product (spu_name) values ('New')"
             )
 
     @post_test("acl.crud.model")
@@ -154,7 +154,7 @@ class TestOqlAclModel(OqlAclProductCase):
                          perm_create=True, default_write=True)
         user_env = self.user_env()
         res = user_env["test.oql.product"].oql(
-            "insert into test.oql.product set spu_name = 'Created'"
+            "insert into test.oql.product (spu_name) values ('Created')"
         )
         self.assertEqual(len(res), 1)
 

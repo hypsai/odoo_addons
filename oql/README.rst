@@ -70,9 +70,9 @@ Use ``searcho()`` instead of ``search()``, or ``oql()`` for full queries::
         "update product.product set list_price = 99.99 where name like 'Boot'"
     )
 
-    # INSERT — insert a new record, returns [{"id": <new_id>}]
+    # INSERT — insert new records, returns [{"id": <new_id>}, ...]
     env['product.product'].oql(
-        "insert into product.product set name = 'New Boot', list_price = 50.00"
+        "insert into product.product (name, list_price) values ('New Boot', 50.00)"
     )
 
     # DELETE — remove records, returns List[dict] with deleted ids
@@ -199,8 +199,8 @@ Three methods are added to every Odoo model:
 
         # INSERT
         env['product.product'].oql(
-            "insert into product.product"
-            " set name = 'New Boot', list_price = 50.00"
+            "insert into product.product (name, list_price)"
+            " values ('New Boot', 50.00)"
         )
 
         # DELETE
@@ -284,27 +284,33 @@ Updates records matching the optional ``WHERE`` clause. Returns a list of
 INSERT
 ~~~~~~
 
-Inserts a single new record. Returns ``[{"id": <new_id>}]``.
+Inserts one or more new records. Returns ``[{"id": <new_id>}, ...]``.
 
 ::
 
-    INSERT INTO <model> SET [TRANSLATE] <field> = <value>, ...
+    INSERT INTO <model> [TRANSLATE] (<column>, ...) VALUES (<value>, ...), ...
 
 ::
 
-    # Insert with multiple fields
-    oql("insert into product.product set name = 'New Boot', list_price = 50.00, active = true")
+    # Insert a single record
+    oql("insert into product.product (name, list_price, active) values ('New Boot', 50.00, true)")
+
+    # Insert multiple records in one statement
+    oql("insert into product.product (name, list_price) values ('Boot A', 10.00), ('Boot B', 20.00)")
 
     # Insert with translated field
-    oql("insert into product.product set translate name = 'Nouvelle Chaussure'")
+    oql("insert into product.product translate (name) values ('Nouvelle Chaussure')")
 
     # Insert with many2one and x2many
-    oql("insert into product.template set name = 'Template', categ_id = 5, tag_ids = (1, 2)")
+    oql("insert into product.template (name, categ_id, tag_ids) values ('Template', 5, (1, 2))")
 
 .. note::
 
-   ``INSERT`` does not support ``WHERE``, ``ORDER BY``, ``LIMIT``, or
-   ``OFFSET`` — it always creates exactly one record.
+   - ``INSERT`` does not support ``WHERE``, ``ORDER BY``, ``LIMIT``, or
+     ``OFFSET``.
+   - The column list and every value row must have the same length.
+   - ``TRANSLATE`` controls the language context for the ``create()`` call —
+     use it to insert translated field values in the user's language.
 
 DELETE
 ~~~~~~
@@ -714,8 +720,8 @@ raised immediately.
 
 **Field-level:** Each field path in WHERE and SELECT is checked. If any field
 in the path lacks read access, the query is blocked with an ``AccessError``.
-For UPDATE and INSERT, every field in the SET clause is checked for write
-access.
+For UPDATE and INSERT, every field in the SET clause / column list is checked
+for write access.
 
 **Alias-level:** Each alias is checked against the user's alias permissions.
 

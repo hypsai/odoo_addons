@@ -262,10 +262,10 @@ env['product.product'].<strong>oql</strong>(
      where name like 'Boot'"
 )
 
-<span style="color: #4caf50;"># INSERT &mdash; insert new record</span>
+<span style="color: #4caf50;"># INSERT &mdash; insert new records</span>
 env['product.product'].<strong>oql</strong>(
-    "insert into product.product
-     set name = 'New Boot', list_price = 50.00"
+    "insert into product.product (name, list_price)
+     values ('New Boot', 50.00)"
 )
 
 <span style="color: #4caf50;"># DELETE &mdash; remove records</span>

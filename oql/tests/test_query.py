@@ -664,7 +664,7 @@ class TestOql(TransactionCase):
     def test_create_simple(self):
         """Test CREATE with a single field."""
         res = self.env["test.oql.product"].oql(
-            "insert into test.oql.product set spu_name = 'Created Product'"
+            "insert into test.oql.product (spu_name) values ('Created Product')"
         )
         self.assertEqual(len(res), 1)
         created = self.env["test.oql.product"].browse(res[0]['id'])
@@ -674,7 +674,7 @@ class TestOql(TransactionCase):
     def test_create_multi_fields(self):
         """Test CREATE with multiple fields."""
         res = self.env["test.oql.product"].oql(
-            "insert into test.oql.product set spu_name = 'Multi Create', active = false"
+            "insert into test.oql.product (spu_name, active) values ('Multi Create', false)"
         )
         self.assertEqual(len(res), 1)
         created = self.env["test.oql.product"].browse(res[0]['id'])
@@ -682,11 +682,23 @@ class TestOql(TransactionCase):
         self.assertFalse(created.active)
 
     @post_test("oql.create")
+    def test_create_multi_rows(self):
+        """Test CREATE with multiple value rows."""
+        res = self.env["test.oql.product"].oql(
+            "insert into test.oql.product (spu_name, active) "
+            "values ('Batch A', true), ('Batch B', false)"
+        )
+        self.assertEqual(len(res), 2)
+        recs = self.env["test.oql.product"].browse([x['id'] for x in res])
+        self.assertEqual(recs.mapped('spu_name'), ['Batch A', 'Batch B'])
+        self.assertEqual(recs.mapped('active'), [True, False])
+
+    @post_test("oql.create")
     def test_create_translate(self):
         """Test CREATE with TRANSLATE keyword."""
         self.env.user.lang = 'fr_FR'
         res = self.env["test.oql.product"].oql(
-            "insert into test.oql.product set translate spu_name = 'Nouveau Produit'"
+            "insert into test.oql.product translate (spu_name) values ('Nouveau Produit')"
         )
         self.assertEqual(len(res), 1)
         created = self.env["test.oql.product"].browse(res[0]['id'])
@@ -697,7 +709,7 @@ class TestOql(TransactionCase):
         """Test CREATE with a many2one field."""
         prod = self.env["test.oql.product"].search([("spu_name", "=", "Cold Boot")], limit=1)
         res = self.env["test.oql.attribute.value"].oql(
-            f"insert into test.oql.attribute.value set name = 'New Value', product_id = {prod.id}"
+            f"insert into test.oql.attribute.value (name, product_id) values ('New Value', {prod.id})"
         )
         self.assertEqual(len(res), 1)
         created = self.env["test.oql.attribute.value"].browse(res[0]['id'])
@@ -710,7 +722,7 @@ class TestOql(TransactionCase):
         term_size = self.env["oql.term"].search([("name", "=", "Size")], limit=1)
         term_width = self.env["oql.term"].search([("name", "=", "Width")], limit=1)
         res = self.env["test.oql.tag"].oql(
-            f"insert into test.oql.tag set name = 'New Tag', term_ids = ({term_size.id}, {term_width.id})"
+            f"insert into test.oql.tag (name, term_ids) values ('New Tag', ({term_size.id}, {term_width.id}))"
         )
         self.assertEqual(len(res), 1)
         created = self.env["test.oql.tag"].browse(res[0]['id'])
@@ -722,7 +734,7 @@ class TestOql(TransactionCase):
         """Test CREATE with a nonexistent field raises an exception."""
         with self.assertRaises(Exception):
             self.env["test.oql.product"].oql(
-                "insert into test.oql.product set nonexistent_field = 'value'"
+                "insert into test.oql.product (nonexistent_field) values ('value')"
             )
 
     # ---- DELETE tests ----
@@ -778,7 +790,7 @@ class TestOql(TransactionCase):
         """Test CREATE -> UPDATE -> DELETE lifecycle."""
         # CREATE
         res = self.env["test.oql.product"].oql(
-            "insert into test.oql.product set spu_name = 'Lifecycle'"
+            "insert into test.oql.product (spu_name) values ('Lifecycle')"
         )
         self.assertEqual(len(res), 1)
         rec_id = res[0]['id']

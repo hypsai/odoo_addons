@@ -112,10 +112,11 @@ class SetClause(Clause):
         self.assignments = tuple(assignments)
         self.env = env
 
-    def execute(self):
+    def execute(self, rec):
+        rec.ensure_one()
         vals = {}
         for fa, val in self.assignments:
-            vals[fa.path] = self._r_execute(val)
+            vals[fa.path] = self._r_execute(val, rec)
         return vals
 
     def gather_acl_units(self, res: List[AclUnit]):
@@ -124,13 +125,15 @@ class SetClause(Clause):
             self._r_gather_val_acl(fa.rear_field, value, res)
 
     @classmethod
-    def _r_execute(cls, node):
+    def _r_execute(cls, node, rec):
         if isinstance(node, list):
-            return [cls._r_execute(x) for x in node]
+            return [cls._r_execute(x, rec) for x in node]
         elif isinstance(node, tuple):
-            return tuple(cls._r_execute(x) for x in node)
+            return tuple(cls._r_execute(x, rec) for x in node)
         elif isinstance(node, dict):
-            return {cls._r_execute(k): cls._r_execute(v) for k, v in node.items()}
+            return {cls._r_execute(k, rec): cls._r_execute(v, rec) for k, v in node.items()}
+        elif isinstance(node, IRecsReader):
+            return node.read(rec)[0]
         else:
             return node
 
@@ -141,5 +144,46 @@ class SetClause(Clause):
         elif isinstance(node, list):
             for item in node:
                 cls._r_gather_val_acl(field, item, res)
+        elif isinstance(node, IRecsReader):
+            node.gather_acl_units(res, "read")
+
+
+class ValuesClause(Clause):
+    """Holds the `VALUES` rows of an INSERT statement."""
+
+    def __init__(self, rows: List[List[Any]], model: models.Model):
+        self.rows = rows
+        self.model = model
+
+    def execute(self, fas: List[FieldAccess]) -> List[Dict[str, Any]]:
+        """Map every value row onto `fas`, e.g. `{'spu_name': 'Boot'}`.
+
+        Each row must hold as many values as `fas`, else `zip_c` raises.
+        """
+        return [{fa.path: self._r_execute(val, self.model)
+                 for fa, val in zip_c(fas, row, strict=True)}
+                for row in self.rows]
+
+    def gather_acl_units(self, res: List[AclUnit]):
+        self._r_gather_val_acl(self.rows,res)
+
+    @classmethod
+    def _r_execute(cls, node, model):
+        if isinstance(node, list):
+            return [cls._r_execute(x, model) for x in node]
+        elif isinstance(node, tuple):
+            return tuple(cls._r_execute(x, model) for x in node)
+        elif isinstance(node, dict):
+            return {cls._r_execute(k, model): cls._r_execute(v, model) for k, v in node.items()}
+        else:
+            return node
+
+    @classmethod
+    def _r_gather_val_acl(cls, node, res: List[AclUnit]):
+        if isinstance(node, tuple) and len(node) == 3:
+            pass
+        elif isinstance(node, list):
+            for item in node:
+                cls._r_gather_val_acl(item, res)
         elif isinstance(node, IRecsReader):
             node.gather_acl_units(res, "read")

@@ -4,7 +4,7 @@ query: [ctx_clause] (select_stmt | update_stmt | insert_stmt | delete_stmt)
 
 select_stmt: from_clause select_clause [where_clause] [orderby_clause] [limit_clause] [offset_clause]
 update_stmt: update_clause set_clause [where_clause] [limit_clause]
-insert_stmt: insert_clause set_clause
+insert_stmt: insert_clause [TRANSLATE] insert_fields values_clause
 delete_stmt: delete_clause [where_clause] [limit_clause]
 
 ctx_clause: "with"i "context"i assignment_simple ("," assignment_simple)*
@@ -14,10 +14,16 @@ insert_clause: "insert"i "into"i model
 delete_clause: "delete"i "from"i model
 select_clause: "select"i [TRANSLATE] ("*" | fields)
 set_clause: "set"i [TRANSLATE] assignment ("," assignment)*
+values_clause: "values"i insert_rows
 where_clause: "where"i [TRANSLATE] expr
 limit_clause: "limit"i INT
 offset_clause: "offset"i INT
 orderby_clause: ORDER_BY orderby_fields
+
+// ------ Insert Fields / Values ------
+insert_fields: "(" CNAME ("," CNAME)* [","] ")"  // Field list, e.g. `(name, price)`
+insert_row: "(" _value_list ")"  // One value row, e.g. `('Boot', 50)`
+insert_rows: insert_row ("," insert_row)*  // One or more value rows
 
 ?expr: or_expr
 
@@ -73,11 +79,11 @@ _value: string
      | TRUE
      | FALSE
      | NULL
-     | set
      | array
      | object
+     | sql_array
 
-set: "(" _value_list ")"  // SQL array, unordered
+sql_array: "(" _value_list ")"  // SQL array
 _value_list: _value ("," _value)* [","] |
 array: "[" _array_items "]"  // Python array, ordered. Items may be ORM commands, e.g. `[link 1, create {name: 'x'}]`
 _array_items: _array_item ("," _array_item)* [","] |

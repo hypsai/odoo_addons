@@ -75,7 +75,7 @@ class IRecsReader(ABC):
         pass
 
     @abstractmethod
-    def read(self, recs, load='_classic_read') -> List[Dict[str, Any]]:
+    def read(self, recs, load='_classic_read') -> list:
         pass
 
     @abstractmethod

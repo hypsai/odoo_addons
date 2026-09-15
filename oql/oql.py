@@ -4,7 +4,7 @@
 # @Description  :
 import copy
 import os.path
-from typing import Optional, Any, Set
+from typing import Optional, Any, List, Set
 
 import odoo.fields
 from odoo import models, _, Command
@@ -13,7 +13,7 @@ from odoo.exceptions import AccessError
 from .acl import ModelMode, FieldMode
 from .base import UnitKind, AclUnit, IAcl, IRecsReader
 from .chain import Chain, StepAttr, StepCall, StepIndex, Step
-from .clause import SelectClause, SetClause, WhereClause, OrderbyClause
+from .clause import SelectClause, SetClause, WhereClause, OrderbyClause, ValuesClause
 from .field import FieldAccess
 from .func import UnboundFuncCall
 from .expr import UnaExpr, BinExpr, AndExpr, OrExpr, Expr
@@ -64,8 +64,10 @@ class OqlTransformer(lark.Transformer):
                     where: Optional[WhereClause] = None, limit=None):
         return UpdateStmt(model, set_clause, where, limit)
 
-    def insert_stmt(self, model: models.Model, set_clause: SetClause):
-        return CreateStmt(model, set_clause)
+    def insert_stmt(self, model: models.Model, translate: Optional[str],
+                    fields: List[str], values: ValuesClause):
+        fas = [FieldAccess(model, [name], self._meta) for name in fields]
+        return CreateStmt(model, bool(translate), fas, values)
 
     def delete_stmt(self, model: models.Model, where: Optional[WhereClause] = None, limit=None):
         return DeleteStmt(model, where, limit)
@@ -101,6 +103,9 @@ class OqlTransformer(lark.Transformer):
 
     def set_clause(self, translate: Optional[str], *assignments):
         return SetClause(bool(translate), assignments, self.env)
+
+    def values_clause(self, rows):
+        return ValuesClause(rows, self.recs)
 
     def where_clause(self, translate: Optional[str], expr: Expr):
         return WhereClause(bool(translate), expr, self.recs)
@@ -166,6 +171,15 @@ class OqlTransformer(lark.Transformer):
     def orderby_fields(self, *fields):
         return list(fields)
 
+    def insert_fields(self, *fields: str):
+        return list(fields)
+
+    def insert_rows(self, *rows: list):
+        return list(rows)
+
+    def insert_row(self, *values):
+        return list(values)
+
     def model(self, names: Tuple[str]):
         return '.'.join(names)
 
@@ -205,7 +219,7 @@ class OqlTransformer(lark.Transformer):
     def NULL(self, value):
         return None
 
-    def set(self, *values):
+    def sql_array(self, *values):
         return values
 
     def array(self, *items):

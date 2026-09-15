@@ -8,10 +8,12 @@ from typing import Optional
 from odoo import models, _
 from odoo.exceptions import AccessError
 
-from .clause import SelectClause, SetClause, WhereClause, OrderbyClause
+from .base import IAcl, AclUnit, UnitKind
+from .clause import SelectClause, SetClause, ValuesClause, WhereClause, OrderbyClause
+from .compatible import zip_c
+from .field import FieldAccess
 from .meta import OqlMeta
 from .recs import *
-from .base import IAcl, AclUnit, UnitKind
 
 _logger = logging.getLogger(__name__)
 
@@ -67,10 +69,11 @@ class UpdateStmt(Statement):
 
         # 2 Build vals and write.
         if recs:
-            vals = self.set_clause.execute()
-            recs.sudo(False).write(vals)  # Downgrade.
+            for rec in recs:
+                vals = self.set_clause.execute(rec)
+                rec.sudo(False).write(vals)  # Downgrade.
 
-        # 4 Return updated record ids.
+        # 3 Return updated record ids.
         return [{"id": rid} for rid in recs.ids]
 
     def gather_acl_units(self, res: List[AclUnit]):
@@ -81,27 +84,28 @@ class UpdateStmt(Statement):
 
 
 class CreateStmt(Statement):
-    def __init__(self, from_: models.Model, set_clause: SetClause):
+    def __init__(self, from_: models.Model, translate: bool,
+                 columns: List[FieldAccess], values: ValuesClause):
         self.from_ = from_
-        self.set_clause = set_clause
+        self.translate = translate
+        self.columns = columns
+        self.values = values
 
     def execute(self):
         env = self.from_.env
         model_name = self.from_._name
         acl = self.meta.acl[model_name]
 
-        # 1 Build vals and create.
-        vals = self.set_clause.execute()
-        create_model = self.from_.with_context(lang=env.user.lang if self.set_clause.translate else None)
+        # 1 Build a value dict for every row and create.
+        vals = self.values.execute(self.columns)
+        create_model = self.from_.with_context(lang=env.user.lang if self.translate else None)
         recs = create_model.sudo(False).create(vals)
 
         # 2 Check record level ACL
         domain = acl.perm_records([("id", "in", recs.ids)], "create")
         allowed_recs = self.from_.with_context(active_test=False).search(domain)
         if len(allowed_recs) != len(recs):
-            if isinstance(vals, dict):
-                vals = [vals]
-            id2val = dict(zip(recs.ids, vals, strict=True))
+            id2val = dict(zip_c(recs.ids, vals, strict=True))
             bad_ids = set(recs.ids) - set(allowed_recs.ids)
             raise AccessError(_("Some created records are out of permitted domain, values: %s") % (
                 [id2val[x] for x in bad_ids],
@@ -112,7 +116,9 @@ class CreateStmt(Statement):
 
     def gather_acl_units(self, res: List[AclUnit]):
         res.append(AclUnit(self.from_, self.from_._name, UnitKind.MODEL, "create"))
-        self.set_clause.gather_acl_units(res)
+        for fa in self.columns:
+            fa.gather_acl_units(res, "write")
+        self.values.gather_acl_units(res)
 
 
 class DeleteStmt(Statement):
