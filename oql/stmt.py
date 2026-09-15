@@ -69,9 +69,7 @@ class UpdateStmt(Statement):
 
         # 2 Build vals and write.
         if recs:
-            for rec in recs:
-                vals = self.set_clause.execute(rec)
-                rec.sudo(False).write(vals)  # Downgrade.
+            self.set_clause.execute(recs)
 
         # 3 Return updated record ids.
         return [{"id": rid} for rid in recs.ids]

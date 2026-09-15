@@ -17,12 +17,23 @@ from .base import IRecsReader, IAcl, AclUnit, UnitKind, ModelMode
 
 
 class Clause(IAcl, ABC):
-    pass
+
+    def __init__(self, translate: bool):
+        self.translate = translate
+
+    def _update_context(self, model: models.Model) -> models.Model:
+        context: dict = dict(model.env.context)
+        if self.translate:
+            if not context.get("lang"):
+                context["lang"] = model.env.user.lang
+        else:
+            context["lang"] = None
+        return model.with_context(**context)
 
 
 class SelectClause(Clause):
     def __init__(self, translate: bool, fas: List[IRecsReader]):
-        self.translate = translate
+        super().__init__(translate)
         self.fas = fas
         # Check agg.
         agg_readers = [x for x in fas if x.is_agg]
@@ -35,7 +46,7 @@ class SelectClause(Clause):
         fas = self.fas
 
         # Read fields.
-        recs = recs.with_context(lang=env.user.lang if self.translate else None)
+        recs = self._update_context(recs)
         rows = [{
             f.as_: val for f, val in zip_c(fas, val_row, strict=True)
         } for val_row in zip_c(*(f.read(recs, load) for f in fas), strict=True)]
@@ -49,7 +60,7 @@ class SelectClause(Clause):
 
 class WhereClause(Clause):
     def __init__(self, translate: bool, expr: Expr, model: models.Model):
-        self.translate = translate
+        super().__init__(translate)
         self.expr = expr
         self.model = model
 
@@ -60,11 +71,10 @@ class WhereClause(Clause):
     def execute(self, model: models.Model, meta: OqlMeta, offset: int, limit: int,
                 orderby: Optional[str], count: bool = False, mode: ModelMode = "read") \
             -> Union[models.Model, int]:
-        env = model.env
         rec_sets = self.expr.eval_rec_sets()
         domain = rec_sets[0].domain.domain
         domain = meta.acl[model._name].perm_records(domain, mode)  # Record level ACL, use odoo's built-in ACL here.
-        where_model = model.with_context(lang=env.user.lang if self.translate else None)
+        where_model = self._update_context(model)
         if count:
             # Odoo 17 and over do not support `count` parameter in `search`, so use `search_count` here.
             res = where_model.search_count(domain)
@@ -79,6 +89,7 @@ class WhereClause(Clause):
 
 class OrderbyClause(Clause):
     def __init__(self, model: models.Model, fields: List[Tuple[str, str]]):
+        super().__init__(False)
         self.model = model
         self.fields = fields
         self.validate(model)
@@ -105,19 +116,21 @@ class OrderbyClause(Clause):
 
 
 class SetClause(Clause):
-    """Holds field=value assignments for UPDATE/CREATE statements."""
+    """Update values for recs."""
 
     def __init__(self, translate: bool, assignments: Iterable[Tuple[FieldAccess, Any]], env):
-        self.translate = translate
+        super().__init__(translate)
         self.assignments = tuple(assignments)
         self.env = env
 
-    def execute(self, rec):
-        rec.ensure_one()
-        vals = {}
-        for fa, val in self.assignments:
-            vals[fa.path] = self._r_execute(val, rec)
-        return vals
+    def execute(self, recs):
+        recs = recs.sudo(False)  # Downgrade.
+        recs = self._update_context(recs)
+        for rec in recs:
+            vals = {}
+            for fa, val in self.assignments:
+                vals[fa.path] = self._r_execute(val, rec)
+            rec.write(vals)
 
     def gather_acl_units(self, res: List[AclUnit]):
         for fa, value in self.assignments:
@@ -152,6 +165,7 @@ class ValuesClause(Clause):
     """Holds the `VALUES` rows of an INSERT statement."""
 
     def __init__(self, rows: List[List[Any]], model: models.Model):
+        super().__init__(False)
         self.rows = rows
         self.model = model
 
