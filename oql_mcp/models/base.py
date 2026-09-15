@@ -12,25 +12,43 @@ class OqlMcpBase(models.AbstractModel):
     @mcp_tool
     @api.model
     def oql_mcp_query(self, oql: str):
-        """Execute OQL search and return records as dicts.
-        Attention: You must use LIMIT clause for any query. Use offset together with limit if you need paginated result.
+        """Execute OQL statement and return records as dicts.
 
-        OQL is a PostgreSQL-like query language for Odoo. It supports dot paths (e.g., `company.name`) and virtual fields (Terms/Aliases).
-        OQL Structure: FROM <model> SELECT <fields> WHERE <conditions> [ORDER BY <field> [ASC|DESC], ...] [LIMIT n] [OFFSET n]
-        Differences from SQL:
-            1. FROM clause is placed at start of a query string.
-            2. It uses Odoo domain operators such as 'like', '=like', etc. Be careful about this!!!
-                Don't add `%` in comparison string when use operator `like`, `ilike`. If you need to use `%`,
-                use `=like`, `=ilike` operator instead.
-            3. `id` field will be added to result automatically.
-        OQL Example:
-            FROM product.product
-            SELECT name, default_code, tag_ids.name
-            WHERE Brand = 'Danner' and Waterproof and list_price > 1000
-            ORDER BY name ASC
-            LIMIT 80
-            OFFSET 160
-        Use `oql_mcp_hint` to find out valid model and field you have access to, or valid candidate values for a field.
+        OQL is a PostgreSQL-like query language over the Odoo ORM.
+
+        Synopsis:
+            [ WITH CONTEXT name = value [, ...] ] statement
+
+            statement:
+                FROM model SELECT [TRANSLATE] ( * | reader [ AS alias ] [, ...] )
+                    [ WHERE [TRANSLATE] condition ]
+                    [ ORDER BY field [ ASC | DESC ] [, ...] ]
+                    [ LIMIT n ] [ OFFSET n ]
+              | UPDATE model SET [TRANSLATE] field = value [, ...]
+                    [ WHERE [TRANSLATE] condition ] [ LIMIT n ]
+              | INSERT INTO model [TRANSLATE] ( field [, ...] )
+                    VALUES ( value [, ...] ) [, ...]
+              | DELETE FROM model [ WHERE [TRANSLATE] condition ] [ LIMIT n ]
+
+            reader:     [ @agg ] path ( .method(args) | [index] )*  |  func(args)
+                        e.g. tag_ids[0].name, @tag_ids.mapped('name'), lower(name), count(@tag_ids)
+            condition:  condition AND/OR condition | NOT condition | ( condition ) | field
+                        | field OP value | field[value] | field IS [NOT] NULL | _sizeof_ field
+            OP:         = | != | <> | < | <= | > | >= | [NOT] LIKE | [NOT] ILIKE | [NOT] IN
+                        | =LIKE | =ILIKE | =? | CHILD_OF | PARENT_OF
+            value:      'text' ('' escapes a quote) | number | true | false | null
+                        | ( value [, ...] )            -- id tuple, links x2many
+                        | [ value | cmd , ... ]        -- JSON array, may hold ORM commands
+                        | { field: value [, ...] }     -- JSON object
+            cmd:        link n | unlink n | set [ n [, ...] ] | create { .. } | update n { .. } | delete n
+
+        Notes:
+            1. SELECT must carry LIMIT (use OFFSET for paging).
+            2. Fields are Odoo dot paths, e.g. company_id.name; Terms/Aliases (virtual fields) allowed.
+            3. `id` is added to results automatically.
+            4. LIKE/ILIKE match substrings (no `%`); use =LIKE/=ILIKE for `%` wildcard patterns.
+            5. TRANSLATE reads/writes field values in the user's language.
+        Use `oql_mcp_hint` to discover accessible models, fields, or candidate values for a field.
 
         :return: List of record dictionaries.
         """
