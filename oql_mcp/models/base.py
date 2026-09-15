@@ -40,7 +40,9 @@ class OqlMcpBase(models.AbstractModel):
                         | ( value [, ...] )            -- id tuple, links x2many
                         | [ value | cmd , ... ]        -- JSON array, may hold ORM commands
                         | { field: value [, ...] }     -- JSON object
-            cmd:        link n | unlink n | set [ n [, ...] ] | create { .. } | update n { .. } | delete n
+            cmd:        link n | unlink n | set [ n [, ...] ] | create object | update n object | delete n
+            object:     { field: value [, ...] }    -- nested JSON-like object, keys unquoted,
+                                                        values may nest objects/arrays/cmds
 
         Notes:
             1. SELECT must carry LIMIT (use OFFSET for paging).

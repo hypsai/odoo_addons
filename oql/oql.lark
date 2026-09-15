@@ -90,7 +90,7 @@ _array_items: _array_item ("," _array_item)* [","] |
 _array_item: _value | cmd
 
 // ------ Odoo ORM special writing format ------
-// (Nested JSON object with commands)
+// (Nested JSON-like object with commands, no quotes for field name)
 // * Note: content rules end with an empty alternative (`|`) instead of using
 // * maybe-there `[...]`, because lark pads the empty branch of `[x]` with `_EMPTY`
 // * placeholders, which surface as `None` children. See `load_grammar.EBNF_to_BNF.maybe`.
